@@ -1,9 +1,13 @@
-from solver.graphical_solver import GraphicalSolver
+from latex.vertical_operation_formatter import VerticalFormatter
 
-solver = GraphicalSolver()
+formatter = VerticalFormatter()
 
-# equation: x + y = 5
-points = solver.generate_points(1,1,5)
+# equation1: 14x + 7y = 49
+# equation2: 4x - 7y = 41
 
-print("Generated Points:")
-print(points)
+eq1 = (14,7,49)
+eq2 = (4,-7,41)
+
+result = formatter.add_equations(eq1,eq2)
+
+print(result)

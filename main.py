@@ -1,11 +1,16 @@
-from solver.elimination_strategy import EliminationStrategy
+from models.equation import Equation
+from models.equation_system import EquationSystem
+from solver.substitution_solver import SubstitutionSolver
 
-strategy = EliminationStrategy()
+# equations
+eq1 = Equation(1,1,1)
+eq2 = Equation(2,3,4)
 
-eq1 = (3,1,18)
-eq2 = (4,14,17)
+system = EquationSystem(eq1,eq2)
 
-result = strategy.detect(eq1,eq2)
+solver = SubstitutionSolver()
 
-print("Elimination Strategy:")
-print(result)
+solution = solver.solve(system)
+
+print("Substitution Solution:")
+print(solution)

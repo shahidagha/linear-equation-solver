@@ -1,20 +1,34 @@
+import sympy as sp
+
 class Normalizer:
 
-    def normalize(self, equation):
-        """
-        Ensures equation is in the form:
+    def normalize(self, eq):
 
-        ax + by = c
-        """
+        a = eq.a
+        b = eq.b
+        c = eq.c
 
-        a = equation.a
-        b = equation.b
-        c = equation.c
+        # convert FractionSurd if needed
+        if hasattr(a,"to_sympy"):
+            a = a.to_sympy()
 
-        # Step 1: ensure first coefficient positive
+        if hasattr(b,"to_sympy"):
+            b = b.to_sympy()
+
+        expr = sp.Eq(a*sp.symbols('x') + b*sp.symbols('y'), c)
+
+        # Step 3: ensure first coefficient positive
         if a < 0:
             a = -a
             b = -b
             c = -c
 
-        return a, b, c
+        # Step 4: clear denominators
+        a,b,c = sp.together(a), sp.together(b), sp.together(c)
+
+        # Step 5: simplify
+        a = sp.simplify(a)
+        b = sp.simplify(b)
+        c = sp.simplify(c)
+
+        return a,b,c

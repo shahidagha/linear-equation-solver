@@ -1,13 +1,11 @@
-from latex.vertical_operation_formatter import VerticalFormatter
+from solver.elimination_strategy import EliminationStrategy
 
-formatter = VerticalFormatter()
+strategy = EliminationStrategy()
 
-# equation1: 14x + 7y = 49
-# equation2: 4x - 7y = 41
+eq1 = (3,1,18)
+eq2 = (4,14,17)
 
-eq1 = (14,7,49)
-eq2 = (4,-7,41)
+result = strategy.detect(eq1,eq2)
 
-result = formatter.add_equations(eq1,eq2)
-
+print("Elimination Strategy:")
 print(result)

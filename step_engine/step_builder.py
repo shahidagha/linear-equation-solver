@@ -1,7 +1,11 @@
+from step_engine.duplicate_filter import DuplicateFilter
+
 class StepBuilder:
 
     def __init__(self):
+
         self.steps = []
+        self.filter = DuplicateFilter()
 
     def add(self, description, expression):
 
@@ -14,7 +18,9 @@ class StepBuilder:
 
     def show(self):
 
-        for step in self.steps:
+        filtered = self.filter.filter(self.steps)
+
+        for step in filtered:
 
             print("\n" + step["description"])
             print(step["expression"])

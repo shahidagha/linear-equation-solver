@@ -1,16 +1,16 @@
 from models.coefficient import FractionSurd
+from models.equation import Equation
 
-# Example: 4√5 / 3√7
+# coefficients
+a = FractionSurd(3,2,1,1)    # 3√2
+b = FractionSurd(5,1,1,3)    # 5/(√3)
 
-num_mult = 4
-num_rad = 5
-den_mult = 3
-den_rad = 7
+c = 7
 
-fs = FractionSurd(num_mult, num_rad, den_mult, den_rad)
+eq = Equation(a,b,c)
 
-print("Expression:")
-print(fs.display())
+print("Equation:")
+print(eq.display())
 
-print("\nLaTeX:")
-print(fs.to_latex())
+print("\nSymPy form:")
+print(eq.to_sympy())

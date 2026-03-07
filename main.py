@@ -1,16 +1,16 @@
 from models.equation import Equation
 from models.equation_system import EquationSystem
-from solver.substitution_solver import SubstitutionSolver
+from solver.cramer_solver import CramerSolver
 
 # equations
-eq1 = Equation(1,1,1)
-eq2 = Equation(2,3,4)
+eq1 = Equation(2,1,7)
+eq2 = Equation(4,-7,41)
 
 system = EquationSystem(eq1,eq2)
 
-solver = SubstitutionSolver()
+solver = CramerSolver()
 
 solution = solver.solve(system)
 
-print("Substitution Solution:")
+print("Cramer Solution:")
 print(solution)

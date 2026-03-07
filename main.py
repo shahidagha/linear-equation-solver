@@ -1,8 +1,16 @@
-from solver.graphical_solver import GraphicalSolver
+from models.coefficient import FractionSurd
 
-solver = GraphicalSolver()
+# Example: 4√5 / 3√7
 
-# equation x + y = 5
-points = solver.generate_points(1,1,5)
+num_mult = 4
+num_rad = 5
+den_mult = 3
+den_rad = 7
 
-solver.generate_table(points)
+fs = FractionSurd(num_mult, num_rad, den_mult, den_rad)
+
+print("Expression:")
+print(fs.display())
+
+print("\nLaTeX:")
+print(fs.to_latex())

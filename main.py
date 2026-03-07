@@ -2,8 +2,14 @@ from step_engine.step_builder import StepBuilder
 
 steps = StepBuilder()
 
-steps.add("Step 1", "18x = 90")
-steps.add("Step 2", "18x = 90")   # duplicate
-steps.add("Step 3", "x = 5")
+steps.add("Equation (1)", "2x + 3y = 4")
+steps.add("Equation (2)", "x + y = 1")
+steps.add("Multiply equation (2) by 2", "2x + 2y = 2")
+steps.add("Subtract equations", "y = 2")
+steps.add("Substitute y = 2", "x = -1")
 
-steps.show()
+print("SHORT MODE")
+steps.show("short")
+
+print("\nNORMAL MODE")
+steps.show("normal")

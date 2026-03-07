@@ -1,11 +1,13 @@
 from step_engine.duplicate_filter import DuplicateFilter
+from step_engine.verbosity_filter import VerbosityFilter
 
 class StepBuilder:
 
     def __init__(self):
 
         self.steps = []
-        self.filter = DuplicateFilter()
+        self.duplicate_filter = DuplicateFilter()
+        self.verbosity_filter = VerbosityFilter()
 
     def add(self, description, expression):
 
@@ -16,9 +18,11 @@ class StepBuilder:
 
         self.steps.append(step)
 
-    def show(self):
+    def show(self, level="normal"):
 
-        filtered = self.filter.filter(self.steps)
+        filtered = self.duplicate_filter.filter(self.steps)
+
+        filtered = self.verbosity_filter.filter(filtered, level)
 
         for step in filtered:
 

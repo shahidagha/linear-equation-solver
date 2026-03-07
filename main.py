@@ -1,19 +1,9 @@
-from sympy import symbols
-from latex.latex_formatter import LatexFormatter
+from solver.graphical_solver import GraphicalSolver
 
-# define variables
-x, y = symbols('x y')
+solver = GraphicalSolver()
 
-# create expression
-expr = 2*x + 3*y
+# equation: x + y = 5
+points = solver.generate_points(1,1,5)
 
-# latex formatter
-formatter = LatexFormatter()
-
-latex_output = formatter.format_expression(expr)
-
-print("Expression:")
-print(expr)
-
-print("\nLaTeX Output:")
-print(latex_output)
+print("Generated Points:")
+print(points)

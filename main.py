@@ -1,28 +1,19 @@
-from models.equation import Equation
-from models.equation_system import EquationSystem
-from solver.elimination_solver import EliminationSolver
-from step_engine.step_manager import StepManager
+from sympy import symbols
+from latex.latex_formatter import LatexFormatter
 
-# create equations
-eq1 = Equation(2, 3, 4)
-eq2 = Equation(1, 1, 1)
+# define variables
+x, y = symbols('x y')
 
-system = EquationSystem(eq1, eq2)
+# create expression
+expr = 2*x + 3*y
 
-print("System of Equations:")
-print(system.display())
+# latex formatter
+formatter = LatexFormatter()
 
-# step manager
-steps = StepManager()
+latex_output = formatter.format_expression(expr)
 
-steps.add_step("Equation (1)", eq1.display())
-steps.add_step("Equation (2)", eq2.display())
+print("Expression:")
+print(expr)
 
-# solver
-solver = EliminationSolver()
-solution = solver.solve(system)
-
-steps.add_step("Solution", solution)
-
-# show steps
-steps.show_steps()
+print("\nLaTeX Output:")
+print(latex_output)

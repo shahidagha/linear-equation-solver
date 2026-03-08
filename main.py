@@ -1,20 +1,11 @@
-from models.coefficient import FractionSurd
-from models.equation import Equation
-from normalization.normalizer import Normalizer
+from math_engine.fraction_surd import FractionSurd
 
-# example equation
-a = FractionSurd(3,2,1,1)     # 3√2
-b = FractionSurd(5,1,1,3)     # 5/(√3)
-c = 7
 
-eq = Equation(a,b,c)
+a = FractionSurd(3,2,1,1,1)     # 3√2
+b = FractionSurd(5,1,1,3,-1)    # -5/√3
 
-print("Original Equation:")
-print(eq.display())
+print("a =", a)
+print("b =", b)
 
-normalizer = Normalizer()
-
-a,b,c = normalizer.normalize(eq)
-
-print("\nNormalized:")
-print(a,"x +",b,"y =",c)
+print("a + b =", a.add(b))
+print("a * b =", a.multiply(b))

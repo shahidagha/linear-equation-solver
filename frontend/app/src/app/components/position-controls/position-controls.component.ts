@@ -21,13 +21,7 @@ export class PositionControlsComponent {
 
   @Output() positionsChange = new EventEmitter<FramePositions>();
 
-  readonly controls: Array<{ key: FrameKey; label: string }> = [
-    { key: 'term1', label: 'First Term' },
-    { key: 'term2', label: 'Second Term' },
-    { key: 'equals', label: 'Equals' },
-    { key: 'constant', label: 'Constant' }
-  ];
-
+  readonly controls: FrameKey[] = ['term1', 'term2', 'equals', 'constant'];
   readonly options = [1, 2, 3, 4];
 
   setPosition(key: FrameKey, position: number): void {

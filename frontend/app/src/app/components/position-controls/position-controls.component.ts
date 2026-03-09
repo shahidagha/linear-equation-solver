@@ -31,6 +31,26 @@ export class PositionControlsComponent {
   readonly options = [1, 2, 3, 4];
 
   setPosition(key: FrameKey, position: number): void {
-    this.positionsChange.emit({ ...this.positions, [key]: position });
+    if (this.positions[key] === position) {
+      return;
+    }
+
+    const swapped = this.getSwappedPositions(key, position);
+    this.positionsChange.emit(swapped);
+  }
+
+  private getSwappedPositions(key: FrameKey, newPosition: number): FramePositions {
+    const updated: FramePositions = { ...this.positions };
+    const displacedKey = (Object.keys(updated) as FrameKey[]).find(
+      (frameKey) => updated[frameKey] === newPosition && frameKey !== key
+    );
+
+    if (displacedKey) {
+      updated[displacedKey] = updated[key];
+    }
+
+    updated[key] = newPosition;
+
+    return updated;
   }
 }

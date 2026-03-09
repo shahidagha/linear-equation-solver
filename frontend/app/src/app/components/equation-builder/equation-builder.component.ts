@@ -1,5 +1,6 @@
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { Term } from '../../models/term.model';
 import { constantToLatex, variableCoeffToLatex } from '../../utils/latex-generator';
@@ -22,6 +23,7 @@ interface FrameItem {
   standalone: true,
   imports: [
     CommonModule,
+    DragDropModule,
     TermInputComponent,
     PositionControlsComponent,
     EquationPreviewComponent
@@ -34,29 +36,9 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   @Input() variable1 = 'x';
   @Input() variable2 = 'y';
 
-  term1: Term = {
-    sign: 1,
-    numCoeff: 1,
-    numRad: 1,
-    denCoeff: 1,
-    denRad: 1
-  };
-
-  term2: Term = {
-    sign: 1,
-    numCoeff: 1,
-    numRad: 1,
-    denCoeff: 1,
-    denRad: 1
-  };
-
-  constant: Term = {
-    sign: 1,
-    numCoeff: 1,
-    numRad: 1,
-    denCoeff: 1,
-    denRad: 1
-  };
+  term1: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
+  term2: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
+  constant: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
 
   positions: FramePositions = {
     term1: 1,
@@ -102,6 +84,22 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
 
   onPositionsChange(updated: FramePositions): void {
     this.positions = updated;
+  }
+
+  onFrameDrop(event: CdkDragDrop<FrameItem[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    const reordered = [...this.orderedFrames];
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+
+    const nextPositions = { ...this.positions };
+    reordered.forEach((frame, index) => {
+      nextPositions[frame.key] = index + 1;
+    });
+
+    this.positions = nextPositions;
   }
 
   onTerm1Change(term: Term): void {

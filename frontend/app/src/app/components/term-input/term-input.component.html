@@ -2,8 +2,8 @@
 
 <select [(ngModel)]="term.sign"
         (ngModelChange)="updateTerm()">
-  <option [value]="1">+</option>
-  <option [value]="-1">−</option>
+  <option [ngValue]="1">+</option>
+  <option [ngValue]="-1">−</option>
 </select>
 
 <input type="number"

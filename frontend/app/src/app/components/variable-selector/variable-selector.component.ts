@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -10,8 +10,11 @@ import { FormsModule } from '@angular/forms';
 })
 export class VariableSelectorComponent {
 
-  variable1: string = 'x';
-  variable2: string = 'y';
+  @Input() variable1: string = 'x';
+  @Input() variable2: string = 'y';
+
+  @Output() variable1Change = new EventEmitter<string>();
+  @Output() variable2Change = new EventEmitter<string>();
 
   validateVariable1() {
 
@@ -24,6 +27,8 @@ export class VariableSelectorComponent {
     if (this.variable1 === this.variable2) {
       this.variable1 = '';
     }
+
+    this.variable1Change.emit(this.variable1);
   }
 
   validateVariable2() {
@@ -37,6 +42,8 @@ export class VariableSelectorComponent {
     if (this.variable2 === this.variable1) {
       this.variable2 = '';
     }
+
+    this.variable2Change.emit(this.variable2);
   }
 
 }

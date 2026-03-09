@@ -1,9 +1,20 @@
-<app-variable-selector></app-variable-selector>
+<app-variable-selector
+  [variable1]="variable1"
+  [variable2]="variable2"
+  (variable1Change)="onVariable1Change($event)"
+  (variable2Change)="onVariable2Change($event)">
+</app-variable-selector>
 
 <hr>
 
 <h3>Equation 1</h3>
-<app-equation-builder></app-equation-builder>
+<app-equation-builder
+  [variable1]="variable1"
+  [variable2]="variable2">
+</app-equation-builder>
 
 <h3>Equation 2</h3>
-<app-equation-builder></app-equation-builder>
+<app-equation-builder
+  [variable1]="variable1"
+  [variable2]="variable2">
+</app-equation-builder>

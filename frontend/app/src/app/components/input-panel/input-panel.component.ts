@@ -11,4 +11,15 @@ import { EquationBuilderComponent } from '../equation-builder/equation-builder.c
 })
 export class InputPanelComponent {
 
+  variable1 = 'x';
+  variable2 = 'y';
+
+  onVariable1Change(variable: string): void {
+    this.variable1 = variable || 'x';
+  }
+
+  onVariable2Change(variable: string): void {
+    this.variable2 = variable || 'y';
+  }
+
 }

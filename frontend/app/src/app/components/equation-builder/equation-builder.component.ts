@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { Term } from '../../models/term.model';
@@ -20,7 +20,10 @@ import { EquationPreviewComponent } from '../equation-preview/equation-preview.c
   templateUrl: './equation-builder.component.html',
   styleUrl: './equation-builder.component.css'
 })
-export class EquationBuilderComponent implements OnInit {
+export class EquationBuilderComponent implements OnInit, OnChanges {
+
+  @Input() variable1 = 'x';
+  @Input() variable2 = 'y';
 
   term1: Term = {
     sign: 1,
@@ -52,6 +55,10 @@ export class EquationBuilderComponent implements OnInit {
     this.updatePreview();
   }
 
+  ngOnChanges(_changes: SimpleChanges): void {
+    this.updatePreview();
+  }
+
   onTerm1Change(term: Term): void {
     this.term1 = term;
     this.updatePreview();
@@ -68,8 +75,8 @@ export class EquationBuilderComponent implements OnInit {
   }
 
   updatePreview(): void {
-    const left = `${variableCoeffToLatex(this.term1)}x`;
-    const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}y`;
+    const left = `${variableCoeffToLatex(this.term1)}${this.variable1}`;
+    const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`;
     const operator = this.term2.sign === -1 ? ' - ' : ' + ';
     const constant = constantToLatex(this.constant);
 

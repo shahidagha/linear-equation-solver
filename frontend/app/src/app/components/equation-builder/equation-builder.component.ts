@@ -4,7 +4,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 
 import { Term } from '../../models/term.model';
 import { constantToLatex, variableCoeffToLatex } from '../../utils/latex-generator';
-
+import { Output, EventEmitter } from '@angular/core';
 import { TermInputComponent } from '../term-input/term-input.component';
 import {
   FrameKey,
@@ -35,7 +35,7 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   @Input() title = 'Equation';
   @Input() variable1 = 'x';
   @Input() variable2 = 'y';
-
+   @Output() equationChange = new EventEmitter<any>();
   term1: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
   term2: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
   constant: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
@@ -118,11 +118,23 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   }
 
   updatePreview(): void {
-    const left = `${variableCoeffToLatex(this.term1)}${this.variable1}`;
-    const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`;
-    const operator = this.term2.sign === -1 ? ' - ' : ' + ';
-    const constant = constantToLatex(this.constant);
 
-    this.equationLatex = `${left}${operator}${rightVariable} = ${constant}`;
-  }
+  const left = `${variableCoeffToLatex(this.term1)}${this.variable1}`;
+  const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`;
+  const operator = this.term2.sign === -1 ? ' - ' : ' + ';
+  const constant = constantToLatex(this.constant);
+
+  this.equationLatex = `${left}${operator}${rightVariable} = ${constant}`;
+    console.log("BUILDER EMIT TEST");   // 👈 add this
+
+  // Emit equation data to parent
+  this.equationChange.emit({
+    positions: this.positions,
+    term1: this.term1,
+    term2: this.term2,
+    constant: this.constant
+  });
+
+}
+ 
 }

@@ -9,16 +9,21 @@
   <app-equation-builder
     title="Equation 1"
     [variable1]="variable1"
-    [variable2]="variable2">
+    [variable2]="variable2"
+    (equationChange)="onEquation1Change($event)">
   </app-equation-builder>
 
   <app-equation-builder
     title="Equation 2"
     [variable1]="variable1"
-    [variable2]="variable2">
+    [variable2]="variable2"
+    (equationChange)="onEquation2Change($event)">
   </app-equation-builder>
 
-  <div class="solve-row">
-    <button type="button" class="solve-btn">Solve System</button>
-  </div>
+  <button
+  type="button"
+  class="solve-btn"
+  (click)="saveSystem()">
+  Solve System
+</button>
 </div>

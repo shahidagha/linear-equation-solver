@@ -1,7 +1,7 @@
 class GraphicalSolver:
-    
+    print("GraphicalSolver module loaded")
     def __init__(self, system):
-        
+        print("GraphicalSolver initialized")
         self.eq1 = system.eq1
         self.eq2 = system.eq2
 
@@ -48,8 +48,9 @@ class GraphicalSolver:
 
 
     def generate_tables(self):
-        
+        print("DEBUG: Running GraphicalSolver")
         p1 = self.generate_points(self.eq1)
         p2 = self.generate_points(self.eq2)
-        
+        print("DEBUG Points:", p1, p2)
+
         return p1, p2

@@ -1,0 +1,31 @@
+<div class="term-row">
+
+<select [(ngModel)]="term.sign"
+        (ngModelChange)="updateTerm()">
+  <option [value]="1">+</option>
+  <option [value]="-1">−</option>
+</select>
+
+<input type="number"
+       [(ngModel)]="term.numCoeff"
+       (ngModelChange)="updateTerm()">
+
+√
+
+<input type="number"
+       [(ngModel)]="term.numRad"
+       (ngModelChange)="updateTerm()">
+
+/
+
+<input type="number"
+       [(ngModel)]="term.denCoeff"
+       (ngModelChange)="updateTerm()">
+
+√
+
+<input type="number"
+       [(ngModel)]="term.denRad"
+       (ngModelChange)="updateTerm()">
+
+</div>

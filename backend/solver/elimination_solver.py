@@ -14,20 +14,26 @@ class EliminationSolver:
         self.recorder = StepRecorder()
         self.eq_numbers = EquationNumbering()
 
-
     # -----------------------------
     # vertical elimination display
     # -----------------------------
 
     def vertical_elimination(self, eq1, eq2, result):
 
-        self.recorder.add("")
-        self.recorder.add(f"  {eq1}")
-        self.recorder.add(f"+ {eq2}")
-        self.recorder.add("--------------")
-        self.recorder.add(f"  {result}")
-        self.recorder.add("")
+        self.recorder.add_vertical(eq1, eq2, result)
 
+    @staticmethod
+    def _term(coeff, var):
+
+        coeff = sp.simplify(coeff)
+
+        if coeff == 1:
+            return var
+
+        if coeff == -1:
+            return f"-{var}"
+
+        return f"{sp.latex(coeff)}{var}"
 
     # -----------------------------
     # strategy detection
@@ -44,12 +50,12 @@ class EliminationSolver:
         if abs(a1) == abs(a2) or abs(b1) == abs(b2):
             return "DIRECT"
 
-        elif a1 == b2 and b1 == a2:
+        signs_match = (sp.sign(a1) == sp.sign(b2)) and (sp.sign(b1) == sp.sign(a2))
+
+        if a1 == b2 and b1 == a2 and signs_match:
             return "CROSS"
 
-        else:
-            return "LCM"
-
+        return "LCM"
 
     # -----------------------------
     # variable selection
@@ -83,7 +89,6 @@ class EliminationSolver:
 
         return "y"
 
-
     # -----------------------------
     # main solver
     # -----------------------------
@@ -91,10 +96,6 @@ class EliminationSolver:
     def solve(self):
 
         strategy = self.detect_strategy()
-
-        # -----------------------------
-        # initial equations
-        # -----------------------------
 
         eq1_str = EquationFormatter.format_equation(
             self.eq1.a.to_sympy(),
@@ -118,13 +119,11 @@ class EliminationSolver:
         self.recorder.add(f"Equation ({n2})")
         self.recorder.add(f"{eq2_str} ... ({n2})")
 
-
         self.recorder.add(f"Elimination strategy: {strategy}")
 
         var = self.choose_variable()
 
         self.recorder.add(f"Choosing to eliminate {var}")
-
 
         a1 = self.eq1.a.to_sympy()
         b1 = self.eq1.b.to_sympy()
@@ -134,56 +133,34 @@ class EliminationSolver:
         b2 = self.eq2.b.to_sympy()
         c2 = self.eq2.c.to_sympy()
 
-
-        # -----------------------------
-        # compute LCM
-        # -----------------------------
-
         if var == "y":
 
             lcm = sp.lcm(abs(b1), abs(b2))
             self.recorder.add(f"LCM of {abs(b1)} and {abs(b2)} = {lcm}")
 
-            m1 = lcm / b1
-            m2 = lcm / b2
+            m1 = lcm / abs(b1)
+            m2 = lcm / abs(b2)
 
         else:
 
             lcm = sp.lcm(abs(a1), abs(a2))
             self.recorder.add(f"LCM of {abs(a1)} and {abs(a2)} = {lcm}")
 
-            m1 = lcm / a1
-            m2 = lcm / a2
+            m1 = lcm / abs(a1)
+            m2 = lcm / abs(a2)
 
-
-        # -----------------------------
-        # multiplication decision
-        # -----------------------------
-
-        mult1 = abs(m1) != 1
-        mult2 = abs(m2) != 1
+        mult1 = m1 != 1
+        mult2 = m2 != 1
 
         if mult1 and not mult2:
-            self.recorder.add(f"Multiplying equation (1) by {m1}")
+            self.recorder.add_operation(f"Multiplying equation (1) by {m1}")
 
         elif mult2 and not mult1:
-            self.recorder.add(f"Multiplying equation (2) by {m2}")
+            self.recorder.add_operation(f"Multiplying equation (2) by {m2}")
 
         elif mult1 and mult2:
-            self.recorder.add(f"Multiplying equation (1) by {m1}")
-            self.recorder.add(f"Multiplying equation (2) by {m2}")
-
-
-        if abs(m1) == 1:
-            m1 = 1
-
-        if abs(m2) == 1:
-            m2 = 1
-
-
-        # -----------------------------
-        # build multiplied equations
-        # -----------------------------
+            self.recorder.add_operation(f"Multiplying equation (1) by {m1}")
+            self.recorder.add_operation(f"Multiplying equation (2) by {m2}")
 
         A1 = a1 * m1
         B1 = b1 * m1
@@ -193,68 +170,79 @@ class EliminationSolver:
         B2 = b2 * m2
         C2 = c2 * m2
 
-
         eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
         eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
-
 
         self.recorder.add_equation(eq_line1)
         self.recorder.add_equation(eq_line2)
 
-        # -----------------------------
-        # elimination
-        # -----------------------------
-
         if var == "y":
 
             if B1 + B2 == 0:
-
                 A = A1 + A2
                 C = C1 + C2
-                result_line = f"{A}x = {C}"
-
                 self.recorder.add_operation("Adding equations")
             else:
-
                 A = A1 - A2
                 C = C1 - C2
-                result_line = f"{A}x = {C}"
+                self.recorder.add_operation("Subtracting equations")
 
-                self.recorder.add("Subtracting equations")
+            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
 
+            x_value = sp.simplify(C / A)
+            self.recorder.add(f"x = {sp.latex(x_value)}")
 
-            self.recorder.add_vertical(eq_line1, eq_line2, result_line)
+            self.recorder.add(f"Substitute x = {sp.latex(x_value)} in equation ({n1})")
+            b1_term = self._term(b1, "y")
+            self.recorder.add(f"{sp.latex(a1)}({sp.latex(x_value)}) + {b1_term} = {sp.latex(c1)}")
 
-            self.recorder.add(result_line)
+            lhs = sp.simplify(a1 * x_value)
+            self.recorder.add(f"{sp.latex(lhs)} + {b1_term} = {sp.latex(c1)}")
 
-            x_value = C / A
-            self.recorder.add(f"x = {x_value}")
+            rhs = sp.simplify(c1 - lhs)
+            equation_rhs_line = f"{b1_term} = {sp.latex(rhs)}"
 
+            y_value = sp.simplify(rhs / b1)
+            final_y_line = f"y = {sp.latex(y_value)}"
 
-            # -----------------------------
-            # substitution
-            # -----------------------------
+            if equation_rhs_line != final_y_line:
+                self.recorder.add(equation_rhs_line)
 
-            self.recorder.add(f"Substitute x = {x_value} in equation ({n1})")
+            self.recorder.add(final_y_line)
 
-            self.recorder.add(f"{a1}({x_value}) + {b1}y = {c1}")
+        else:
 
-            lhs = a1 * x_value
+            if A1 + A2 == 0:
+                B = B1 + B2
+                C = C1 + C2
+                self.recorder.add_operation("Adding equations")
+            else:
+                B = B1 - B2
+                C = C1 - C2
+                self.recorder.add_operation("Subtracting equations")
 
-            self.recorder.add(f"{lhs} + {b1}y = {c1}")
+            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
 
-            rhs = c1 - lhs
+            y_value = sp.simplify(C / B)
+            self.recorder.add(f"y = {sp.latex(y_value)}")
 
-            self.recorder.add(f"{b1}y = {rhs}")
+            self.recorder.add(f"Substitute y = {sp.latex(y_value)} in equation ({n1})")
+            a1_term = self._term(a1, "x")
+            substituted = sp.simplify(b1 * y_value)
+            self.recorder.add(f"{a1_term} + ({sp.latex(substituted)}) = {sp.latex(c1)}")
 
-            y_value = rhs / b1
+            lhs = substituted
+            self.recorder.add(f"{a1_term} + {sp.latex(lhs)} = {sp.latex(c1)}")
 
-            self.recorder.add(f"y = {y_value}")
+            rhs = sp.simplify(c1 - lhs)
+            self.recorder.add(f"{a1_term} = {sp.latex(rhs)}")
 
-
-        # -----------------------------
-        # verification using sympy
-        # -----------------------------
+            x_value = sp.simplify(rhs / a1)
+            self.recorder.add(f"x = {sp.latex(x_value)}")
 
         x = sp.Symbol(self.eq1.var1)
         y = sp.Symbol(self.eq1.var2)
@@ -263,7 +251,6 @@ class EliminationSolver:
         eq2 = self.eq2.sympy_equation()
 
         solution = sp.solve((eq1, eq2), (x, y))
-
 
         print("\nRecorded Steps:\n")
 

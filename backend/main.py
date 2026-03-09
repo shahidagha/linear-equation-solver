@@ -5,7 +5,7 @@ from math_engine.system import EquationSystem
 from solver.elimination_solver import EliminationSolver
 from solver.graphical_solver import GraphicalSolver
 
-from latex.latex_step_renderer import LatexStepRenderer
+from latex.latex_generator import LatexGenerator
 
 
 # -----------------------------
@@ -90,9 +90,9 @@ for step in solver.recorder.get_steps():
 # Generate LaTeX
 # -----------------------------
 
-renderer = LatexStepRenderer(solver.recorder.get_steps())
+latex = LatexGenerator(solver.recorder.get_steps())
 
-latex_output = renderer.generate()
+latex_output = latex.generate()
 
 print("\nLaTeX Output:\n")
 print(latex_output)

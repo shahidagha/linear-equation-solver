@@ -1,0 +1,28 @@
+<app-position-controls></app-position-controls>
+
+<div>
+  <strong>Term 1</strong>
+  <app-term-input
+    (termChange)="term1 = $event; updatePreview()">
+  </app-term-input>
+</div>
+
+<div>
+  <strong>Term 2</strong>
+  <app-term-input
+    (termChange)="term2 = $event; updatePreview()">
+  </app-term-input>
+</div>
+
+<div>
+  <strong>Constant</strong>
+  <app-term-input
+    (termChange)="constant = $event; updatePreview()">
+  </app-term-input>
+</div>
+
+<h4>Preview</h4>
+
+<app-equation-preview
+  [equation]="equationLatex">
+</app-equation-preview>

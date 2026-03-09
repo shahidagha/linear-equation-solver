@@ -1,0 +1,28 @@
+.solver-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.solver-header {
+  padding: 16px;
+  font-size: 24px;
+  font-weight: bold;
+  border-bottom: 1px solid #ddd;
+}
+
+.solver-main {
+  flex: 1;
+  display: flex;
+}
+
+.input-panel {
+  width: 45%;
+  border-right: 1px solid #ddd;
+  padding: 20px;
+}
+
+.solution-panel {
+  width: 55%;
+  padding: 20px;
+}

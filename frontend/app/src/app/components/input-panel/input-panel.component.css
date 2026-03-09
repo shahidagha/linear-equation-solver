@@ -1,21 +1,22 @@
 .input-panel-stack {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 14px;
 }
 
 .solve-row {
   display: flex;
   justify-content: center;
+  padding-top: 2px;
 }
 
 .solve-btn {
   border: 0;
   background: #4f6ef7;
   color: #ffffff;
-  border-radius: 14px;
+  border-radius: 12px;
   min-width: 220px;
-  height: 48px;
+  height: 44px;
   padding: 0 24px;
   font-size: 15px;
   font-weight: 600;

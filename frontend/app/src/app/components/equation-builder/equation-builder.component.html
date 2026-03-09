@@ -13,37 +13,41 @@
     (positionsChange)="onPositionsChange($event)">
   </app-position-controls>
 
-  <div class="frame-row">
+  <div
+    class="frame-row"
+    cdkDropList
+    [cdkDropListData]="orderedFrames"
+    cdkDropListOrientation="horizontal"
+    (cdkDropListDropped)="onFrameDrop($event)">
     <ng-container *ngFor="let frame of orderedFrames">
-      <app-term-input
-        *ngIf="frame.key === 'term1'"
-        label="First Term"
-        [variable]="variable1"
-        (termChange)="onTerm1Change($event)">
-      </app-term-input>
+      <div class="frame-slot" cdkDrag>
+        <div class="drag-handle" cdkDragHandle title="Drag to reorder">⋮⋮</div>
 
-      <app-term-input
-        *ngIf="frame.key === 'term2'"
-        label="Second Term"
-        [variable]="variable2"
-        (termChange)="onTerm2Change($event)">
-      </app-term-input>
+        <app-term-input
+          *ngIf="frame.key === 'term1'"
+          [variable]="variable1"
+          (termChange)="onTerm1Change($event)">
+        </app-term-input>
 
-      <div *ngIf="frame.key === 'equals'" class="equals-frame">
-        <div class="frame-title">Equals</div>
-        <div class="equals-symbol">{{ equalsDisplay }}</div>
+        <app-term-input
+          *ngIf="frame.key === 'term2'"
+          [variable]="variable2"
+          (termChange)="onTerm2Change($event)">
+        </app-term-input>
+
+        <div *ngIf="frame.key === 'equals'" class="equals-frame">
+          <div class="equals-symbol">{{ equalsDisplay }}</div>
+        </div>
+
+        <app-term-input
+          *ngIf="frame.key === 'constant'"
+          (termChange)="onConstantChange($event)">
+        </app-term-input>
       </div>
-
-      <app-term-input
-        *ngIf="frame.key === 'constant'"
-        label="Constant"
-        (termChange)="onConstantChange($event)">
-      </app-term-input>
     </ng-container>
   </div>
 
   <div class="preview-section">
-    <h4>Preview</h4>
     <app-equation-preview [equation]="equationLatex"></app-equation-preview>
   </div>
 </section>

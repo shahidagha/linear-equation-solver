@@ -1,7 +1,7 @@
 .position-layout {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  column-gap: 16px;
 }
 
 .position-col {
@@ -11,20 +11,20 @@
 }
 
 .position-label {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 14px;
+  color: #1a1a1a;
   font-weight: 600;
 }
 
 .pill-row {
   display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
+  gap: 4px;
 }
 
 .pill-btn {
   flex: 1;
-  height: 30px;
+  min-width: 0;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid #dbe2ef;
   background: #ffffff;
@@ -36,13 +36,14 @@
 }
 
 .pill-btn:hover {
-  border-color: #7bc6ff;
-  background: #f1f8ff;
+  border-color: #4f6ef7;
+  color: #2f49b8;
+  background: #f3f6ff;
 }
 
 .pill-btn.active {
   border-color: #4f6ef7;
   background: #4f6ef7;
   color: #ffffff;
-  box-shadow: 0 8px 14px rgba(79, 110, 247, 0.24);
+  box-shadow: 0 6px 12px rgba(79, 110, 247, 0.24);
 }

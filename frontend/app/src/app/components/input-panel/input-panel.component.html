@@ -1,20 +1,24 @@
-<app-variable-selector
-  [variable1]="variable1"
-  [variable2]="variable2"
-  (variable1Change)="onVariable1Change($event)"
-  (variable2Change)="onVariable2Change($event)">
-</app-variable-selector>
+<div class="input-panel-stack">
+  <app-variable-selector
+    [variable1]="variable1"
+    [variable2]="variable2"
+    (variable1Change)="onVariable1Change($event)"
+    (variable2Change)="onVariable2Change($event)">
+  </app-variable-selector>
 
-<hr>
+  <app-equation-builder
+    title="Equation 1"
+    [variable1]="variable1"
+    [variable2]="variable2">
+  </app-equation-builder>
 
-<h3>Equation 1</h3>
-<app-equation-builder
-  [variable1]="variable1"
-  [variable2]="variable2">
-</app-equation-builder>
+  <app-equation-builder
+    title="Equation 2"
+    [variable1]="variable1"
+    [variable2]="variable2">
+  </app-equation-builder>
 
-<h3>Equation 2</h3>
-<app-equation-builder
-  [variable1]="variable1"
-  [variable2]="variable2">
-</app-equation-builder>
+  <div class="solve-row">
+    <button type="button" class="solve-btn">Solve System</button>
+  </div>
+</div>

@@ -1,31 +1,29 @@
-<div class="term-row">
+<div class="term-frame">
+  <div class="frame-title">{{ label }}</div>
 
-<select [(ngModel)]="term.sign"
-        (ngModelChange)="updateTerm()">
-  <option [ngValue]="1">+</option>
-  <option [ngValue]="-1">−</option>
-</select>
+  <div class="editor-layout">
+    <button
+      type="button"
+      class="sign-toggle"
+      [class.negative]="term.sign === -1"
+      (click)="term.sign = term.sign === 1 ? -1 : 1; updateTerm()">
+      {{ term.sign === 1 ? '+' : '−' }}
+    </button>
 
-<input type="number"
-       [(ngModel)]="term.numCoeff"
-       (ngModelChange)="updateTerm()">
+    <div class="fraction-editor">
+      <div class="fraction-row">
+        <input type="number" [(ngModel)]="term.numCoeff" (ngModelChange)="updateTerm()">
+        <span class="sqrt">√</span>
+        <input type="number" [(ngModel)]="term.numRad" (ngModelChange)="updateTerm()">
+      </div>
+      <div class="fraction-bar"></div>
+      <div class="fraction-row">
+        <input type="number" [(ngModel)]="term.denCoeff" (ngModelChange)="updateTerm()">
+        <span class="sqrt">√</span>
+        <input type="number" [(ngModel)]="term.denRad" (ngModelChange)="updateTerm()">
+      </div>
+    </div>
 
-√
-
-<input type="number"
-       [(ngModel)]="term.numRad"
-       (ngModelChange)="updateTerm()">
-
-/
-
-<input type="number"
-       [(ngModel)]="term.denCoeff"
-       (ngModelChange)="updateTerm()">
-
-√
-
-<input type="number"
-       [(ngModel)]="term.denRad"
-       (ngModelChange)="updateTerm()">
-
+    <div class="variable-chip" *ngIf="variable">{{ variable }}</div>
+  </div>
 </div>

@@ -1,5 +1,5 @@
 <div class="term-frame">
-  <div class="editor-layout">
+  <div class="term-inner">
     <button
       type="button"
       class="sign-toggle"
@@ -8,13 +8,13 @@
       {{ term.sign === 1 ? '+' : '−' }}
     </button>
 
-    <div class="fraction-editor">
+    <div class="fraction">
       <div class="fraction-row">
         <input type="number" [(ngModel)]="term.numCoeff" (ngModelChange)="updateTerm()">
         <span class="sqrt">√</span>
         <input type="number" [(ngModel)]="term.numRad" (ngModelChange)="updateTerm()">
       </div>
-      <div class="fraction-bar"></div>
+      <div class="fraction-line"></div>
       <div class="fraction-row">
         <input type="number" [(ngModel)]="term.denCoeff" (ngModelChange)="updateTerm()">
         <span class="sqrt">√</span>

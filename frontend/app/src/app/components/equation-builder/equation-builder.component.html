@@ -1,28 +1,49 @@
-<app-position-controls></app-position-controls>
+<section class="equation-card">
+  <h3>{{ title }}</h3>
 
-<div>
-  <strong>Term 1</strong>
-  <app-term-input
-    (termChange)="onTerm1Change($event)">
-  </app-term-input>
-</div>
+  <div class="meta-label-row">
+    <span>First Term</span>
+    <span>Second Term</span>
+    <span>Equals</span>
+    <span>Constant</span>
+  </div>
 
-<div>
-  <strong>Term 2</strong>
-  <app-term-input
-    (termChange)="onTerm2Change($event)">
-  </app-term-input>
-</div>
+  <app-position-controls
+    [positions]="positions"
+    (positionsChange)="onPositionsChange($event)">
+  </app-position-controls>
 
-<div>
-  <strong>Constant</strong>
-  <app-term-input
-    (termChange)="onConstantChange($event)">
-  </app-term-input>
-</div>
+  <div class="frame-row">
+    <ng-container *ngFor="let frame of orderedFrames">
+      <app-term-input
+        *ngIf="frame.key === 'term1'"
+        label="First Term"
+        [variable]="variable1"
+        (termChange)="onTerm1Change($event)">
+      </app-term-input>
 
-<h4>Preview</h4>
+      <app-term-input
+        *ngIf="frame.key === 'term2'"
+        label="Second Term"
+        [variable]="variable2"
+        (termChange)="onTerm2Change($event)">
+      </app-term-input>
 
-<app-equation-preview
-  [equation]="equationLatex">
-</app-equation-preview>
+      <div *ngIf="frame.key === 'equals'" class="equals-frame">
+        <div class="frame-title">Equals</div>
+        <div class="equals-symbol">{{ equalsDisplay }}</div>
+      </div>
+
+      <app-term-input
+        *ngIf="frame.key === 'constant'"
+        label="Constant"
+        (termChange)="onConstantChange($event)">
+      </app-term-input>
+    </ng-container>
+  </div>
+
+  <div class="preview-section">
+    <h4>Preview</h4>
+    <app-equation-preview [equation]="equationLatex"></app-equation-preview>
+  </div>
+</section>

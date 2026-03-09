@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Term } from '../../models/term.model';
@@ -11,6 +11,8 @@ import { Term } from '../../models/term.model';
   styleUrl: './term-input.component.css'
 })
 export class TermInputComponent {
+  @Input() label = 'Term';
+  @Input() variable = '';
 
   term: Term = {
     sign: 1,
@@ -29,5 +31,4 @@ export class TermInputComponent {
   updateTerm() {
     this.termChange.emit({ ...this.term });
   }
-
 }

@@ -1,28 +1,63 @@
 .solver-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f7fb;
+  color: #1a1a1a;
+  font-family: Inter, "Segoe UI", Roboto, sans-serif;
 }
 
 .solver-header {
-  padding: 16px;
-  font-size: 24px;
-  font-weight: bold;
-  border-bottom: 1px solid #ddd;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e4e8f0;
+  background: #ffffff;
+}
+
+.solver-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.solver-header p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .solver-main {
-  flex: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: 45% 55%;
+  gap: 24px;
+  padding: 24px;
 }
 
-.input-panel {
-  width: 45%;
-  border-right: 1px solid #ddd;
-  padding: 20px;
-}
-
+.input-panel,
 .solution-panel {
-  width: 55%;
-  padding: 20px;
+  min-width: 0;
+}
+
+.solution-placeholder-card {
+  background: #ffffff;
+  border: 1px solid #e4e8f0;
+  border-radius: 16px;
+  min-height: 180px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
+}
+
+.solution-placeholder-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.solution-placeholder-card p {
+  margin: 0;
+  color: #6b7280;
+}
+
+@media (max-width: 1120px) {
+  .solver-main {
+    grid-template-columns: 1fr;
+  }
 }

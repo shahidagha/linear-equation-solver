@@ -5,8 +5,17 @@ import { Term } from '../../models/term.model';
 import { constantToLatex, variableCoeffToLatex } from '../../utils/latex-generator';
 
 import { TermInputComponent } from '../term-input/term-input.component';
-import { PositionControlsComponent } from '../position-controls/position-controls.component';
+import {
+  FrameKey,
+  FramePositions,
+  PositionControlsComponent
+} from '../position-controls/position-controls.component';
 import { EquationPreviewComponent } from '../equation-preview/equation-preview.component';
+
+interface FrameItem {
+  key: FrameKey;
+  label: string;
+}
 
 @Component({
   selector: 'app-equation-builder',
@@ -21,7 +30,7 @@ import { EquationPreviewComponent } from '../equation-preview/equation-preview.c
   styleUrl: './equation-builder.component.css'
 })
 export class EquationBuilderComponent implements OnInit, OnChanges {
-
+  @Input() title = 'Equation';
   @Input() variable1 = 'x';
   @Input() variable2 = 'y';
 
@@ -49,6 +58,20 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
     denRad: 1
   };
 
+  positions: FramePositions = {
+    term1: 1,
+    term2: 2,
+    equals: 3,
+    constant: 4
+  };
+
+  readonly frameItems: FrameItem[] = [
+    { key: 'term1', label: 'First Term' },
+    { key: 'term2', label: 'Second Term' },
+    { key: 'equals', label: 'Equals' },
+    { key: 'constant', label: 'Constant' }
+  ];
+
   equationLatex = '';
 
   ngOnInit(): void {
@@ -57,6 +80,28 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
 
   ngOnChanges(_changes: SimpleChanges): void {
     this.updatePreview();
+  }
+
+  get orderedFrames(): FrameItem[] {
+    return [...this.frameItems].sort((a, b) => this.positions[a.key] - this.positions[b.key]);
+  }
+
+  get equalsDisplay(): string {
+    const equalsPosition = this.positions.equals;
+
+    if (equalsPosition === 1) {
+      return '0 =';
+    }
+
+    if (equalsPosition === 4) {
+      return '= 0';
+    }
+
+    return '=';
+  }
+
+  onPositionsChange(updated: FramePositions): void {
+    this.positions = updated;
   }
 
   onTerm1Change(term: Term): void {

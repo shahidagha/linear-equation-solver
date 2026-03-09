@@ -1,5 +1,5 @@
 export interface Term {
-  sign: number;
+  sign: 1 | -1;
   numCoeff: number;
   numRad: number;
   denCoeff: number;

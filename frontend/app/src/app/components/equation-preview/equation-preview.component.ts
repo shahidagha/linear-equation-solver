@@ -1,4 +1,4 @@
-import { Component, Input, ElementRef, OnChanges } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
 import katex from 'katex';
 
 @Component({
@@ -7,29 +7,42 @@ import katex from 'katex';
   templateUrl: './equation-preview.component.html',
   styleUrl: './equation-preview.component.css'
 })
-export class EquationPreviewComponent implements OnChanges {
+export class EquationPreviewComponent implements OnChanges, AfterViewInit {
 
-  @Input() equation: string = '';
+  @Input() equation = '';
 
-  constructor(private el: ElementRef) {}
+  @ViewChild('equationContainer', { static: true })
+  equationContainer!: ElementRef<HTMLDivElement>;
 
-  ngOnChanges() {
+  private viewInitialized = false;
 
-    const container = this.el.nativeElement.querySelector('#equation');
+  ngAfterViewInit(): void {
+    this.viewInitialized = true;
+    this.renderEquation();
+  }
 
-    if (!container) return;
+  ngOnChanges(_changes: SimpleChanges): void {
+    this.renderEquation();
+  }
 
-    if (!this.equation) {
-      container.innerHTML = '';
+  private renderEquation(): void {
+    if (!this.viewInitialized || !this.equationContainer) {
+      return;
+    }
+
+    const container = this.equationContainer.nativeElement;
+
+    if (!this.equation?.trim()) {
+      container.textContent = '';
       return;
     }
 
     try {
-      katex.render(this.equation, container);
+      katex.render(this.equation, container, {
+        throwOnError: false,
+      });
     } catch {
-      container.innerHTML = this.equation;
+      container.textContent = this.equation;
     }
-
   }
-
 }

@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { Term } from '../../models/term.model';
-import { termToLatex } from '../../utils/latex-generator';
+import { constantToLatex, variableCoeffToLatex } from '../../utils/latex-generator';
 
 import { TermInputComponent } from '../term-input/term-input.component';
 import { PositionControlsComponent } from '../position-controls/position-controls.component';
@@ -20,9 +20,8 @@ import { EquationPreviewComponent } from '../equation-preview/equation-preview.c
   templateUrl: './equation-builder.component.html',
   styleUrl: './equation-builder.component.css'
 })
-export class EquationBuilderComponent {
+export class EquationBuilderComponent implements OnInit {
 
-  // initialize default terms so preview works immediately
   term1: Term = {
     sign: 1,
     numCoeff: 1,
@@ -47,27 +46,33 @@ export class EquationBuilderComponent {
     denRad: 1
   };
 
-  equationLatex: string = '';
+  equationLatex = '';
 
-  updatePreview() {
-
-  const t1 = termToLatex(this.term1);
-  const t2 = termToLatex(this.term2);
-  const c = termToLatex(this.constant);
-
-  let equation = `${t1}x`;
-
-  if (this.term2.sign === -1) {
-    equation += ` - ${t2}y`;
-  } else {
-    equation += ` + ${t2}y`;
+  ngOnInit(): void {
+    this.updatePreview();
   }
 
-  equation += ` = ${c}`;
+  onTerm1Change(term: Term): void {
+    this.term1 = term;
+    this.updatePreview();
+  }
 
-  this.equationLatex = equation;
+  onTerm2Change(term: Term): void {
+    this.term2 = term;
+    this.updatePreview();
+  }
 
-  console.log("EQUATION:", this.equationLatex);
-}
+  onConstantChange(term: Term): void {
+    this.constant = term;
+    this.updatePreview();
+  }
 
+  updatePreview(): void {
+    const left = `${variableCoeffToLatex(this.term1)}x`;
+    const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}y`;
+    const operator = this.term2.sign === -1 ? ' - ' : ' + ';
+    const constant = constantToLatex(this.constant);
+
+    this.equationLatex = `${left}${operator}${rightVariable} = ${constant}`;
+  }
 }

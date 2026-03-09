@@ -3,21 +3,21 @@
 <div>
   <strong>Term 1</strong>
   <app-term-input
-    (termChange)="term1 = $event; updatePreview()">
+    (termChange)="onTerm1Change($event)">
   </app-term-input>
 </div>
 
 <div>
   <strong>Term 2</strong>
   <app-term-input
-    (termChange)="term2 = $event; updatePreview()">
+    (termChange)="onTerm2Change($event)">
   </app-term-input>
 </div>
 
 <div>
   <strong>Constant</strong>
   <app-term-input
-    (termChange)="constant = $event; updatePreview()">
+    (termChange)="onConstantChange($event)">
   </app-term-input>
 </div>
 

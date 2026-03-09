@@ -22,9 +22,12 @@ export class TermInputComponent {
 
   @Output() termChange = new EventEmitter<Term>();
 
+  ngOnInit() {
+    this.updateTerm();
+  }
+
   updateTerm() {
-    console.log("Term changed:", this.term);
-    this.termChange.emit(this.term);
+    this.termChange.emit({ ...this.term });
   }
 
 }

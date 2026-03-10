@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models.equation_models import EquationSystem
 from utils.hash_utils import generate_equation_hash, generate_system_hash
+from utils.canonical_encoder import canonicalize_equation
 
 
 def save_equation_system(db: Session, payload: dict):
@@ -14,12 +15,29 @@ def save_equation_system(db: Session, payload: dict):
     eq1 = payload["equation1"]
     eq2 = payload["equation2"]
 
-    # Generate hashes
-    equation_hash = generate_equation_hash(eq1, eq2)
-    system_hash = generate_system_hash(var1, var2, eq1, eq2)
+    # ---------------------------------------------------
+    # Reject identical equations
+    # ---------------------------------------------------
+
+    eq1_canonical = canonicalize_equation(eq1)
+    eq2_canonical = canonicalize_equation(eq2)
+
+    if eq1_canonical == eq2_canonical:
+        return {
+            "status": "invalid",
+            "message": "Both equations are identical. A valid system requires two different equations."
+        }
 
     # ---------------------------------------------------
-    # Check for exact duplicate
+    # Generate hashes
+    # ---------------------------------------------------
+
+    equation_hash = generate_equation_hash(eq1, eq2)
+    system_hash = generate_system_hash(var1, var2, eq1, eq2)
+    print("EQUATION HASH:", equation_hash)
+    print("SYSTEM HASH:", system_hash)
+    # ---------------------------------------------------
+    # Check exact duplicate
     # ---------------------------------------------------
 
     existing_system = (
@@ -74,3 +92,27 @@ def save_equation_system(db: Session, payload: dict):
         "status": "saved",
         "id": new_system.id
     }
+
+def get_saved_systems(db: Session):
+        """
+        Return all saved equation systems
+        """
+
+        systems = (
+            db.query(EquationSystem)
+            .order_by(EquationSystem.id.desc())
+            .all()
+        )
+
+        result = []
+
+        for s in systems:
+
+            result.append({
+                "id": s.id,
+                "variables": s.variables,
+                "equation1": s.equation1,
+                "equation2": s.equation2
+            })
+
+        return result

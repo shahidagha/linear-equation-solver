@@ -14,4 +14,12 @@ export class EquationApiService {
     return this.http.post(`${this.apiUrl}/save-system`, payload);
   }
 
+  solveSystem(payload: any) {
+    return this.http.post(`${this.apiUrl}/solve-system`, payload);
+  }
+
+  getSystems() {
+    return this.http.get(`${this.apiUrl}/systems`);
+  }
+
 }

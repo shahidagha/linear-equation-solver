@@ -1,0 +1,25 @@
+<h3>Saved Systems</h3>
+
+<div *ngFor="let sys of systems" class="system-card">
+
+  <div class="equation">
+    {{ buildEquation(sys.equation1, sys.variables) }}
+  </div>
+
+  <div class="equation">
+    {{ buildEquation(sys.equation2, sys.variables) }}
+  </div>
+
+  <div class="actions">
+
+    <button (click)="showSolution(sys)">
+      Show Solution
+    </button>
+
+    <button (click)="deleteSystem(sys.id)">
+      Delete
+    </button>
+
+  </div>
+
+</div>

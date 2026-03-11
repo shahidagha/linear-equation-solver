@@ -18,6 +18,11 @@ interface FrameItem {
   label: string;
 }
 
+interface SignedExpressionTerm {
+  sign: 1 | -1;
+  value: string;
+}
+
 @Component({
   selector: 'app-equation-builder',
   standalone: true,
@@ -84,6 +89,7 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
 
   onPositionsChange(updated: FramePositions): void {
     this.positions = updated;
+    this.updatePreview();
   }
 
   onFrameDrop(event: CdkDragDrop<FrameItem[]>): void {
@@ -100,6 +106,7 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
     });
 
     this.positions = nextPositions;
+    this.updatePreview();
   }
 
   onTerm1Change(term: Term): void {
@@ -118,21 +125,74 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   }
 
   updatePreview(): void {
+    const orderedKeys = [...this.frameItems]
+      .sort((a, b) => this.positions[a.key] - this.positions[b.key])
+      .map((frame) => frame.key);
 
-  const left = `${variableCoeffToLatex(this.term1)}${this.variable1}`;
-  const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`;
-  const operator = this.term2.sign === -1 ? ' - ' : ' + ';
-  const constant = constantToLatex(this.constant);
+    const equalsIndex = orderedKeys.indexOf('equals');
+    const leftKeys = orderedKeys.slice(0, equalsIndex);
+    const rightKeys = orderedKeys.slice(equalsIndex + 1);
 
-  this.equationLatex = `${left}${operator}${rightVariable} = ${constant}`;
-  // Emit equation data to parent
-  this.equationChange.emit({
-    positions: this.positions,
-    term1: this.term1,
-    term2: this.term2,
-    constant: this.constant
-  });
+    const leftExpression = this.buildSide(leftKeys);
+    const rightExpression = this.buildSide(rightKeys);
 
-}
+    this.equationLatex = `${leftExpression} = ${rightExpression}`;
+
+    this.equationChange.emit({
+      positions: this.positions,
+      term1: this.term1,
+      term2: this.term2,
+      constant: this.constant
+    });
+  }
+
+  private buildSide(keys: FrameKey[]): string {
+    const terms = keys
+      .map((key) => this.frameKeyToTerm(key))
+      .filter((term): term is SignedExpressionTerm => term !== null);
+
+    return this.joinTerms(terms);
+  }
+
+  private frameKeyToTerm(key: FrameKey): SignedExpressionTerm | null {
+    if (key === 'equals') {
+      return null;
+    }
+
+    if (key === 'constant') {
+      return {
+        sign: this.constant.sign as 1 | -1,
+        value: constantToLatex({ ...this.constant, sign: 1 })
+      };
+    }
+
+    if (key === 'term1') {
+      return {
+        sign: this.term1.sign as 1 | -1,
+        value: `${variableCoeffToLatex({ ...this.term1, sign: 1 })}${this.variable1}`
+      };
+    }
+
+    return {
+      sign: this.term2.sign as 1 | -1,
+      value: `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`
+    };
+  }
+
+  private joinTerms(terms: SignedExpressionTerm[]): string {
+    if (terms.length === 0) {
+      return '0';
+    }
+
+    return terms
+      .map((term, index) => {
+        if (index === 0) {
+          return term.sign === -1 ? `-${term.value}` : term.value;
+        }
+
+        return term.sign === -1 ? ` - ${term.value}` : ` + ${term.value}`;
+      })
+      .join('');
+  }
  
 }

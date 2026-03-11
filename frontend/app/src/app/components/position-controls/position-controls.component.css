@@ -10,15 +10,16 @@
 
 .pill-row {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
+  justify-content: space-between;
 }
 
 .pill-btn {
-  flex: 1;
-  min-width: 0;
-  height: 28px;
-  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
   border: 1px solid #dbe2ef;
   background: #ffffff;
   color: #4b5563;

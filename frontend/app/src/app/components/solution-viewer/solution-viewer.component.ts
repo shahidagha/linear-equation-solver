@@ -16,9 +16,14 @@ export class SolutionViewerComponent {
   @Input() response: SolverResponse | null = null;
 
   selectedMethod = 'elimination';
+  selectedSavedSystem: any = null;
 
   onMethodSelected(method: string): void {
     this.selectedMethod = method;
+  }
+
+  onSavedSystemSelected(system: any): void {
+    this.selectedSavedSystem = system;
   }
 
   keepOriginalOrder = (a: KeyValue<string, unknown>, b: KeyValue<string, unknown>): number => 0;

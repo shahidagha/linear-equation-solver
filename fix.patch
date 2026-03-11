@@ -1,0 +1,1255 @@
+diff --git a/backend/services/equation_service.py b/backend/services/equation_service.py
+index e105856b2b25352537168287e96804c6a35e3e44..e71fd1996746a13365179f202db684441d17cd83 100644
+--- a/backend/services/equation_service.py
++++ b/backend/services/equation_service.py
+@@ -12,52 +12,50 @@ def save_equation_system(db: Session, payload: dict):
+     var1 = payload["variables"]["var1"]
+     var2 = payload["variables"]["var2"]
+ 
+     eq1 = payload["equation1"]
+     eq2 = payload["equation2"]
+ 
+     # ---------------------------------------------------
+     # Reject identical equations
+     # ---------------------------------------------------
+ 
+     eq1_canonical = canonicalize_equation(eq1)
+     eq2_canonical = canonicalize_equation(eq2)
+ 
+     if eq1_canonical == eq2_canonical:
+         return {
+             "status": "invalid",
+             "message": "Both equations are identical. A valid system requires two different equations."
+         }
+ 
+     # ---------------------------------------------------
+     # Generate hashes
+     # ---------------------------------------------------
+ 
+     equation_hash = generate_equation_hash(eq1, eq2)
+     system_hash = generate_system_hash(var1, var2, eq1, eq2)
+-    print("EQUATION HASH:", equation_hash)
+-    print("SYSTEM HASH:", system_hash)
+     # ---------------------------------------------------
+     # Check exact duplicate
+     # ---------------------------------------------------
+ 
+     existing_system = (
+         db.query(EquationSystem)
+         .filter(EquationSystem.system_hash == system_hash)
+         .first()
+     )
+ 
+     if existing_system:
+         return {
+             "status": "duplicate",
+             "message": "This equation system already exists."
+         }
+ 
+     # ---------------------------------------------------
+     # Check same equations but different variables
+     # ---------------------------------------------------
+ 
+     existing_equation = (
+         db.query(EquationSystem)
+         .filter(EquationSystem.equation_hash == equation_hash)
+         .first()
+     )
+@@ -72,47 +70,46 @@ def save_equation_system(db: Session, payload: dict):
+             "existing_variables": old_vars
+         }
+ 
+     # ---------------------------------------------------
+     # Save new system
+     # ---------------------------------------------------
+ 
+     new_system = EquationSystem(
+         variables=payload["variables"],
+         equation1=payload["equation1"],
+         equation2=payload["equation2"],
+         equation_hash=equation_hash,
+         system_hash=system_hash
+     )
+ 
+     db.add(new_system)
+     db.commit()
+     db.refresh(new_system)
+ 
+     return {
+         "status": "saved",
+         "id": new_system.id
+     }
+ 
+ def get_saved_systems(db: Session):
+-        """
+-        Return all saved equation systems
+-        """
+-
+-        systems = (
+-            db.query(EquationSystem)
+-            .order_by(EquationSystem.id.desc())
+-            .all()
+-        )
++    """
++    Return all saved equation systems
++    """
+ 
+-        result = []
++    systems = (
++        db.query(EquationSystem)
++        .order_by(EquationSystem.id.desc())
++        .all()
++    )
+ 
+-        for s in systems:
++    result = []
+ 
+-            result.append({
+-                "id": s.id,
+-                "variables": s.variables,
+-                "equation1": s.equation1,
+-                "equation2": s.equation2
+-            })
++    for s in systems:
++        result.append({
++            "id": s.id,
++            "variables": s.variables,
++            "equation1": s.equation1,
++            "equation2": s.equation2
++        })
+ 
+-        return result
+\ No newline at end of file
++    return result
+\ No newline at end of file
+diff --git a/backend/services/solver_service.py b/backend/services/solver_service.py
+index fbf9ef9ba8e17d62a1abfdad92028b837607a951..e3b1a501b3b33d2c3915f701ea6fc679bac41e11 100644
+--- a/backend/services/solver_service.py
++++ b/backend/services/solver_service.py
+@@ -1,234 +1,134 @@
+-from math_engine.fraction_surd import FractionSurd
++from sqlalchemy.orm import Session
++
+ from math_engine.equation import Equation
++from math_engine.fraction_surd import FractionSurd
+ from math_engine.system import EquationSystem
+-from models.equation_models import EquationSystem as EquationSystemModel
++from models.solution_methods import SolutionMethod
+ from solver.elimination_solver import EliminationSolver
+ from solver.graphical_solver import GraphicalSolver
+-from utils.hash_utils import generate_equation_hash, generate_system_hash
+-from sqlalchemy.orm import Session
+-from models.solution_methods import SolutionMethod
++
++
+ def build_fraction_surd(term: dict):
+-    """
+-    Convert frontend term JSON into FractionSurd object
+-    """
++    """Convert frontend term JSON into FractionSurd object."""
+ 
+     sign = term["sign"]
+-    numCoeff = term["numCoeff"]
+-    numRad = term["numRad"]
+-    denCoeff = term["denCoeff"]
+-    denRad = term["denRad"]
+-
+-    numCoeff = sign * numCoeff
+-
+-    return FractionSurd(
+-        numCoeff,
+-        numRad,
+-        denCoeff,
+-        denRad,
+-        1
+-    )
++    num_coeff = term["numCoeff"]
++    num_rad = term["numRad"]
++    den_coeff = term["denCoeff"]
++    den_rad = term["denRad"]
++
++    num_coeff = sign * num_coeff
++
++    return FractionSurd(num_coeff, num_rad, den_coeff, den_rad, 1)
+ 
+ 
+ def to_python_number(value):
+-    """
+-    Convert SymPy numbers to Python numbers
+-    """
++    """Convert SymPy numbers to JSON-safe values without float conversion."""
++
+     try:
+         return int(value)
+-    except:
+-        try:
+-            return float(value)
+-        except:
+-            return str(value)
++    except Exception:
++        return str(value)
++
+ 
+ def convert_points(points):
+-    """
+-    Convert graph points to JSON-safe numbers
+-    """
++    """Convert graph points to JSON-safe numbers."""
+ 
+     clean = []
+ 
+     for p in points:
+-
+         x = to_python_number(p[0])
+         y = to_python_number(p[1])
+-
+         clean.append([x, y])
+ 
+     return clean
+ 
++
+ def solve_system(db: Session, system_id: int, payload: dict):
+-    # -----------------------------
+-    # Extract data
+-    # -----------------------------
+-    print("SOLVER SERVICE STARTED")
+     var1 = payload["variables"]["var1"]
+     var2 = payload["variables"]["var2"]
+ 
+     eq1_data = payload["equation1"]
+     eq2_data = payload["equation2"]
+ 
+-    # -----------------------------
+-    # Generate hashes for duplicate detection
+-    # -----------------------------
+-
+-    equation_hash = generate_equation_hash(eq1_data, eq2_data)
+-    system_hash = generate_system_hash(var1, var2, eq1_data, eq2_data)
+-
+-    # -----------------------------
+-    # Check exact duplicate
+-    # -----------------------------
+-
+-
+-    # -----------------------------
+-    # Check same equations but different variables
+-    # -----------------------------
+-
+-    
+-    # -----------------------------
+-    # Build Equation 1
+-    # -----------------------------
+-
+     a1 = build_fraction_surd(eq1_data["term1"])
+     b1 = build_fraction_surd(eq1_data["term2"])
+     c1 = build_fraction_surd(eq1_data["constant"])
+-
+     eq1 = Equation(a1, b1, c1)
+ 
+-    # -----------------------------
+-    # Build Equation 2
+-    # -----------------------------
+-
+     a2 = build_fraction_surd(eq2_data["term1"])
+     b2 = build_fraction_surd(eq2_data["term2"])
+     c2 = build_fraction_surd(eq2_data["constant"])
+-
+     eq2 = Equation(a2, b2, c2)
+ 
+-    # -----------------------------
+-    # Initialize containers
+-    # -----------------------------
+-
+     methods = {}
+-    graph = {}
+-
+-    # -----------------------------
+-    # Build System
+-    # -----------------------------
+ 
+     system = EquationSystem(eq1, eq2)
+ 
+-    # -----------------------------
+-    # Elimination Solver
+-    # -----------------------------
+-
+     solver = EliminationSolver(system)
+-
+     raw_solution = solver.solve()
+-
+-    print("RAW SOLUTION:", raw_solution)
+-
+     values = list(raw_solution.values())
+ 
+     solution = {
+         var1: to_python_number(values[0]),
+         var2: to_python_number(values[1])
+     }
+ 
+-    # -----------------------------
+-    # Extract Steps
+-    # -----------------------------
+-
+     steps = []
+-
+     for step in solver.recorder.get_steps():
+-
+         if step.type == "vertical_elimination":
+-
+             data = step.content
+-
+-            steps.append({
+-                "type": "vertical_elimination",
+-                "eq1": data["eq1"],
+-                "eq2": data["eq2"],
+-                "result": data["result"]
+-            })
+-
++            steps.append(
++                {
++                    "type": "vertical_elimination",
++                    "eq1": data["eq1"],
++                    "eq2": data["eq2"],
++                    "result": data["result"]
++                }
++            )
+         else:
+-
+-            steps.append({
+-                "type": step.type,
+-                "content": step.content
+-            })
++            steps.append({"type": step.type, "content": step.content})
+ 
+     methods["elimination"] = steps
+ 
+-    # -----------------------------
+-    # Graphical Solver
+-    # -----------------------------
+-
+     graph_solver = GraphicalSolver(system)
+-
+     points1, points2 = graph_solver.generate_tables()
+ 
+-    points1 = convert_points(points1)
+-    points2 = convert_points(points2)
+-
+     graph = {
+-        "equation1_points": points1,
+-        "equation2_points": points2,
++        "equation1_points": convert_points(points1),
++        "equation2_points": convert_points(points2),
+         "intersection": solution
+     }
+ 
+     methods["graphical_steps"] = [
+         "Generated value table for equation 1",
+         "Generated value table for equation 2",
+         "Plotted both equations",
+         "Intersection point found"
+     ]
+-    # -----------------------------
+-    # Save new equation system
+-    # -----------------------------
+ 
+-   
+-
+-    # ---------------------------------
+-    # Save Elimination Method
+-    # ---------------------------------
+-    print("Saving solution methods for system:", system_id)
+-    print("Creating elimination record")
+     elimination_record = SolutionMethod(
+         system_id=system_id,
+         method_name="elimination",
+         solution=solution,
+         steps=methods["elimination"],
+         graph_data=None
+     )
+-
+     db.add(elimination_record)
+ 
+-
+-    # ---------------------------------
+-    # Save Graphical Method
+-    # ---------------------------------
+-
+     graphical_record = SolutionMethod(
+         system_id=system_id,
+         method_name="graphical",
+         solution=solution,
+         steps=methods["graphical_steps"],
+         graph_data=graph
+     )
+-
+     db.add(graphical_record)
+ 
+     db.commit()
+-    # -----------------------------
+-    # Return Result
+-    # -----------------------------
+ 
+     return {
+         "solution": solution,
+         "methods": methods,
+         "graph": graph
+-    }
+\ No newline at end of file
++    }
+diff --git a/backend/solver/elimination_solver.py b/backend/solver/elimination_solver.py
+index c667f687e30d7385897cfdc5ab985cfbc6c781a9..1ed7e88601f0cf65a5a9bb599c16ac8dc0f47284 100644
+--- a/backend/solver/elimination_solver.py
++++ b/backend/solver/elimination_solver.py
+@@ -230,31 +230,26 @@ class EliminationSolver:
+             y_value = sp.simplify(C / B)
+             self.recorder.add(f"y = {sp.latex(y_value)}")
+ 
+             self.recorder.add(f"Substitute y = {sp.latex(y_value)} in equation ({n1})")
+             a1_term = self._term(a1, "x")
+             substituted = sp.simplify(b1 * y_value)
+             self.recorder.add(f"{a1_term} + ({sp.latex(substituted)}) = {sp.latex(c1)}")
+ 
+             lhs = substituted
+             self.recorder.add(f"{a1_term} + {sp.latex(lhs)} = {sp.latex(c1)}")
+ 
+             rhs = sp.simplify(c1 - lhs)
+             self.recorder.add(f"{a1_term} = {sp.latex(rhs)}")
+ 
+             x_value = sp.simplify(rhs / a1)
+             self.recorder.add(f"x = {sp.latex(x_value)}")
+ 
+         x = sp.Symbol(self.eq1.var1)
+         y = sp.Symbol(self.eq1.var2)
+ 
+         eq1 = self.eq1.sympy_equation()
+         eq2 = self.eq2.sympy_equation()
+ 
+         solution = sp.solve((eq1, eq2), (x, y))
+ 
+-        print("\nRecorded Steps:\n")
+-
+-        for step in self.recorder.get_steps():
+-            print(step)
+-
+         return solution
+diff --git a/backend/solver/graphical_solver.py b/backend/solver/graphical_solver.py
+index 6e2ce8deee5addf55048993992c005c185a4d0bd..125b76b336eb802ece087e41719067699807ca74 100644
+--- a/backend/solver/graphical_solver.py
++++ b/backend/solver/graphical_solver.py
+@@ -1,56 +1,46 @@
+ class GraphicalSolver:
+-    print("GraphicalSolver module loaded")
+     def __init__(self, system):
+-        print("GraphicalSolver initialized")
+         self.eq1 = system.eq1
+         self.eq2 = system.eq2
+ 
+-
+     def generate_points(self, equation):
+-
+         a = equation.a.to_sympy()
+         b = equation.b.to_sympy()
+         c = equation.c.to_sympy()
+ 
+         points = []
+ 
+         # 1. search integer points
+         for x in range(-8, 9):
+-
+             if b == 0:
+                 continue
+ 
+             y = (c - a*x) / b
+             y = y.simplify()
+ 
+             if y.is_integer:
+-
+                 y_val = int(y)
+ 
+                 if -8 <= y_val <= 8:
+                     points.append((x, y_val))
+ 
+             if len(points) == 3:
+                 return points
+ 
+-
+         # 2. add intercept points if needed
+ 
+         if a != 0:
+             x_intercept = c / a
+             points.append((x_intercept, 0))
+ 
+         if b != 0:
+             y_intercept = c / b
+             points.append((0, y_intercept))
+ 
+         return points[:3]
+ 
+-
+     def generate_tables(self):
+-        print("DEBUG: Running GraphicalSolver")
+         p1 = self.generate_points(self.eq1)
+         p2 = self.generate_points(self.eq2)
+-        print("DEBUG Points:", p1, p2)
+ 
+-        return p1, p2
+\ No newline at end of file
++        return p1, p2
+diff --git a/frontend/app/src/app/app.component.html b/frontend/app/src/app/app.component.html
+index 3f929a6ea4975088219dc2db19f54d8006f29120..0680b43f9c6ae05df91c576141f20ed411d07c7d 100644
+--- a/frontend/app/src/app/app.component.html
++++ b/frontend/app/src/app/app.component.html
+@@ -1,2 +1 @@
+ <router-outlet></router-outlet>
+-<app-saved-systems></app-saved-systems>
+\ No newline at end of file
+diff --git a/frontend/app/src/app/app.component.ts b/frontend/app/src/app/app.component.ts
+index a99452533bef0a748dc87a993101f07e76189775..da5a9965b53fcc7d6f99afd62f95d3981d32d0b8 100644
+--- a/frontend/app/src/app/app.component.ts
++++ b/frontend/app/src/app/app.component.ts
+@@ -1,12 +1,12 @@
+ import { Component } from '@angular/core';
+ import { RouterOutlet } from '@angular/router';
+-import { SavedSystemsComponent } from './components/saved-systems/saved-systems.component';
++
+ @Component({
+   selector: 'app-root',
+-  imports: [RouterOutlet, SavedSystemsComponent],
++  imports: [RouterOutlet],
+   templateUrl: './app.component.html',
+   styleUrl: './app.component.css'
+ })
+ export class AppComponent {
+   title = 'app';
+ }
+diff --git a/frontend/app/src/app/components/equation-builder/equation-builder.component.ts b/frontend/app/src/app/components/equation-builder/equation-builder.component.ts
+index 21a580ebcd9c09c54c9195c755030a5e89bfde27..2baf4180405b4c067b576093605b986f56b1a834 100644
+--- a/frontend/app/src/app/components/equation-builder/equation-builder.component.ts
++++ b/frontend/app/src/app/components/equation-builder/equation-builder.component.ts
+@@ -103,38 +103,36 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
+   }
+ 
+   onTerm1Change(term: Term): void {
+     this.term1 = term;
+     this.updatePreview();
+   }
+ 
+   onTerm2Change(term: Term): void {
+     this.term2 = term;
+     this.updatePreview();
+   }
+ 
+   onConstantChange(term: Term): void {
+     this.constant = term;
+     this.updatePreview();
+   }
+ 
+   updatePreview(): void {
+ 
+   const left = `${variableCoeffToLatex(this.term1)}${this.variable1}`;
+   const rightVariable = `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`;
+   const operator = this.term2.sign === -1 ? ' - ' : ' + ';
+   const constant = constantToLatex(this.constant);
+ 
+   this.equationLatex = `${left}${operator}${rightVariable} = ${constant}`;
+-    console.log("BUILDER EMIT TEST");   // 👈 add this
+-
+   // Emit equation data to parent
+   this.equationChange.emit({
+     positions: this.positions,
+     term1: this.term1,
+     term2: this.term2,
+     constant: this.constant
+   });
+ 
+ }
+  
+ }
+diff --git a/frontend/app/src/app/components/input-panel/input-panel.component.ts b/frontend/app/src/app/components/input-panel/input-panel.component.ts
+index 9430cd89ea47dbbe82dedc0e2cdb731b6186ad79..364f0287ff37caee546c8142fa7f52a888ef039f 100644
+--- a/frontend/app/src/app/components/input-panel/input-panel.component.ts
++++ b/frontend/app/src/app/components/input-panel/input-panel.component.ts
+@@ -1,86 +1,68 @@
+-import { Component } from '@angular/core';
++import { Component, EventEmitter, Output } from '@angular/core';
+ import { VariableSelectorComponent } from '../variable-selector/variable-selector.component';
+ import { EquationBuilderComponent } from '../equation-builder/equation-builder.component';
+ import { EquationApiService } from '../../services/equation-api.service';
++import { SolverResponse } from '../../models/solver-response.model';
+ 
+ @Component({
+   selector: 'app-input-panel',
+   standalone: true,
+   imports: [
+     VariableSelectorComponent,
+     EquationBuilderComponent
+   ],
+   templateUrl: './input-panel.component.html',
+   styleUrls: ['./input-panel.component.css']
+ })
+ export class InputPanelComponent {
++  @Output() solved = new EventEmitter<SolverResponse>();
+ 
+   variable1 = 'x';
+   variable2 = 'y';
+ 
+   equation1Data: any = null;
+   equation2Data: any = null;
+ 
+   constructor(private equationApi: EquationApiService) {}
+ 
+   onVariable1Change(variable: string): void {
+     this.variable1 = variable || 'x';
+   }
+ 
+   onVariable2Change(variable: string): void {
+     this.variable2 = variable || 'y';
+   }
+ 
+   onEquation1Change(data: any): void {
+     this.equation1Data = data;
+-    console.log('Equation 1:', data);
+   }
+ 
+   onEquation2Change(data: any): void {
+     this.equation2Data = data;
+-    console.log('Equation 2:', data);
+   }
+ 
+   saveSystem(): void {
+-
+     const payload = {
+       variables: {
+         var1: this.variable1,
+         var2: this.variable2
+       },
+       equation1: this.equation1Data,
+       equation2: this.equation2Data
+     };
+ 
+-    console.log("Sending payload:", payload);
+-
+     this.equationApi.solveSystem(payload).subscribe({
+-
+-      next: (response: any) => {
+-
+-        console.log("Solution received:", response);
+-
++      next: (response: SolverResponse) => {
+         if (!response) {
+-          alert("No response from server.");
++          alert('No response from server.');
+           return;
+         }
+ 
+-        alert("System solved successfully.");
+-
+-        // Later we will send this to the right panel
+-        console.log("Solution:", response.solution);
+-        console.log("Methods:", response.methods);
+-        console.log("Graph:", response.graph);
+-
++        this.solved.emit(response);
+       },
+-
+-      error: (error) => {
+-        console.error("Solve failed:", error);
+-        alert("Server error while solving system.");
++      error: () => {
++        alert('Server error while solving system.');
+       }
+-
+     });
+-
+   }
+-
+-}
+\ No newline at end of file
++}
+diff --git a/frontend/app/src/app/components/method-selector/method-selector.component.css b/frontend/app/src/app/components/method-selector/method-selector.component.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..2a7a135579c7ea9b94a2e7cf8b318367b3219319
+--- /dev/null
++++ b/frontend/app/src/app/components/method-selector/method-selector.component.css
+@@ -0,0 +1,27 @@
++.method-list {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 8px;
++}
++
++.method-btn {
++  border: 1px solid #d4dbec;
++  background: #fff;
++  color: #334155;
++  border-radius: 10px;
++  padding: 8px 12px;
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++}
++
++.method-btn.active {
++  border-color: #4f6ef7;
++  background: #eef2ff;
++  color: #2f47bd;
++}
++
++.method-btn:disabled {
++  opacity: 0.45;
++  cursor: not-allowed;
++}
+diff --git a/frontend/app/src/app/components/method-selector/method-selector.component.html b/frontend/app/src/app/components/method-selector/method-selector.component.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..82a653ae0a7559150d1b351be63fa508ad7f91ee
+--- /dev/null
++++ b/frontend/app/src/app/components/method-selector/method-selector.component.html
+@@ -0,0 +1,11 @@
++<div class="method-list">
++  <button
++    *ngFor="let method of methods"
++    type="button"
++    class="method-btn"
++    [class.active]="selectedMethod === method.key"
++    [disabled]="!method.enabled"
++    (click)="selectMethod(method.key, method.enabled)">
++    {{ method.label }}
++  </button>
++</div>
+diff --git a/frontend/app/src/app/components/method-selector/method-selector.component.ts b/frontend/app/src/app/components/method-selector/method-selector.component.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4003541cb80f7df532f419d744d938a5fd5213c0
+--- /dev/null
++++ b/frontend/app/src/app/components/method-selector/method-selector.component.ts
+@@ -0,0 +1,28 @@
++import { Component, EventEmitter, Input, Output } from '@angular/core';
++import { CommonModule } from '@angular/common';
++
++@Component({
++  selector: 'app-method-selector',
++  standalone: true,
++  imports: [CommonModule],
++  templateUrl: './method-selector.component.html',
++  styleUrl: './method-selector.component.css'
++})
++export class MethodSelectorComponent {
++  @Input() selectedMethod = 'elimination';
++  @Output() methodSelected = new EventEmitter<string>();
++
++  readonly methods = [
++    { key: 'elimination', label: 'Elimination', enabled: true },
++    { key: 'graphical', label: 'Graphical', enabled: true },
++    { key: 'substitution', label: 'Substitution', enabled: false },
++    { key: 'comparison', label: 'Comparison', enabled: false }
++  ];
++
++  selectMethod(methodKey: string, enabled: boolean): void {
++    if (!enabled) {
++      return;
++    }
++    this.methodSelected.emit(methodKey);
++  }
++}
+diff --git a/frontend/app/src/app/components/saved-systems/saved-systems.component.css b/frontend/app/src/app/components/saved-systems/saved-systems.component.css
+index ea4acacc2e6af4231a3de2829fcffcbcae8f4984..34a53eeec40941d60f3c8d81560788c8adef9a08 100644
+--- a/frontend/app/src/app/components/saved-systems/saved-systems.component.css
++++ b/frontend/app/src/app/components/saved-systems/saved-systems.component.css
+@@ -1,19 +1,31 @@
+-.system-card{
+-  padding:12px;
+-  border:1px solid #ddd;
+-  border-radius:8px;
+-  margin-bottom:10px;
++.saved-list {
++  display: flex;
++  flex-direction: column;
++  gap: 10px;
+ }
+ 
+-.equation{
++.system-card {
++  padding: 10px;
++  border: 1px solid #e4e8f0;
++  border-radius: 10px;
++  background: #fff;
++}
++
++.equation {
+   font-family: serif;
+-  font-size:18px;
++  font-size: 16px;
+ }
+-.actions{
+-  margin-top:8px;
++
++button {
++  margin-top: 8px;
++  padding: 6px 10px;
++  border-radius: 8px;
++  border: 1px solid #d5dbec;
++  background: #f8faff;
++  cursor: pointer;
+ }
+ 
+-button{
+-  margin-right:8px;
+-  padding:4px 10px;
+-}
+\ No newline at end of file
++.empty-state {
++  color: #6b7280;
++  font-size: 13px;
++}
+diff --git a/frontend/app/src/app/components/saved-systems/saved-systems.component.html b/frontend/app/src/app/components/saved-systems/saved-systems.component.html
+index 8915fe02c7d0e1b742f1b9b5b3a72a4cd5a4725e..f41f8604d63deaa758fc97cd83812890a38b7cc2 100644
+--- a/frontend/app/src/app/components/saved-systems/saved-systems.component.html
++++ b/frontend/app/src/app/components/saved-systems/saved-systems.component.html
+@@ -1,25 +1,10 @@
+-<h3>Saved Systems</h3>
+-
+-<div *ngFor="let sys of systems" class="system-card">
+-
+-  <div class="equation">
+-    {{ buildEquation(sys.equation1, sys.variables) }}
+-  </div>
+-
+-  <div class="equation">
+-    {{ buildEquation(sys.equation2, sys.variables) }}
+-  </div>
+-
+-  <div class="actions">
+-
+-    <button (click)="showSolution(sys)">
+-      Show Solution
+-    </button>
+-
+-    <button (click)="deleteSystem(sys.id)">
+-      Delete
+-    </button>
++<div class="saved-list">
++  <div *ngFor="let sys of systems" class="system-card">
++    <div class="equation">{{ buildEquation(sys.equation1, sys.variables) }}</div>
++    <div class="equation">{{ buildEquation(sys.equation2, sys.variables) }}</div>
+ 
++    <button type="button" (click)="showSolution(sys)">Use System</button>
+   </div>
+ 
+-</div>
+\ No newline at end of file
++  <div *ngIf="systems.length === 0" class="empty-state">No systems saved yet.</div>
++</div>
+diff --git a/frontend/app/src/app/components/saved-systems/saved-systems.component.ts b/frontend/app/src/app/components/saved-systems/saved-systems.component.ts
+index e7cdea83787242b9e02b237030c91402d4535d80..2b710338ef27c20e9ae44d44cd847ccb8d1c0eb1 100644
+--- a/frontend/app/src/app/components/saved-systems/saved-systems.component.ts
++++ b/frontend/app/src/app/components/saved-systems/saved-systems.component.ts
+@@ -1,63 +1,53 @@
+-import { Component, OnInit } from '@angular/core';
++import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+ import { EquationApiService } from '../../services/equation-api.service';
+ 
+ @Component({
+   selector: 'app-saved-systems',
+   standalone: true,
+   imports: [CommonModule],
+   templateUrl: './saved-systems.component.html',
+   styleUrls: ['./saved-systems.component.css']
+ })
+ export class SavedSystemsComponent implements OnInit {
++  @Output() systemSelected = new EventEmitter<any>();
+ 
+   systems: any[] = [];
+ 
+   constructor(private equationApi: EquationApiService) {}
+ 
+   ngOnInit(): void {
+     this.loadSystems();
+   }
+ 
+   loadSystems(): void {
+-
+     this.equationApi.getSystems().subscribe({
+-
+       next: (data: any) => {
+-        console.log("Loaded systems:", data);
+         this.systems = data;
+       },
+-
+-      error: (err) => {
+-        console.error("Failed to load systems:", err);
++      error: () => {
++        this.systems = [];
+       }
+-
+     });
+-
+   }
+-    buildEquation(eq: any, vars: any): string {
+ 
++  buildEquation(eq: any, vars: any): string {
+     const v1 = vars.var1;
+     const v2 = vars.var2;
+ 
+     const t1 = eq.term1.numCoeff * eq.term1.sign;
+     const t2 = eq.term2.numCoeff * eq.term2.sign;
+-    const c  = eq.constant.numCoeff * eq.constant.sign;
++    const c = eq.constant.numCoeff * eq.constant.sign;
+ 
+-    const part1 = `${t1}${v1}`;
+-    const part2 = t2 >= 0 ? ` + ${t2}${v2}` : ` - ${Math.abs(t2)}${v2}`;
++    const firstCoeff = Math.abs(t1) === 1 ? (t1 < 0 ? '-' : '') : `${t1}`;
++    const secondCoeffAbs = Math.abs(t2) === 1 ? '' : `${Math.abs(t2)}`;
++    const part1 = `${firstCoeff}${v1}`;
++    const part2 = t2 >= 0 ? ` + ${secondCoeffAbs}${v2}` : ` - ${secondCoeffAbs}${v2}`;
+ 
+     return `${part1}${part2} = ${c}`;
+   }
+-  showSolution(system: any): void {
+-
+-    console.log("Open solution for:", system);
+-
+-  }
+-
+-  deleteSystem(id: number): void {
+-
+-    console.log("Delete system:", id);
+ 
++  showSolution(system: any): void {
++    this.systemSelected.emit(system);
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/frontend/app/src/app/components/solution-steps/solution-steps.component.css b/frontend/app/src/app/components/solution-steps/solution-steps.component.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..baffdbd434e9046f82c66721b1d35d03f1a41dd6
+--- /dev/null
++++ b/frontend/app/src/app/components/solution-steps/solution-steps.component.css
+@@ -0,0 +1,36 @@
++.step-card {
++  border: 1px solid #e6eaf3;
++  border-radius: 10px;
++  background: #fff;
++  padding: 10px 12px;
++  margin-bottom: 8px;
++  color: #1f2937;
++  font-size: 13px;
++}
++
++.vertical-step pre {
++  margin: 0;
++  font-family: 'Fira Code', monospace;
++  white-space: pre-wrap;
++}
++
++.empty-state {
++  color: #6b7280;
++  font-size: 13px;
++}
++
++.graph-placeholder {
++  border: 1px dashed #c9d4ef;
++  border-radius: 10px;
++  background: #f8faff;
++  padding: 12px;
++}
++
++.graph-placeholder h4 {
++  margin: 0 0 8px;
++}
++
++.graph-placeholder p {
++  margin: 4px 0;
++  font-size: 13px;
++}
+diff --git a/frontend/app/src/app/components/solution-steps/solution-steps.component.html b/frontend/app/src/app/components/solution-steps/solution-steps.component.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..a28e9ec8c325a0d34a24f9baf1e600f3ef99e4ea
+--- /dev/null
++++ b/frontend/app/src/app/components/solution-steps/solution-steps.component.html
+@@ -0,0 +1,31 @@
++<div *ngIf="!response" class="empty-state">Solve a system to see method steps.</div>
++
++<ng-container *ngIf="response">
++  <div *ngIf="selectedMethod === 'elimination'; else graphicalBlock">
++    <div *ngFor="let step of eliminationSteps" class="step-card" [ngSwitch]="step.type">
++      <div *ngSwitchCase="'vertical_elimination'" class="vertical-step">
++        <pre>{{ step.eq1 }}
+++ {{ step.eq2 }}
++--------------
++{{ step.result }}</pre>
++      </div>
++      <div *ngSwitchDefault>{{ step.content }}</div>
++    </div>
++  </div>
++
++  <ng-template #graphicalBlock>
++    <div *ngIf="selectedMethod === 'graphical'; else comingSoonBlock">
++      <div *ngFor="let step of graphicalSteps" class="step-card">{{ step }}</div>
++      <div class="graph-placeholder">
++        <h4>Graph Data Preview</h4>
++        <p>Equation 1 Points: {{ response.graph.equation1_points.length }}</p>
++        <p>Equation 2 Points: {{ response.graph.equation2_points.length }}</p>
++        <p>Intersection: {{ response.graph.intersection | json }}</p>
++      </div>
++    </div>
++  </ng-template>
++
++  <ng-template #comingSoonBlock>
++    <div class="empty-state">This method is planned and will be available soon.</div>
++  </ng-template>
++</ng-container>
+diff --git a/frontend/app/src/app/components/solution-steps/solution-steps.component.ts b/frontend/app/src/app/components/solution-steps/solution-steps.component.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..fa0cfdf85a32609552b082ea16f8661d73d550c3
+--- /dev/null
++++ b/frontend/app/src/app/components/solution-steps/solution-steps.component.ts
+@@ -0,0 +1,23 @@
++import { Component, Input } from '@angular/core';
++import { CommonModule } from '@angular/common';
++import { SolverResponse, SolverStep } from '../../models/solver-response.model';
++
++@Component({
++  selector: 'app-solution-steps',
++  standalone: true,
++  imports: [CommonModule],
++  templateUrl: './solution-steps.component.html',
++  styleUrl: './solution-steps.component.css'
++})
++export class SolutionStepsComponent {
++  @Input() response: SolverResponse | null = null;
++  @Input() selectedMethod = 'elimination';
++
++  get eliminationSteps(): SolverStep[] {
++    return this.response?.methods?.elimination ?? [];
++  }
++
++  get graphicalSteps(): string[] {
++    return this.response?.methods?.graphical_steps ?? [];
++  }
++}
+diff --git a/frontend/app/src/app/components/solution-viewer/solution-viewer.component.css b/frontend/app/src/app/components/solution-viewer/solution-viewer.component.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..ec4609689981ff496a6b88356110f1b85692e937
+--- /dev/null
++++ b/frontend/app/src/app/components/solution-viewer/solution-viewer.component.css
+@@ -0,0 +1,29 @@
++.right-panel-stack {
++  display: flex;
++  flex-direction: column;
++  gap: 12px;
++}
++
++.panel-card {
++  background: #fff;
++  border: 1px solid #e4e8f0;
++  border-radius: 14px;
++  padding: 14px;
++  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
++}
++
++.panel-card h3 {
++  margin: 0 0 10px;
++  font-size: 16px;
++}
++
++.solution-line {
++  font-size: 14px;
++  margin-bottom: 6px;
++}
++
++.hint {
++  margin: 0;
++  color: #6b7280;
++  font-size: 13px;
++}
+diff --git a/frontend/app/src/app/components/solution-viewer/solution-viewer.component.html b/frontend/app/src/app/components/solution-viewer/solution-viewer.component.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..990107631801bf3731547a31ea36ba44500afb84
+--- /dev/null
++++ b/frontend/app/src/app/components/solution-viewer/solution-viewer.component.html
+@@ -0,0 +1,34 @@
++<div class="right-panel-stack">
++  <section class="panel-card">
++    <h3>Saved Systems</h3>
++    <app-saved-systems></app-saved-systems>
++  </section>
++
++  <section class="panel-card">
++    <h3>Solution</h3>
++    <div *ngIf="response as resp; else emptySolution">
++      <div class="solution-line" *ngFor="let entry of resp.solution | keyvalue: keepOriginalOrder">
++        <strong>{{ entry.key }}</strong> = {{ entry.value }}
++      </div>
++    </div>
++    <ng-template #emptySolution>
++      <p class="hint">No solution yet. Build equations and click Solve System.</p>
++    </ng-template>
++  </section>
++
++  <section class="panel-card">
++    <h3>Methods</h3>
++    <app-method-selector
++      [selectedMethod]="selectedMethod"
++      (methodSelected)="onMethodSelected($event)">
++    </app-method-selector>
++  </section>
++
++  <section class="panel-card">
++    <h3>Steps</h3>
++    <app-solution-steps
++      [response]="response"
++      [selectedMethod]="selectedMethod">
++    </app-solution-steps>
++  </section>
++</div>
+diff --git a/frontend/app/src/app/components/solution-viewer/solution-viewer.component.ts b/frontend/app/src/app/components/solution-viewer/solution-viewer.component.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..24784ffb2c53a6812b78af8b6b8d9f630e295e06
+--- /dev/null
++++ b/frontend/app/src/app/components/solution-viewer/solution-viewer.component.ts
+@@ -0,0 +1,25 @@
++import { Component, Input } from '@angular/core';
++import { CommonModule, KeyValue } from '@angular/common';
++import { MethodSelectorComponent } from '../method-selector/method-selector.component';
++import { SolutionStepsComponent } from '../solution-steps/solution-steps.component';
++import { SavedSystemsComponent } from '../saved-systems/saved-systems.component';
++import { SolverResponse } from '../../models/solver-response.model';
++
++@Component({
++  selector: 'app-solution-viewer',
++  standalone: true,
++  imports: [CommonModule, MethodSelectorComponent, SolutionStepsComponent, SavedSystemsComponent],
++  templateUrl: './solution-viewer.component.html',
++  styleUrl: './solution-viewer.component.css'
++})
++export class SolutionViewerComponent {
++  @Input() response: SolverResponse | null = null;
++
++  selectedMethod = 'elimination';
++
++  onMethodSelected(method: string): void {
++    this.selectedMethod = method;
++  }
++
++  keepOriginalOrder = (a: KeyValue<string, unknown>, b: KeyValue<string, unknown>): number => 0;
++}
+diff --git a/frontend/app/src/app/models/solver-response.model.ts b/frontend/app/src/app/models/solver-response.model.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..f26868f63de2e98c77674ff65ba29824caa3a629
+--- /dev/null
++++ b/frontend/app/src/app/models/solver-response.model.ts
+@@ -0,0 +1,21 @@
++export interface SolverStep {
++  type?: string;
++  content?: string;
++  eq1?: string;
++  eq2?: string;
++  result?: string;
++}
++
++export interface SolverResponse {
++  solution: Record<string, string | number>;
++  methods: {
++    elimination?: SolverStep[];
++    graphical_steps?: string[];
++    [key: string]: unknown;
++  };
++  graph: {
++    equation1_points: Array<[string | number, string | number]>;
++    equation2_points: Array<[string | number, string | number]>;
++    intersection: Record<string, string | number>;
++  };
++}
+diff --git a/frontend/app/src/app/pages/solver-page/solver-page.component.html b/frontend/app/src/app/pages/solver-page/solver-page.component.html
+index 61da154117fb60c60f7f067b7bceef813beae9ee..31f9667daeab0379ab0a826300f4d5d62a5941d9 100644
+--- a/frontend/app/src/app/pages/solver-page/solver-page.component.html
++++ b/frontend/app/src/app/pages/solver-page/solver-page.component.html
+@@ -1,19 +1,16 @@
+ <div class="solver-container">
+   <header class="solver-header">
+     <h1>Linear Equation Solver</h1>
+     <p>Build two equations with symbolic coefficients and solve step-by-step.</p>
+   </header>
+ 
+   <div class="solver-main">
+     <section class="input-panel">
+-      <app-input-panel></app-input-panel>
++      <app-input-panel (solved)="onSolved($event)"></app-input-panel>
+     </section>
+ 
+     <section class="solution-panel">
+-      <div class="solution-placeholder-card">
+-        <h2>Solution Panel</h2>
+-        <p>Step-by-step elimination, LaTeX output, and graph points will appear here.</p>
+-      </div>
++      <app-solution-viewer [response]="solverResponse"></app-solution-viewer>
+     </section>
+   </div>
+ </div>
+diff --git a/frontend/app/src/app/pages/solver-page/solver-page.component.ts b/frontend/app/src/app/pages/solver-page/solver-page.component.ts
+index 14d4f5f74143935d46d6fd2602313f422861e025..756fc73acc4dd4a8c5b3c6e5f087306250366ed0 100644
+--- a/frontend/app/src/app/pages/solver-page/solver-page.component.ts
++++ b/frontend/app/src/app/pages/solver-page/solver-page.component.ts
+@@ -1,13 +1,19 @@
+ import { Component } from '@angular/core';
+ import { InputPanelComponent } from '../../components/input-panel/input-panel.component';
++import { SolutionViewerComponent } from '../../components/solution-viewer/solution-viewer.component';
++import { SolverResponse } from '../../models/solver-response.model';
+ 
+ @Component({
+   selector: 'app-solver-page',
+   standalone: true,
+-  imports: [InputPanelComponent],
++  imports: [InputPanelComponent, SolutionViewerComponent],
+   templateUrl: './solver-page.component.html',
+   styleUrl: './solver-page.component.css'
+ })
+ export class SolverPageComponent {
++  solverResponse: SolverResponse | null = null;
+ 
+-}
+\ No newline at end of file
++  onSolved(response: SolverResponse): void {
++    this.solverResponse = response;
++  }
++}
+diff --git a/frontend/app/src/app/services/equation-api.service.ts b/frontend/app/src/app/services/equation-api.service.ts
+index 3b8630bc7b2a3a138ed7a46c5ed2ff31f80f4a74..6b58b5d4299935a3ca59b5e77b385076da730ba1 100644
+--- a/frontend/app/src/app/services/equation-api.service.ts
++++ b/frontend/app/src/app/services/equation-api.service.ts
+@@ -1,25 +1,25 @@
+ import { Injectable } from '@angular/core';
+ import { HttpClient } from '@angular/common/http';
++import { Observable } from 'rxjs';
++import { SolverResponse } from '../models/solver-response.model';
+ 
+ @Injectable({
+   providedIn: 'root'
+ })
+ export class EquationApiService {
+-
+   private apiUrl = 'http://127.0.0.1:8000';
+ 
+   constructor(private http: HttpClient) {}
+ 
+-  saveSystem(payload: any) {
++  saveSystem(payload: any): Observable<unknown> {
+     return this.http.post(`${this.apiUrl}/save-system`, payload);
+   }
+ 
+-  solveSystem(payload: any) {
+-    return this.http.post(`${this.apiUrl}/solve-system`, payload);
++  solveSystem(payload: any): Observable<SolverResponse> {
++    return this.http.post<SolverResponse>(`${this.apiUrl}/solve-system`, payload);
+   }
+ 
+-  getSystems() {
+-    return this.http.get(`${this.apiUrl}/systems`);
++  getSystems(): Observable<any[]> {
++    return this.http.get<any[]>(`${this.apiUrl}/systems`);
+   }
+-
+-}
+\ No newline at end of file
++}

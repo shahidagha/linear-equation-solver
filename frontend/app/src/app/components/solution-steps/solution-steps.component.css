@@ -1,0 +1,36 @@
+.step-card {
+  border: 1px solid #e6eaf3;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.vertical-step pre {
+  margin: 0;
+  font-family: 'Fira Code', monospace;
+  white-space: pre-wrap;
+}
+
+.empty-state {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.graph-placeholder {
+  border: 1px dashed #c9d4ef;
+  border-radius: 10px;
+  background: #f8faff;
+  padding: 12px;
+}
+
+.graph-placeholder h4 {
+  margin: 0 0 8px;
+}
+
+.graph-placeholder p {
+  margin: 4px 0;
+  font-size: 13px;
+}

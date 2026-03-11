@@ -1,0 +1,11 @@
+<div class="method-list">
+  <button
+    *ngFor="let method of methods"
+    type="button"
+    class="method-btn"
+    [class.active]="selectedMethod === method.key"
+    [disabled]="!method.enabled"
+    (click)="selectMethod(method.key, method.enabled)">
+    {{ method.label }}
+  </button>
+</div>

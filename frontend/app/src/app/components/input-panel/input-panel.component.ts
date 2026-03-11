@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { VariableSelectorComponent } from '../variable-selector/variable-selector.component';
 import { EquationBuilderComponent } from '../equation-builder/equation-builder.component';
 import { EquationApiService } from '../../services/equation-api.service';
+import { SolverResponse } from '../../models/solver-response.model';
 
 @Component({
   selector: 'app-input-panel',
@@ -14,6 +15,7 @@ import { EquationApiService } from '../../services/equation-api.service';
   styleUrls: ['./input-panel.component.css']
 })
 export class InputPanelComponent {
+  @Output() solved = new EventEmitter<SolverResponse>();
 
   variable1 = 'x';
   variable2 = 'y';
@@ -33,16 +35,13 @@ export class InputPanelComponent {
 
   onEquation1Change(data: any): void {
     this.equation1Data = data;
-    console.log('Equation 1:', data);
   }
 
   onEquation2Change(data: any): void {
     this.equation2Data = data;
-    console.log('Equation 2:', data);
   }
 
   saveSystem(): void {
-
     const payload = {
       variables: {
         var1: this.variable1,
@@ -52,35 +51,18 @@ export class InputPanelComponent {
       equation2: this.equation2Data
     };
 
-    console.log("Sending payload:", payload);
-
     this.equationApi.solveSystem(payload).subscribe({
-
-      next: (response: any) => {
-
-        console.log("Solution received:", response);
-
+      next: (response: SolverResponse) => {
         if (!response) {
-          alert("No response from server.");
+          alert('No response from server.');
           return;
         }
 
-        alert("System solved successfully.");
-
-        // Later we will send this to the right panel
-        console.log("Solution:", response.solution);
-        console.log("Methods:", response.methods);
-        console.log("Graph:", response.graph);
-
+        this.solved.emit(response);
       },
-
-      error: (error) => {
-        console.error("Solve failed:", error);
-        alert("Server error while solving system.");
+      error: () => {
+        alert('Server error while solving system.');
       }
-
     });
-
   }
-
 }

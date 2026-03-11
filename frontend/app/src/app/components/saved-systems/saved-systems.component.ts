@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { EquationApiService } from '../../services/equation-api.service';
 
@@ -10,6 +10,7 @@ import { EquationApiService } from '../../services/equation-api.service';
   styleUrls: ['./saved-systems.component.css']
 })
 export class SavedSystemsComponent implements OnInit {
+  @Output() systemSelected = new EventEmitter<any>();
 
   systems: any[] = [];
 
@@ -20,44 +21,33 @@ export class SavedSystemsComponent implements OnInit {
   }
 
   loadSystems(): void {
-
     this.equationApi.getSystems().subscribe({
-
       next: (data: any) => {
-        console.log("Loaded systems:", data);
         this.systems = data;
       },
-
-      error: (err) => {
-        console.error("Failed to load systems:", err);
+      error: () => {
+        this.systems = [];
       }
-
     });
-
   }
-    buildEquation(eq: any, vars: any): string {
 
+  buildEquation(eq: any, vars: any): string {
     const v1 = vars.var1;
     const v2 = vars.var2;
 
     const t1 = eq.term1.numCoeff * eq.term1.sign;
     const t2 = eq.term2.numCoeff * eq.term2.sign;
-    const c  = eq.constant.numCoeff * eq.constant.sign;
+    const c = eq.constant.numCoeff * eq.constant.sign;
 
-    const part1 = `${t1}${v1}`;
-    const part2 = t2 >= 0 ? ` + ${t2}${v2}` : ` - ${Math.abs(t2)}${v2}`;
+    const firstCoeff = Math.abs(t1) === 1 ? (t1 < 0 ? '-' : '') : `${t1}`;
+    const secondCoeffAbs = Math.abs(t2) === 1 ? '' : `${Math.abs(t2)}`;
+    const part1 = `${firstCoeff}${v1}`;
+    const part2 = t2 >= 0 ? ` + ${secondCoeffAbs}${v2}` : ` - ${secondCoeffAbs}${v2}`;
 
     return `${part1}${part2} = ${c}`;
   }
+
   showSolution(system: any): void {
-
-    console.log("Open solution for:", system);
-
-  }
-
-  deleteSystem(id: number): void {
-
-    console.log("Delete system:", id);
-
+    this.systemSelected.emit(system);
   }
 }

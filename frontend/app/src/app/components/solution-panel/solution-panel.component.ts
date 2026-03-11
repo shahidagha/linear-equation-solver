@@ -18,7 +18,7 @@ export class SolutionPanelComponent {
 
   onMethodSelected(method: string): void { this.state.setSelectedMethod(method); }
   setVerbosity(level: VerbosityLevel): void { this.state.setVerbosity(level); }
-  exitSolution(): void { this.state.setPanelMode('saved'); }
+  exitSolution(): void { this.state.resetSolutionState(); }
 
   copyQuestion(): void {}
   copySolution(): void {}

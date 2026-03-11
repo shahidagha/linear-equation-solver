@@ -107,23 +107,27 @@ def solve_system(db: Session, system_id: int, payload: dict):
         "Intersection point found"
     ]
 
-    elimination_record = SolutionMethod(
-        system_id=system_id,
-        method_name="elimination",
-        solution=solution,
-        steps=methods["elimination"],
-        graph_data=None
-    )
-    db.add(elimination_record)
+    elimination_record = db.query(SolutionMethod).filter(
+        SolutionMethod.system_id == system_id,
+        SolutionMethod.method_name == "elimination",
+    ).first()
+    if elimination_record is None:
+        elimination_record = SolutionMethod(system_id=system_id, method_name="elimination")
+        db.add(elimination_record)
+    elimination_record.solution = solution
+    elimination_record.steps = methods["elimination"]
+    elimination_record.graph_data = None
 
-    graphical_record = SolutionMethod(
-        system_id=system_id,
-        method_name="graphical",
-        solution=solution,
-        steps=methods["graphical_steps"],
-        graph_data=graph
-    )
-    db.add(graphical_record)
+    graphical_record = db.query(SolutionMethod).filter(
+        SolutionMethod.system_id == system_id,
+        SolutionMethod.method_name == "graphical",
+    ).first()
+    if graphical_record is None:
+        graphical_record = SolutionMethod(system_id=system_id, method_name="graphical")
+        db.add(graphical_record)
+    graphical_record.solution = solution
+    graphical_record.steps = methods["graphical_steps"]
+    graphical_record.graph_data = graph
 
     db.commit()
 

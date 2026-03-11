@@ -1,0 +1,6 @@
+.panel-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; height:100%; }
+.verbosity-row,.controls-row{display:flex; gap:8px; flex-wrap:wrap}
+button{padding:6px 10px; border:1px solid #d5dbec; border-radius:8px; background:#f8faff; cursor:pointer}
+button.active{background:#2563eb; color:#fff; border-color:#2563eb}
+.solution-value{font-size:13px; color:#1f2937; display:flex; gap:12px}
+.exit-btn{align-self:flex-end; margin-top:auto}

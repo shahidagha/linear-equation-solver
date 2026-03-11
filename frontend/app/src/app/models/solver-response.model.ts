@@ -11,6 +11,8 @@ export interface SolverResponse {
   methods: {
     elimination?: SolverStep[];
     graphical_steps?: string[];
+    substitution?: SolverStep[];
+    cramer?: SolverStep[];
     [key: string]: unknown;
   };
   graph: {

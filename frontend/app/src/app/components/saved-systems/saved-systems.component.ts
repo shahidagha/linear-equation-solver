@@ -1,7 +1,9 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EquationApiService } from '../../services/equation-api.service';
+import { SolverStateService } from '../../services/solver-state.service';
+import { SolverResponse } from '../../models/solver-response.model';
 
 @Component({
   selector: 'app-saved-systems',
@@ -11,14 +13,12 @@ import { EquationApiService } from '../../services/equation-api.service';
   styleUrls: ['./saved-systems.component.css']
 })
 export class SavedSystemsComponent implements OnInit {
-  @Output() systemSelected = new EventEmitter<any>();
-
   systems: any[] = [];
   searchTerm = '';
   currentPage = 1;
-  readonly pageSize = 8;
+  pageSize = 8;
 
-  constructor(private equationApi: EquationApiService) {}
+  constructor(private equationApi: EquationApiService, private readonly state: SolverStateService) {}
 
   ngOnInit(): void {
     this.loadSystems();
@@ -38,15 +38,8 @@ export class SavedSystemsComponent implements OnInit {
 
   get filteredSystems(): any[] {
     const normalizedSearch = this.searchTerm.trim().toLowerCase();
-
-    if (!normalizedSearch) {
-      return this.systems;
-    }
-
-    return this.systems.filter((system) => {
-      const combined = this.buildSystemText(system).toLowerCase();
-      return combined.includes(normalizedSearch);
-    });
+    if (!normalizedSearch) return this.systems;
+    return this.systems.filter((system) => this.buildSystemText(system).toLowerCase().includes(normalizedSearch));
   }
 
   get totalPages(): number {
@@ -58,45 +51,26 @@ export class SavedSystemsComponent implements OnInit {
     return this.filteredSystems.slice(start, start + this.pageSize);
   }
 
-  onSearchChange(): void {
-    this.currentPage = 1;
-  }
-
-  previousPage(): void {
-    if (this.currentPage > 1) {
-      this.currentPage -= 1;
-    }
-  }
-
-  nextPage(): void {
-    if (this.currentPage < this.totalPages) {
-      this.currentPage += 1;
-    }
-  }
-
   buildSystemText(system: any): string {
-    const eq1 = this.buildEquation(system.equation1, system.variables);
-    const eq2 = this.buildEquation(system.equation2, system.variables);
-    return `${eq1} ; ${eq2}`;
+    return `${this.buildEquation(system.equation1, system.variables)} ; ${this.buildEquation(system.equation2, system.variables)}`;
   }
 
   buildEquation(eq: any, vars: any): string {
-    const v1 = vars.var1;
-    const v2 = vars.var2;
-
+    const [v1, v2] = [vars.var1, vars.var2];
     const t1 = eq.term1.numCoeff * eq.term1.sign;
     const t2 = eq.term2.numCoeff * eq.term2.sign;
     const c = eq.constant.numCoeff * eq.constant.sign;
-
     const firstCoeff = Math.abs(t1) === 1 ? (t1 < 0 ? '-' : '') : `${t1}`;
     const secondCoeffAbs = Math.abs(t2) === 1 ? '' : `${Math.abs(t2)}`;
-    const part1 = `${firstCoeff}${v1}`;
-    const part2 = t2 >= 0 ? ` + ${secondCoeffAbs}${v2}` : ` - ${secondCoeffAbs}${v2}`;
-
-    return `${part1}${part2} = ${c}`;
+    return `${firstCoeff}${v1}${t2 >= 0 ? ' + ' : ' - '}${secondCoeffAbs}${v2} = ${c}`;
   }
 
   showSolution(system: any): void {
-    this.systemSelected.emit(system);
+    if (!system.stored_response) return;
+    this.state.setResponse(system.id, system.stored_response as SolverResponse);
+  }
+
+  editSystem(_system: any): void {
+    this.state.setPanelMode('saved');
   }
 }

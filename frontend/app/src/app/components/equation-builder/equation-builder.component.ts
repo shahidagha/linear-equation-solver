@@ -133,8 +133,8 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
     const leftKeys = orderedKeys.slice(0, equalsIndex);
     const rightKeys = orderedKeys.slice(equalsIndex + 1);
 
-    const leftExpression = this.buildSide(leftKeys);
-    const rightExpression = this.buildSide(rightKeys);
+    const leftExpression = this.buildSide(leftKeys, "left");
+    const rightExpression = this.buildSide(rightKeys, "right");
 
     this.equationLatex = `${leftExpression} = ${rightExpression}`;
 
@@ -146,22 +146,23 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
     });
   }
 
-  private buildSide(keys: FrameKey[]): string {
+  private buildSide(keys: FrameKey[], side: "left" | "right"): string {
     const terms = keys
-      .map((key) => this.frameKeyToTerm(key))
+      .map((key) => this.frameKeyToTerm(key, side))
       .filter((term): term is SignedExpressionTerm => term !== null);
 
     return this.joinTerms(terms);
   }
 
-  private frameKeyToTerm(key: FrameKey): SignedExpressionTerm | null {
+  private frameKeyToTerm(key: FrameKey, side: "left" | "right"): SignedExpressionTerm | null {
     if (key === 'equals') {
       return null;
     }
 
     if (key === 'constant') {
+      const sign = side === "left" ? (this.constant.sign * -1) as 1 | -1 : (this.constant.sign as 1 | -1);
       return {
-        sign: this.constant.sign as 1 | -1,
+        sign,
         value: constantToLatex({ ...this.constant, sign: 1 })
       };
     }

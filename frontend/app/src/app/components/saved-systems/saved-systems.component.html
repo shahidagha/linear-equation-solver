@@ -1,24 +1,24 @@
-<div class="saved-list">
-  <input
-    type="text"
-    class="search-input"
-    placeholder="Search systems..."
-    [(ngModel)]="searchTerm"
-    (ngModelChange)="onSearchChange()">
+<div class="saved-list panel-card">
+  <h3>Saved Systems</h3>
+
+  <div class="top-row">
+    <input type="text" class="search-input" placeholder="Search systems..." [(ngModel)]="searchTerm">
+    <select [(ngModel)]="pageSize"><option [ngValue]="5">5</option><option [ngValue]="8">8</option><option [ngValue]="12">12</option></select>
+  </div>
 
   <div *ngFor="let sys of pagedSystems" class="system-card">
     <div class="system-text">{{ buildSystemText(sys) }}</div>
     <div class="actions">
-      <button type="button" (click)="showSolution(sys)">Use</button>
-      <button type="button" class="secondary" (click)="showSolution(sys)">Solution</button>
+      <button type="button" (click)="editSystem(sys)">Edit</button>
+      <button type="button" class="solution" [class.has-solution]="sys.has_solution" [disabled]="!sys.has_solution" (click)="showSolution(sys)">Solution</button>
     </div>
   </div>
 
   <div *ngIf="filteredSystems.length === 0" class="empty-state">No systems found.</div>
 
   <div class="pagination" *ngIf="filteredSystems.length > 0">
-    <button type="button" (click)="previousPage()" [disabled]="currentPage === 1">Previous</button>
+    <button type="button" (click)="currentPage=currentPage-1" [disabled]="currentPage === 1">Previous</button>
     <span>Page {{ currentPage }} / {{ totalPages }}</span>
-    <button type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">Next</button>
+    <button type="button" (click)="currentPage=currentPage+1" [disabled]="currentPage === totalPages">Next</button>
   </div>
 </div>

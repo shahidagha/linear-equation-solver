@@ -1,0 +1,4 @@
+<div class="right-panel-stack">
+  <app-saved-systems *ngIf="(state.panelMode$ | async) === 'saved'"></app-saved-systems>
+  <app-solution-panel *ngIf="(state.panelMode$ | async) === 'solution'"></app-solution-panel>
+</div>

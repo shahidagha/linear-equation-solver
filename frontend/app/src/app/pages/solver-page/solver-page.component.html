@@ -6,14 +6,11 @@
 
   <div class="solver-main">
     <section class="input-panel">
-      <app-input-panel></app-input-panel>
+      <app-input-panel (solved)="onSolved($event)"></app-input-panel>
     </section>
 
     <section class="solution-panel">
-      <div class="solution-placeholder-card">
-        <h2>Solution Panel</h2>
-        <p>Step-by-step elimination, LaTeX output, and graph points will appear here.</p>
-      </div>
+      <app-solution-viewer [response]="solverResponse"></app-solution-viewer>
     </section>
   </div>
 </div>

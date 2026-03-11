@@ -1,0 +1,27 @@
+.method-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.method-btn {
+  border: 1px solid #d4dbec;
+  background: #fff;
+  color: #334155;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.method-btn.active {
+  border-color: #4f6ef7;
+  background: #eef2ff;
+  color: #2f47bd;
+}
+
+.method-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

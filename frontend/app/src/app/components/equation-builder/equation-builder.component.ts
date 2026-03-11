@@ -125,8 +125,6 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   const constant = constantToLatex(this.constant);
 
   this.equationLatex = `${left}${operator}${rightVariable} = ${constant}`;
-    console.log("BUILDER EMIT TEST");   // 👈 add this
-
   // Emit equation data to parent
   this.equationChange.emit({
     positions: this.positions,

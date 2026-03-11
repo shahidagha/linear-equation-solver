@@ -252,9 +252,4 @@ class EliminationSolver:
 
         solution = sp.solve((eq1, eq2), (x, y))
 
-        print("\nRecorded Steps:\n")
-
-        for step in self.recorder.get_steps():
-            print(step)
-
         return solution

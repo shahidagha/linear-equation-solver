@@ -1,19 +1,31 @@
-.system-card{
-  padding:12px;
-  border:1px solid #ddd;
-  border-radius:8px;
-  margin-bottom:10px;
+.saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.equation{
+.system-card {
+  padding: 10px;
+  border: 1px solid #e4e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.equation {
   font-family: serif;
-  font-size:18px;
-}
-.actions{
-  margin-top:8px;
+  font-size: 16px;
 }
 
-button{
-  margin-right:8px;
-  padding:4px 10px;
+button {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d5dbec;
+  background: #f8faff;
+  cursor: pointer;
+}
+
+.empty-state {
+  color: #6b7280;
+  font-size: 13px;
 }

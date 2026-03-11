@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { SolverResponse } from '../models/solver-response.model';
 
 export interface BuilderState {
@@ -16,11 +16,12 @@ export type VerbosityLevel = 'detailed' | 'medium' | 'short';
 
 @Injectable({ providedIn: 'root' })
 export class SolverStateService {
+  private readonly defaultVariables: BuilderState['variables'] = { var1: 'x', var2: 'y' };
   private readonly currentSystemIdSubject = new BehaviorSubject<number | null>(null);
-  private readonly variablesSubject = new BehaviorSubject<BuilderState['variables']>({ var1: 'x', var2: 'y' });
+  private readonly variablesSubject = new BehaviorSubject<BuilderState['variables']>(this.defaultVariables);
   private readonly equationsSubject = new BehaviorSubject<{ equation1: unknown; equation2: unknown }>({
-    equation1: null,
-    equation2: null
+    equation1: this.createDefaultEquation(),
+    equation2: this.createDefaultEquation()
   });
   private readonly solutionSubject = new BehaviorSubject<Record<string, string | number> | null>(null);
   private readonly methodsSubject = new BehaviorSubject<SolverResponse['methods'] | null>(null);
@@ -29,6 +30,7 @@ export class SolverStateService {
   private readonly verbositySubject = new BehaviorSubject<VerbosityLevel>('detailed');
   private readonly panelModeSubject = new BehaviorSubject<PanelMode>('saved');
   private readonly canSolveSubject = new BehaviorSubject<boolean>(true);
+  private readonly savedSystemsRefreshSubject = new Subject<void>();
 
   readonly currentSystemId$ = this.currentSystemIdSubject.asObservable();
   readonly variables$ = this.variablesSubject.asObservable();
@@ -40,6 +42,7 @@ export class SolverStateService {
   readonly verbosity$ = this.verbositySubject.asObservable();
   readonly panelMode$ = this.panelModeSubject.asObservable();
   readonly canSolve$ = this.canSolveSubject.asObservable();
+  readonly savedSystemsRefresh$ = this.savedSystemsRefreshSubject.asObservable();
 
   setBuilderState(builder: BuilderState): void {
     this.variablesSubject.next(builder.variables);
@@ -112,8 +115,13 @@ export class SolverStateService {
     this.panelModeSubject.next(mode);
   }
 
-  clearSolution(): void {
+  resetSolutionState(): void {
     this.currentSystemIdSubject.next(null);
+    this.variablesSubject.next({ ...this.defaultVariables });
+    this.equationsSubject.next({
+      equation1: this.createDefaultEquation(),
+      equation2: this.createDefaultEquation()
+    });
     this.solutionSubject.next(null);
     this.methodsSubject.next(null);
     this.graphSubject.next(null);
@@ -121,5 +129,15 @@ export class SolverStateService {
     this.verbositySubject.next('detailed');
     this.canSolveSubject.next(true);
     this.panelModeSubject.next('saved');
+    this.savedSystemsRefreshSubject.next();
+  }
+
+  private createDefaultEquation(): unknown {
+    return {
+      positions: { term1: 1, term2: 2, equals: 3, constant: 4 },
+      term1: { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 },
+      term2: { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 },
+      constant: { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 }
+    };
   }
 }

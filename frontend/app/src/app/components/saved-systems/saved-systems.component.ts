@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { EquationApiService } from '../../services/equation-api.service';
 import { SolverStateService } from '../../services/solver-state.service';
 import { SolverResponse } from '../../models/solver-response.model';
@@ -12,16 +13,25 @@ import { SolverResponse } from '../../models/solver-response.model';
   templateUrl: './saved-systems.component.html',
   styleUrls: ['./saved-systems.component.css']
 })
-export class SavedSystemsComponent implements OnInit {
+export class SavedSystemsComponent implements OnInit, OnDestroy {
   systems: any[] = [];
   searchTerm = '';
   currentPage = 1;
   pageSize = 8;
 
+  private refreshSubscription?: Subscription;
+
   constructor(private equationApi: EquationApiService, private readonly state: SolverStateService) {}
 
   ngOnInit(): void {
     this.loadSystems();
+    this.refreshSubscription = this.state.savedSystemsRefresh$.subscribe(() => {
+      this.loadSystems();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSubscription?.unsubscribe();
   }
 
   loadSystems(): void {

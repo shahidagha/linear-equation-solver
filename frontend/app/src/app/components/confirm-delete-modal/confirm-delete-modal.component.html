@@ -1,0 +1,10 @@
+<div class="modal-backdrop" *ngIf="isOpen" (click)="onBackdropClick($event)">
+  <section class="modal" role="dialog" aria-modal="true" aria-label="Delete System Confirmation">
+    <h3>{{ title }}</h3>
+    <p>{{ message }}</p>
+    <div class="actions">
+      <button type="button" (click)="cancel.emit()" [disabled]="isDeleting">Cancel</button>
+      <button type="button" class="delete" (click)="confirmDelete.emit()" [disabled]="isDeleting">Delete</button>
+    </div>
+  </section>
+</div>

@@ -124,10 +124,14 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
     }
 
     if (key === 'term1') {
-      return { sign: this.term1.sign as 1 | -1, value: `${variableCoeffToLatex({ ...this.term1, sign: 1 })}${this.variable1}` };
+      const coeff = variableCoeffToLatex({ ...this.term1, sign: 1 });
+      if (coeff === '0') return null;
+      return { sign: this.term1.sign as 1 | -1, value: `${coeff}${this.variable1}` };
     }
 
-    return { sign: this.term2.sign as 1 | -1, value: `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}` };
+    const coeff = variableCoeffToLatex({ ...this.term2, sign: 1 });
+    if (coeff === '0') return null;
+    return { sign: this.term2.sign as 1 | -1, value: `${coeff}${this.variable2}` };
   }
 
   private joinTerms(terms: SignedExpressionTerm[]): string {

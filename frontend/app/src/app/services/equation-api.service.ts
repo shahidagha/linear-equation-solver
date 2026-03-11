@@ -22,4 +22,8 @@ export class EquationApiService {
   getSystems(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/systems`);
   }
+  deleteSystem(systemId: number): Observable<{ status: string }> {
+    return this.http.delete<{ status: string }>(`${this.apiUrl}/system/${systemId}`);
+  }
 }
+

@@ -5,11 +5,12 @@ import { Subscription } from 'rxjs';
 import { EquationApiService } from '../../services/equation-api.service';
 import { SolverStateService } from '../../services/solver-state.service';
 import { SolverResponse } from '../../models/solver-response.model';
+import { ConfirmDeleteModalComponent } from '../confirm-delete-modal/confirm-delete-modal.component';
 
 @Component({
   selector: 'app-saved-systems',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConfirmDeleteModalComponent],
   templateUrl: './saved-systems.component.html',
   styleUrls: ['./saved-systems.component.css']
 })
@@ -18,20 +19,31 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
   searchTerm = '';
   currentPage = 1;
   pageSize = 8;
+  editingSystemId: number | null = null;
+  pendingDeleteSystem: any | null = null;
+  isDeleting = false;
 
-  private refreshSubscription?: Subscription;
+  private readonly subscriptions: Subscription[] = [];
 
   constructor(private equationApi: EquationApiService, private readonly state: SolverStateService) {}
 
   ngOnInit(): void {
     this.loadSystems();
-    this.refreshSubscription = this.state.savedSystemsRefresh$.subscribe(() => {
-      this.loadSystems();
-    });
+    this.subscriptions.push(
+      this.state.savedSystemsRefresh$.subscribe(() => {
+        this.editingSystemId = null;
+        this.loadSystems();
+      }),
+      this.state.currentSystemId$.subscribe((systemId) => {
+        if (systemId === null) {
+          this.editingSystemId = null;
+        }
+      })
+    );
   }
 
   ngOnDestroy(): void {
-    this.refreshSubscription?.unsubscribe();
+    this.subscriptions.forEach((s) => s.unsubscribe());
   }
 
   loadSystems(): void {
@@ -70,9 +82,24 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
     const t1 = eq.term1.numCoeff * eq.term1.sign;
     const t2 = eq.term2.numCoeff * eq.term2.sign;
     const c = eq.constant.numCoeff * eq.constant.sign;
-    const firstCoeff = Math.abs(t1) === 1 ? (t1 < 0 ? '-' : '') : `${t1}`;
-    const secondCoeffAbs = Math.abs(t2) === 1 ? '' : `${Math.abs(t2)}`;
-    return `${firstCoeff}${v1}${t2 >= 0 ? ' + ' : ' - '}${secondCoeffAbs}${v2} = ${c}`;
+
+    const terms: string[] = [];
+    if (t1 !== 0) {
+      const firstCoeff = Math.abs(t1) === 1 ? (t1 < 0 ? '-' : '') : `${t1}`;
+      terms.push(`${firstCoeff}${v1}`);
+    }
+
+    if (t2 !== 0) {
+      const coeff = Math.abs(t2) === 1 ? '' : `${Math.abs(t2)}`;
+      if (terms.length === 0) {
+        terms.push(`${t2 < 0 ? '-' : ''}${coeff}${v2}`);
+      } else {
+        terms.push(`${t2 >= 0 ? '+' : '-'} ${coeff}${v2}`);
+      }
+    }
+
+    const left = terms.length > 0 ? terms.join(' ') : '0';
+    return `${left} = ${c}`;
   }
 
   showSolution(system: any): void {
@@ -88,11 +115,48 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
   }
 
   editSystem(system: any): void {
+    this.editingSystemId = system.id;
     this.state.loadSystemForEdit({
       id: system.id,
       variables: system.variables,
       equation1: system.equation1,
       equation2: system.equation2
+    });
+  }
+
+  openDeleteModal(system: any): void {
+    this.pendingDeleteSystem = system;
+  }
+
+  cancelDelete(): void {
+    if (this.isDeleting) return;
+    this.pendingDeleteSystem = null;
+  }
+
+  confirmDelete(): void {
+    if (!this.pendingDeleteSystem || this.isDeleting) return;
+
+    const deletingId = this.pendingDeleteSystem.id;
+    this.isDeleting = true;
+
+    this.equationApi.deleteSystem(deletingId).subscribe({
+      next: () => {
+        this.systems = this.systems.filter((system) => system.id !== deletingId);
+
+        if (this.editingSystemId === deletingId) {
+          this.state.resetSolutionState();
+          this.editingSystemId = null;
+        }
+
+        this.pendingDeleteSystem = null;
+        this.isDeleting = false;
+        this.loadSystems();
+      },
+      error: () => {
+        this.pendingDeleteSystem = null;
+        this.isDeleting = false;
+        this.loadSystems();
+      }
     });
   }
 }

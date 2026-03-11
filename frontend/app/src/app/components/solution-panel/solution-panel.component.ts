@@ -22,6 +22,4 @@ export class SolutionPanelComponent {
 
   copyQuestion(): void {}
   copySolution(): void {}
-  viewGraph(): void {}
-  copyGraphImage(): void {}
 }

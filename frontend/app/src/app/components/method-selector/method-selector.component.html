@@ -4,6 +4,7 @@
     type="button"
     class="method-btn"
     [class.active]="selectedMethod === method.key"
+    [disabled]="disabled"
     (click)="selectMethod(method.key)">
     {{ method.label }}
   </button>

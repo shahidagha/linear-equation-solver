@@ -6,9 +6,24 @@
     (variable2Change)="onVariable2Change($event)">
   </app-variable-selector>
 
-  <app-equation-builder title="Equation 1" [variable1]="variable1" [variable2]="variable2" (equationChange)="onEquation1Change($event)"></app-equation-builder>
-  <app-equation-builder title="Equation 2" [variable1]="variable1" [variable2]="variable2" (equationChange)="onEquation2Change($event)"></app-equation-builder>
+  <app-equation-builder
+    title="Equation 1"
+    [variable1]="variable1"
+    [variable2]="variable2"
+    [initialEquation]="initialEquation1"
+    (equationChange)="onEquation1Change($event)">
+  </app-equation-builder>
 
-  <button type="button" class="solve-btn" [disabled]="isSubmitting" (click)="saveSystem()">{{ isSubmitting ? 'Solving...' : 'Solve System' }}</button>
+  <app-equation-builder
+    title="Equation 2"
+    [variable1]="variable1"
+    [variable2]="variable2"
+    [initialEquation]="initialEquation2"
+    (equationChange)="onEquation2Change($event)">
+  </app-equation-builder>
+
+  <button type="button" class="solve-btn" [disabled]="isSubmitting || !canSolve" (click)="saveSystem()">
+    {{ isSubmitting ? 'Solving...' : 'Solve System' }}
+  </button>
   <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
 </div>

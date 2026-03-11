@@ -67,10 +67,22 @@ export class SavedSystemsComponent implements OnInit {
 
   showSolution(system: any): void {
     if (!system.stored_response) return;
-    this.state.setResponse(system.id, system.stored_response as SolverResponse);
+
+    this.state.loadSystemForSolution({
+      id: system.id,
+      variables: system.variables,
+      equation1: system.equation1,
+      equation2: system.equation2,
+      stored_response: system.stored_response as SolverResponse
+    });
   }
 
-  editSystem(_system: any): void {
-    this.state.setPanelMode('saved');
+  editSystem(system: any): void {
+    this.state.loadSystemForEdit({
+      id: system.id,
+      variables: system.variables,
+      equation1: system.equation1,
+      equation2: system.equation2
+    });
   }
 }

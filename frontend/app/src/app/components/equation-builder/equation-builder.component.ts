@@ -1,16 +1,11 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { Term } from '../../models/term.model';
 import { constantToLatex, variableCoeffToLatex } from '../../utils/latex-generator';
-import { Output, EventEmitter } from '@angular/core';
 import { TermInputComponent } from '../term-input/term-input.component';
-import {
-  FrameKey,
-  FramePositions,
-  PositionControlsComponent
-} from '../position-controls/position-controls.component';
+import { FrameKey, FramePositions, PositionControlsComponent } from '../position-controls/position-controls.component';
 import { EquationPreviewComponent } from '../equation-preview/equation-preview.component';
 
 interface FrameItem {
@@ -26,13 +21,7 @@ interface SignedExpressionTerm {
 @Component({
   selector: 'app-equation-builder',
   standalone: true,
-  imports: [
-    CommonModule,
-    DragDropModule,
-    TermInputComponent,
-    PositionControlsComponent,
-    EquationPreviewComponent
-  ],
+  imports: [CommonModule, DragDropModule, TermInputComponent, PositionControlsComponent, EquationPreviewComponent],
   templateUrl: './equation-builder.component.html',
   styleUrl: './equation-builder.component.css'
 })
@@ -40,17 +29,14 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   @Input() title = 'Equation';
   @Input() variable1 = 'x';
   @Input() variable2 = 'y';
-   @Output() equationChange = new EventEmitter<any>();
+  @Input() initialEquation: any = null;
+  @Output() equationChange = new EventEmitter<any>();
+
   term1: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
   term2: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
   constant: Term = { sign: 1, numCoeff: 1, numRad: 1, denCoeff: 1, denRad: 1 };
 
-  positions: FramePositions = {
-    term1: 1,
-    term2: 2,
-    equals: 3,
-    constant: 4
-  };
+  positions: FramePositions = { term1: 1, term2: 2, equals: 3, constant: 4 };
 
   readonly frameItems: FrameItem[] = [
     { key: 'term1', label: 'First Term' },
@@ -62,10 +48,12 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   equationLatex = '';
 
   ngOnInit(): void {
+    this.applyInitialEquation();
     this.updatePreview();
   }
 
   ngOnChanges(_changes: SimpleChanges): void {
+    this.applyInitialEquation();
     this.updatePreview();
   }
 
@@ -74,16 +62,8 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   }
 
   get equalsDisplay(): string {
-    const equalsPosition = this.positions.equals;
-
-    if (equalsPosition === 1) {
-      return '0 =';
-    }
-
-    if (equalsPosition === 4) {
-      return '= 0';
-    }
-
+    if (this.positions.equals === 1) return '0 =';
+    if (this.positions.equals === 4) return '= 0';
     return '=';
   }
 
@@ -93,9 +73,7 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   }
 
   onFrameDrop(event: CdkDragDrop<FrameItem[]>): void {
-    if (event.previousIndex === event.currentIndex) {
-      return;
-    }
+    if (event.previousIndex === event.currentIndex) return;
 
     const reordered = [...this.orderedFrames];
     moveItemInArray(reordered, event.previousIndex, event.currentIndex);
@@ -109,91 +87,57 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
     this.updatePreview();
   }
 
-  onTerm1Change(term: Term): void {
-    this.term1 = term;
-    this.updatePreview();
-  }
-
-  onTerm2Change(term: Term): void {
-    this.term2 = term;
-    this.updatePreview();
-  }
-
-  onConstantChange(term: Term): void {
-    this.constant = term;
-    this.updatePreview();
-  }
+  onTerm1Change(term: Term): void { this.term1 = term; this.updatePreview(); }
+  onTerm2Change(term: Term): void { this.term2 = term; this.updatePreview(); }
+  onConstantChange(term: Term): void { this.constant = term; this.updatePreview(); }
 
   updatePreview(): void {
-    const orderedKeys = [...this.frameItems]
-      .sort((a, b) => this.positions[a.key] - this.positions[b.key])
-      .map((frame) => frame.key);
-
+    const orderedKeys = [...this.frameItems].sort((a, b) => this.positions[a.key] - this.positions[b.key]).map((frame) => frame.key);
     const equalsIndex = orderedKeys.indexOf('equals');
-    const leftKeys = orderedKeys.slice(0, equalsIndex);
-    const rightKeys = orderedKeys.slice(equalsIndex + 1);
-
-    const leftExpression = this.buildSide(leftKeys, "left");
-    const rightExpression = this.buildSide(rightKeys, "right");
+    const leftExpression = this.buildSide(orderedKeys.slice(0, equalsIndex), 'left');
+    const rightExpression = this.buildSide(orderedKeys.slice(equalsIndex + 1), 'right');
 
     this.equationLatex = `${leftExpression} = ${rightExpression}`;
-
-    this.equationChange.emit({
-      positions: this.positions,
-      term1: this.term1,
-      term2: this.term2,
-      constant: this.constant
-    });
+    this.equationChange.emit({ positions: this.positions, term1: this.term1, term2: this.term2, constant: this.constant });
   }
 
-  private buildSide(keys: FrameKey[], side: "left" | "right"): string {
-    const terms = keys
-      .map((key) => this.frameKeyToTerm(key, side))
-      .filter((term): term is SignedExpressionTerm => term !== null);
+  private applyInitialEquation(): void {
+    if (!this.initialEquation) return;
 
+    this.positions = this.initialEquation.positions ?? { term1: 1, term2: 2, equals: 3, constant: 4 };
+    this.term1 = this.initialEquation.term1 ?? this.term1;
+    this.term2 = this.initialEquation.term2 ?? this.term2;
+    this.constant = this.initialEquation.constant ?? this.constant;
+  }
+
+  private buildSide(keys: FrameKey[], side: 'left' | 'right'): string {
+    const terms = keys.map((key) => this.frameKeyToTerm(key, side)).filter((term): term is SignedExpressionTerm => term !== null);
     return this.joinTerms(terms);
   }
 
-  private frameKeyToTerm(key: FrameKey, side: "left" | "right"): SignedExpressionTerm | null {
-    if (key === 'equals') {
-      return null;
-    }
+  private frameKeyToTerm(key: FrameKey, side: 'left' | 'right'): SignedExpressionTerm | null {
+    if (key === 'equals') return null;
 
     if (key === 'constant') {
-      const sign = side === "left" ? (this.constant.sign * -1) as 1 | -1 : (this.constant.sign as 1 | -1);
-      return {
-        sign,
-        value: constantToLatex({ ...this.constant, sign: 1 })
-      };
+      const sign = side === 'left' ? (this.constant.sign * -1) as 1 | -1 : this.constant.sign as 1 | -1;
+      return { sign, value: constantToLatex({ ...this.constant, sign: 1 }) };
     }
 
     if (key === 'term1') {
-      return {
-        sign: this.term1.sign as 1 | -1,
-        value: `${variableCoeffToLatex({ ...this.term1, sign: 1 })}${this.variable1}`
-      };
+      return { sign: this.term1.sign as 1 | -1, value: `${variableCoeffToLatex({ ...this.term1, sign: 1 })}${this.variable1}` };
     }
 
-    return {
-      sign: this.term2.sign as 1 | -1,
-      value: `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}`
-    };
+    return { sign: this.term2.sign as 1 | -1, value: `${variableCoeffToLatex({ ...this.term2, sign: 1 })}${this.variable2}` };
   }
 
   private joinTerms(terms: SignedExpressionTerm[]): string {
-    if (terms.length === 0) {
-      return '0';
-    }
+    if (terms.length === 0) return '0';
 
     return terms
       .map((term, index) => {
-        if (index === 0) {
-          return term.sign === -1 ? `-${term.value}` : term.value;
-        }
-
+        if (index === 0) return term.sign === -1 ? `-${term.value}` : term.value;
         return term.sign === -1 ? ` - ${term.value}` : ` + ${term.value}`;
       })
       .join('');
   }
- 
 }

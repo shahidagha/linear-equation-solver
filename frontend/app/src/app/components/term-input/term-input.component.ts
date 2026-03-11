@@ -13,6 +13,11 @@ import { Term } from '../../models/term.model';
 export class TermInputComponent {
   @Input() label = 'Term';
   @Input() variable = '';
+  @Input() set initialTerm(value: Term | null) {
+    if (!value) return;
+    this.term = { ...value };
+    this.updateTerm();
+  }
 
   term: Term = {
     sign: 1,
@@ -42,26 +47,9 @@ export class TermInputComponent {
   }
 
   onNumericKeydown(event: KeyboardEvent): void {
-    const allowedControlKeys = [
-      'Backspace',
-      'Delete',
-      'Tab',
-      'Escape',
-      'Enter',
-      'ArrowLeft',
-      'ArrowRight',
-      'Home',
-      'End'
-    ];
-
-    if (allowedControlKeys.includes(event.key)) {
-      return;
-    }
-
-    if (/^[0-9]$/.test(event.key)) {
-      return;
-    }
-
+    const allowedControlKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (allowedControlKeys.includes(event.key)) return;
+    if (/^[0-9]$/.test(event.key)) return;
     event.preventDefault();
   }
 

@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SavedSystemsComponent } from './components/saved-systems/saved-systems.component';
+
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, SavedSystemsComponent],
+  imports: [RouterOutlet],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

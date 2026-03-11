@@ -1,13 +1,9 @@
 class GraphicalSolver:
-    print("GraphicalSolver module loaded")
     def __init__(self, system):
-        print("GraphicalSolver initialized")
         self.eq1 = system.eq1
         self.eq2 = system.eq2
 
-
     def generate_points(self, equation):
-
         a = equation.a.to_sympy()
         b = equation.b.to_sympy()
         c = equation.c.to_sympy()
@@ -16,7 +12,6 @@ class GraphicalSolver:
 
         # 1. search integer points
         for x in range(-8, 9):
-
             if b == 0:
                 continue
 
@@ -24,7 +19,6 @@ class GraphicalSolver:
             y = y.simplify()
 
             if y.is_integer:
-
                 y_val = int(y)
 
                 if -8 <= y_val <= 8:
@@ -32,7 +26,6 @@ class GraphicalSolver:
 
             if len(points) == 3:
                 return points
-
 
         # 2. add intercept points if needed
 
@@ -46,11 +39,8 @@ class GraphicalSolver:
 
         return points[:3]
 
-
     def generate_tables(self):
-        print("DEBUG: Running GraphicalSolver")
         p1 = self.generate_points(self.eq1)
         p2 = self.generate_points(self.eq2)
-        print("DEBUG Points:", p1, p2)
 
         return p1, p2

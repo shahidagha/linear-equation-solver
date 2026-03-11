@@ -34,8 +34,6 @@ def save_equation_system(db: Session, payload: dict):
 
     equation_hash = generate_equation_hash(eq1, eq2)
     system_hash = generate_system_hash(var1, var2, eq1, eq2)
-    print("EQUATION HASH:", equation_hash)
-    print("SYSTEM HASH:", system_hash)
     # ---------------------------------------------------
     # Check exact duplicate
     # ---------------------------------------------------
@@ -94,25 +92,24 @@ def save_equation_system(db: Session, payload: dict):
     }
 
 def get_saved_systems(db: Session):
-        """
-        Return all saved equation systems
-        """
+    """
+    Return all saved equation systems
+    """
 
-        systems = (
-            db.query(EquationSystem)
-            .order_by(EquationSystem.id.desc())
-            .all()
-        )
+    systems = (
+        db.query(EquationSystem)
+        .order_by(EquationSystem.id.desc())
+        .all()
+    )
 
-        result = []
+    result = []
 
-        for s in systems:
+    for s in systems:
+        result.append({
+            "id": s.id,
+            "variables": s.variables,
+            "equation1": s.equation1,
+            "equation2": s.equation2
+        })
 
-            result.append({
-                "id": s.id,
-                "variables": s.variables,
-                "equation1": s.equation1,
-                "equation2": s.equation2
-            })
-
-        return result
+    return result

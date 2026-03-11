@@ -1,0 +1,34 @@
+<div class="right-panel-stack">
+  <section class="panel-card">
+    <h3>Saved Systems</h3>
+    <app-saved-systems></app-saved-systems>
+  </section>
+
+  <section class="panel-card">
+    <h3>Solution</h3>
+    <div *ngIf="response as resp; else emptySolution">
+      <div class="solution-line" *ngFor="let entry of resp.solution | keyvalue: keepOriginalOrder">
+        <strong>{{ entry.key }}</strong> = {{ entry.value }}
+      </div>
+    </div>
+    <ng-template #emptySolution>
+      <p class="hint">No solution yet. Build equations and click Solve System.</p>
+    </ng-template>
+  </section>
+
+  <section class="panel-card">
+    <h3>Methods</h3>
+    <app-method-selector
+      [selectedMethod]="selectedMethod"
+      (methodSelected)="onMethodSelected($event)">
+    </app-method-selector>
+  </section>
+
+  <section class="panel-card">
+    <h3>Steps</h3>
+    <app-solution-steps
+      [response]="response"
+      [selectedMethod]="selectedMethod">
+    </app-solution-steps>
+  </section>
+</div>

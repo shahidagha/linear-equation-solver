@@ -10,15 +10,47 @@
 
     <div class="fraction">
       <div class="fraction-row">
-        <input type="number" [(ngModel)]="term.numCoeff" (ngModelChange)="updateTerm()">
+        <input
+          type="number"
+          inputmode="numeric"
+          [(ngModel)]="term.numCoeff"
+          (focus)="selectInputValue($event)"
+          (click)="selectInputValue($event)"
+          (keydown)="onNumericKeydown($event)"
+          (blur)="sanitizeNumericField('numCoeff')"
+          (ngModelChange)="updateTerm()">
         <span class="sqrt">√</span>
-        <input type="number" [(ngModel)]="term.numRad" (ngModelChange)="updateTerm()">
+        <input
+          type="number"
+          inputmode="numeric"
+          [(ngModel)]="term.numRad"
+          (focus)="selectInputValue($event)"
+          (click)="selectInputValue($event)"
+          (keydown)="onNumericKeydown($event)"
+          (blur)="sanitizeNumericField('numRad')"
+          (ngModelChange)="updateTerm()">
       </div>
       <div class="fraction-line"></div>
       <div class="fraction-row">
-        <input type="number" [(ngModel)]="term.denCoeff" (ngModelChange)="updateTerm()">
+        <input
+          type="number"
+          inputmode="numeric"
+          [(ngModel)]="term.denCoeff"
+          (focus)="selectInputValue($event)"
+          (click)="selectInputValue($event)"
+          (keydown)="onNumericKeydown($event)"
+          (blur)="sanitizeNumericField('denCoeff')"
+          (ngModelChange)="updateTerm()">
         <span class="sqrt">√</span>
-        <input type="number" [(ngModel)]="term.denRad" (ngModelChange)="updateTerm()">
+        <input
+          type="number"
+          inputmode="numeric"
+          [(ngModel)]="term.denRad"
+          (focus)="selectInputValue($event)"
+          (click)="selectInputValue($event)"
+          (keydown)="onNumericKeydown($event)"
+          (blur)="sanitizeNumericField('denRad')"
+          (ngModelChange)="updateTerm()">
       </div>
     </div>
 

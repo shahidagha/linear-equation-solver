@@ -1,7 +1,7 @@
 <div class="right-panel-stack">
   <section class="panel-card">
     <h3>Saved Systems</h3>
-    <app-saved-systems></app-saved-systems>
+    <app-saved-systems (systemSelected)="onSavedSystemSelected($event)"></app-saved-systems>
   </section>
 
   <section class="panel-card">
@@ -25,10 +25,11 @@
   </section>
 
   <section class="panel-card">
-    <h3>Steps</h3>
+    <h3>Steps Viewer</h3>
     <app-solution-steps
       [response]="response"
       [selectedMethod]="selectedMethod">
     </app-solution-steps>
+    <div class="graph-container"></div>
   </section>
 </div>

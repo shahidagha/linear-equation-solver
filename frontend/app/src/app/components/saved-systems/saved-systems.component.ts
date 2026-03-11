@@ -1,11 +1,12 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { EquationApiService } from '../../services/equation-api.service';
 
 @Component({
   selector: 'app-saved-systems',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './saved-systems.component.html',
   styleUrls: ['./saved-systems.component.css']
 })
@@ -13,6 +14,9 @@ export class SavedSystemsComponent implements OnInit {
   @Output() systemSelected = new EventEmitter<any>();
 
   systems: any[] = [];
+  searchTerm = '';
+  currentPage = 1;
+  readonly pageSize = 8;
 
   constructor(private equationApi: EquationApiService) {}
 
@@ -24,11 +28,56 @@ export class SavedSystemsComponent implements OnInit {
     this.equationApi.getSystems().subscribe({
       next: (data: any) => {
         this.systems = data;
+        this.currentPage = 1;
       },
       error: () => {
         this.systems = [];
       }
     });
+  }
+
+  get filteredSystems(): any[] {
+    const normalizedSearch = this.searchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return this.systems;
+    }
+
+    return this.systems.filter((system) => {
+      const combined = this.buildSystemText(system).toLowerCase();
+      return combined.includes(normalizedSearch);
+    });
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredSystems.length / this.pageSize));
+  }
+
+  get pagedSystems(): any[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredSystems.slice(start, start + this.pageSize);
+  }
+
+  onSearchChange(): void {
+    this.currentPage = 1;
+  }
+
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage -= 1;
+    }
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage += 1;
+    }
+  }
+
+  buildSystemText(system: any): string {
+    const eq1 = this.buildEquation(system.equation1, system.variables);
+    const eq2 = this.buildEquation(system.equation2, system.variables);
+    return `${eq1} ; ${eq2}`;
   }
 
   buildEquation(eq: any, vars: any): string {

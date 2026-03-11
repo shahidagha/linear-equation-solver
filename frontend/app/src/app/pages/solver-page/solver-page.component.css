@@ -26,7 +26,7 @@
 
 .solver-main {
   display: grid;
-  grid-template-columns: 45% 55%;
+  grid-template-columns: 60% 40%;
   gap: 18px;
   padding: 16px;
 }

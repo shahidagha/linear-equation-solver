@@ -1,10 +1,24 @@
 <div class="saved-list">
-  <div *ngFor="let sys of systems" class="system-card">
-    <div class="equation">{{ buildEquation(sys.equation1, sys.variables) }}</div>
-    <div class="equation">{{ buildEquation(sys.equation2, sys.variables) }}</div>
+  <input
+    type="text"
+    class="search-input"
+    placeholder="Search systems..."
+    [(ngModel)]="searchTerm"
+    (ngModelChange)="onSearchChange()">
 
-    <button type="button" (click)="showSolution(sys)">Use System</button>
+  <div *ngFor="let sys of pagedSystems" class="system-card">
+    <div class="system-text">{{ buildSystemText(sys) }}</div>
+    <div class="actions">
+      <button type="button" (click)="showSolution(sys)">Use</button>
+      <button type="button" class="secondary" (click)="showSolution(sys)">Solution</button>
+    </div>
   </div>
 
-  <div *ngIf="systems.length === 0" class="empty-state">No systems saved yet.</div>
+  <div *ngIf="filteredSystems.length === 0" class="empty-state">No systems found.</div>
+
+  <div class="pagination" *ngIf="filteredSystems.length > 0">
+    <button type="button" (click)="previousPage()" [disabled]="currentPage === 1">Previous</button>
+    <span>Page {{ currentPage }} / {{ totalPages }}</span>
+    <button type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">Next</button>
+  </div>
 </div>

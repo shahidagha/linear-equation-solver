@@ -31,4 +31,50 @@ export class TermInputComponent {
   updateTerm() {
     this.termChange.emit({ ...this.term });
   }
+
+  selectInputValue(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement | null;
+    input?.select();
+  }
+
+  onNumericKeydown(event: KeyboardEvent): void {
+    const allowedControlKeys = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'Home',
+      'End'
+    ];
+
+    if (allowedControlKeys.includes(event.key)) {
+      return;
+    }
+
+    if (/^[0-9]$/.test(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+  }
+
+  sanitizeNumericField(key: 'numCoeff' | 'numRad' | 'denCoeff' | 'denRad'): void {
+    const rawValue = Number(this.term[key]);
+
+    if (!Number.isFinite(rawValue) || rawValue < 1) {
+      this.term[key] = 1;
+      this.updateTerm();
+      return;
+    }
+
+    const normalized = Math.floor(Math.abs(rawValue));
+    if (this.term[key] !== normalized) {
+      this.term[key] = normalized;
+    }
+
+    this.updateTerm();
+  }
 }

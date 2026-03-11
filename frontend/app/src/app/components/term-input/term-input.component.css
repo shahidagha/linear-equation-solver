@@ -56,6 +56,14 @@
   border-radius: 8px;
   text-align: center;
   font-size: 13px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.fraction-row input::-webkit-outer-spin-button,
+.fraction-row input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .fraction-row input:focus {

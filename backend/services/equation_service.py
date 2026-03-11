@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
-from models.equation_models import EquationSystem
-from models.solution_methods import SolutionMethod
-from utils.hash_utils import generate_equation_hash, generate_system_hash
-from utils.canonical_encoder import canonicalize_equation
+from backend.models.equation_models import EquationSystem
+from backend.models.solution_methods import SolutionMethod
+from backend.utils.hash_utils import generate_equation_hash, generate_system_hash
+from backend.utils.canonical_encoder import canonicalize_equation
 
 
 def save_equation_system(db: Session, payload: dict):

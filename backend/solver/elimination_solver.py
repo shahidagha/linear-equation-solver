@@ -1,7 +1,7 @@
 import sympy as sp
-from utils.step_recorder import StepRecorder
-from utils.equation_numbering import EquationNumbering
-from latex.equation_formatter import EquationFormatter
+from backend.utils.step_recorder import StepRecorder
+from backend.utils.equation_numbering import EquationNumbering
+from backend.latex.equation_formatter import EquationFormatter
 
 
 class EliminationSolver:

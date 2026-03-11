@@ -1,4 +1,4 @@
-from latex.math_to_latex import MathToLatex
+from backend.latex.math_to_latex import MathToLatex
 
 
 class LatexGenerator:

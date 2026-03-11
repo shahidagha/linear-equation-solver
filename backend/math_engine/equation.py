@@ -1,5 +1,5 @@
 import sympy as sp
-from math_engine.fraction_surd import FractionSurd
+from backend.math_engine.fraction_surd import FractionSurd
 
 
 class Equation:

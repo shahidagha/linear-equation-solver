@@ -1,6 +1,7 @@
-from solver.substitution_solver import SubstitutionSolver
-from solver.elimination_solver import EliminationSolver
-from solver.cramer_solver import CramerSolver
+from backend.solver.substitution_solver import SubstitutionSolver
+from backend.solver.elimination_solver import EliminationSolver
+from backend.solver.cramer_solver import CramerSolver
+
 
 class SolverController:
 

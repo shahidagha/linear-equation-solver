@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -6,6 +6,8 @@ import { EquationApiService } from '../../services/equation-api.service';
 import { SolverStateService } from '../../services/solver-state.service';
 import { SolverResponse } from '../../models/solver-response.model';
 import { ConfirmDeleteModalComponent } from '../confirm-delete-modal/confirm-delete-modal.component';
+import katex from 'katex';
+import { equationToLatex } from '../../utils/latex-generator';
 
 @Component({
   selector: 'app-saved-systems',
@@ -14,7 +16,7 @@ import { ConfirmDeleteModalComponent } from '../confirm-delete-modal/confirm-del
   templateUrl: './saved-systems.component.html',
   styleUrls: ['./saved-systems.component.css']
 })
-export class SavedSystemsComponent implements OnInit, OnDestroy {
+export class SavedSystemsComponent implements OnInit, OnDestroy, AfterViewChecked {
   systems: any[] = [];
   searchTerm = '';
   currentPage = 1;
@@ -24,6 +26,8 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
   isDeleting = false;
 
   private readonly subscriptions: Subscription[] = [];
+  @ViewChildren('systemEquation')
+  private readonly systemEquationBlocks!: QueryList<ElementRef<HTMLElement>>;
 
   constructor(private equationApi: EquationApiService, private readonly state: SolverStateService) {}
 
@@ -44,6 +48,10 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach((s) => s.unsubscribe());
+  }
+
+  ngAfterViewChecked(): void {
+    this.renderSystemEquations();
   }
 
   loadSystems(): void {
@@ -74,32 +82,15 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
   }
 
   buildSystemText(system: any): string {
-    return `${this.buildEquation(system.equation1, system.variables)} ; ${this.buildEquation(system.equation2, system.variables)}`;
+    return `${this.buildEquationLatex(system.equation1, system.variables)} ; ${this.buildEquationLatex(system.equation2, system.variables)}`;
   }
 
-  buildEquation(eq: any, vars: any): string {
-    const [v1, v2] = [vars.var1, vars.var2];
-    const t1 = eq.term1.numCoeff * eq.term1.sign;
-    const t2 = eq.term2.numCoeff * eq.term2.sign;
-    const c = eq.constant.numCoeff * eq.constant.sign;
+  buildEquationLatex(eq: any, vars: any): string {
+    return equationToLatex(eq, vars);
+  }
 
-    const terms: string[] = [];
-    if (t1 !== 0) {
-      const firstCoeff = Math.abs(t1) === 1 ? (t1 < 0 ? '-' : '') : `${t1}`;
-      terms.push(`${firstCoeff}${v1}`);
-    }
-
-    if (t2 !== 0) {
-      const coeff = Math.abs(t2) === 1 ? '' : `${Math.abs(t2)}`;
-      if (terms.length === 0) {
-        terms.push(`${t2 < 0 ? '-' : ''}${coeff}${v2}`);
-      } else {
-        terms.push(`${t2 >= 0 ? '+' : '-'} ${coeff}${v2}`);
-      }
-    }
-
-    const left = terms.length > 0 ? terms.join(' ') : '0';
-    return `${left} = ${c}`;
+  trackBySystem(index: number, system: any): number {
+    return system.id;
   }
 
   showSolution(system: any): void {
@@ -157,6 +148,32 @@ export class SavedSystemsComponent implements OnInit, OnDestroy {
         this.isDeleting = false;
         this.loadSystems();
       }
+    });
+  }
+
+  private renderSystemEquations(): void {
+    if (!this.systemEquationBlocks) {
+      return;
+    }
+
+    this.systemEquationBlocks.forEach((blockRef) => {
+      const block = blockRef.nativeElement;
+      const latex = block.dataset['latex'];
+
+      if (!latex || block.dataset['renderedLatex'] === latex) {
+        return;
+      }
+
+      try {
+        katex.render(latex, block, {
+          throwOnError: false,
+          displayMode: false,
+        });
+      } catch {
+        block.textContent = latex;
+      }
+
+      block.dataset['renderedLatex'] = latex;
     });
   }
 }

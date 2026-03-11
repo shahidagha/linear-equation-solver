@@ -6,8 +6,8 @@
     <select [(ngModel)]="pageSize"><option [ngValue]="5">5</option><option [ngValue]="8">8</option><option [ngValue]="12">12</option></select>
   </div>
 
-  <div *ngFor="let sys of pagedSystems" class="system-card">
-    <div class="system-text">{{ buildSystemText(sys) }}</div>
+  <div *ngFor="let sys of pagedSystems; trackBy: trackBySystem" class="system-card">
+    <div #systemEquation class="system-text" [attr.data-latex]="buildSystemText(sys)"></div>
     <div class="actions">
       <button type="button" [class.active-edit]="sys.id === editingSystemId" (click)="editSystem(sys)">Edit</button>
       <button type="button" class="delete" (click)="openDeleteModal(sys)">Delete</button>

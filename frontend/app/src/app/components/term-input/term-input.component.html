@@ -15,7 +15,7 @@
           inputmode="numeric"
           [(ngModel)]="term.numCoeff"
           (focus)="selectInputValue($event)"
-          (click)="selectInputValue($event)"
+          (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
           (keydown)="onNumericKeydown($event)"
           (blur)="sanitizeNumericField('numCoeff')"
           (ngModelChange)="updateTerm()">
@@ -25,7 +25,7 @@
           inputmode="numeric"
           [(ngModel)]="term.numRad"
           (focus)="selectInputValue($event)"
-          (click)="selectInputValue($event)"
+          (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
           (keydown)="onNumericKeydown($event)"
           (blur)="sanitizeNumericField('numRad')"
           (ngModelChange)="updateTerm()">
@@ -37,7 +37,7 @@
           inputmode="numeric"
           [(ngModel)]="term.denCoeff"
           (focus)="selectInputValue($event)"
-          (click)="selectInputValue($event)"
+          (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
           (keydown)="onNumericKeydown($event)"
           (blur)="sanitizeNumericField('denCoeff')"
           (ngModelChange)="updateTerm()">
@@ -47,7 +47,7 @@
           inputmode="numeric"
           [(ngModel)]="term.denRad"
           (focus)="selectInputValue($event)"
-          (click)="selectInputValue($event)"
+          (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
           (keydown)="onNumericKeydown($event)"
           (blur)="sanitizeNumericField('denRad')"
           (ngModelChange)="updateTerm()">

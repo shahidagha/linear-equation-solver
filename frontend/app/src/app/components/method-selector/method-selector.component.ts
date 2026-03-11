@@ -13,16 +13,13 @@ export class MethodSelectorComponent {
   @Output() methodSelected = new EventEmitter<string>();
 
   readonly methods = [
-    { key: 'elimination', label: 'Elimination', enabled: true },
-    { key: 'graphical', label: 'Graphical', enabled: true },
-    { key: 'substitution', label: 'Substitution', enabled: false },
-    { key: 'comparison', label: 'Comparison', enabled: false }
+    { key: 'elimination', label: 'Elimination' },
+    { key: 'graphical', label: 'Graphical' },
+    { key: 'substitution', label: 'Substitution' },
+    { key: 'cramer', label: 'Cramer' }
   ];
 
-  selectMethod(methodKey: string, enabled: boolean): void {
-    if (!enabled) {
-      return;
-    }
+  selectMethod(methodKey: string): void {
     this.methodSelected.emit(methodKey);
   }
 }

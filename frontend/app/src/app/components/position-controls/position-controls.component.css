@@ -27,6 +27,10 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
 }
 
 .pill-btn:hover {

@@ -37,6 +37,10 @@ export class TermInputComponent {
     input?.select();
   }
 
+  keepSelection(event: MouseEvent): void {
+    event.preventDefault();
+  }
+
   onNumericKeydown(event: KeyboardEvent): void {
     const allowedControlKeys = [
       'Backspace',

@@ -35,3 +35,5 @@
   outline: 3px solid rgba(123, 198, 255, 0.55);
   outline-offset: 3px;
 }
+
+.error { color: #b91c1c; font-size: 12px; margin: 0; }

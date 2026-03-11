@@ -1,31 +1,17 @@
-<div *ngIf="!response" class="empty-state">Solve a system to see method steps.</div>
+<div class="flow" *ngIf="selectedMethod === 'elimination'; else graphicalBlock">
+  <ng-container *ngFor="let step of eliminationSteps">
+    <p *ngIf="step.type === 'text'">{{ step.content }}</p>
+    <div *ngIf="step.type !== 'text'" #mathBlock [attr.data-latex]="toLatex(step)"></div>
+  </ng-container>
+</div>
 
-<ng-container *ngIf="response">
-  <div *ngIf="selectedMethod === 'elimination'; else graphicalBlock">
-    <div *ngFor="let step of eliminationSteps" class="step-card" [ngSwitch]="step.type">
-      <div *ngSwitchCase="'vertical_elimination'" class="vertical-step">
-        <pre>{{ step.eq1 }}
-+ {{ step.eq2 }}
---------------
-{{ step.result }}</pre>
-      </div>
-      <div *ngSwitchDefault>{{ step.content }}</div>
-    </div>
+<ng-template #graphicalBlock>
+  <div class="flow" *ngIf="selectedMethod === 'graphical'; else comingSoonBlock">
+    <p *ngFor="let step of graphicalSteps">{{ step }}</p>
+    <p *ngIf="graph">Intersection: {{ graph.intersection | json }}</p>
   </div>
+</ng-template>
 
-  <ng-template #graphicalBlock>
-    <div *ngIf="selectedMethod === 'graphical'; else comingSoonBlock">
-      <div *ngFor="let step of graphicalSteps" class="step-card">{{ step }}</div>
-      <div class="graph-placeholder">
-        <h4>Graph Data Preview</h4>
-        <p>Equation 1 Points: {{ response.graph.equation1_points.length }}</p>
-        <p>Equation 2 Points: {{ response.graph.equation2_points.length }}</p>
-        <p>Intersection: {{ response.graph.intersection | json }}</p>
-      </div>
-    </div>
-  </ng-template>
-
-  <ng-template #comingSoonBlock>
-    <div class="empty-state">This method is planned and will be available soon.</div>
-  </ng-template>
-</ng-container>
+<ng-template #comingSoonBlock>
+  <div class="flow"><p>This method is planned and will be available soon.</p></div>
+</ng-template>

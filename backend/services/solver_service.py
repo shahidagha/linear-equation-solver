@@ -81,19 +81,19 @@ def _upsert_method_record(
 
 
 def solve_system(db: Session, system_id: int, payload: dict):
-    var1 = payload["variables"]["var1"]
-    var2 = payload["variables"]["var2"]
+    var1 = payload["variables"][0]
+    var2 = payload["variables"][1]
 
     eq1_data = payload["equation1"]
     eq2_data = payload["equation2"]
 
-    a1 = build_fraction_surd(eq1_data["term1"])
-    b1 = build_fraction_surd(eq1_data["term2"])
+    a1 = build_fraction_surd(eq1_data["terms"][0])
+    b1 = build_fraction_surd(eq1_data["terms"][1])
     c1 = build_fraction_surd(eq1_data["constant"])
     eq1 = Equation(a1, b1, c1, var1=var1, var2=var2)
 
-    a2 = build_fraction_surd(eq2_data["term1"])
-    b2 = build_fraction_surd(eq2_data["term2"])
+    a2 = build_fraction_surd(eq2_data["terms"][0])
+    b2 = build_fraction_surd(eq2_data["terms"][1])
     c2 = build_fraction_surd(eq2_data["constant"])
     eq2 = Equation(a2, b2, c2, var1=var1, var2=var2)
 

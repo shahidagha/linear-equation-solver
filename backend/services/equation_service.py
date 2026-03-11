@@ -8,8 +8,8 @@ from backend.utils.canonical_encoder import canonicalize_equation
 def save_equation_system(db: Session, payload: dict):
     """Save an equation system with duplicate detection."""
 
-    var1 = payload["variables"]["var1"]
-    var2 = payload["variables"]["var2"]
+    var1 = payload["variables"][0]
+    var2 = payload["variables"][1]
 
     eq1 = payload["equation1"]
     eq2 = payload["equation2"]

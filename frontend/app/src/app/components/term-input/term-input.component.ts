@@ -55,14 +55,15 @@ export class TermInputComponent {
 
   sanitizeNumericField(key: 'numCoeff' | 'numRad' | 'denCoeff' | 'denRad'): void {
     const rawValue = Number(this.term[key]);
+    const minValue = key === 'numCoeff' ? 0 : 1;
 
-    if (!Number.isFinite(rawValue) || rawValue < 1) {
-      this.term[key] = 1;
+    if (!Number.isFinite(rawValue)) {
+      this.term[key] = minValue;
       this.updateTerm();
       return;
     }
 
-    const normalized = Math.floor(Math.abs(rawValue));
+    const normalized = Math.max(minValue, Math.floor(Math.abs(rawValue)));
     if (this.term[key] !== normalized) {
       this.term[key] = normalized;
     }

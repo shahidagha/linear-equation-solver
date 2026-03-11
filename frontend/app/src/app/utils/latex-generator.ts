@@ -10,8 +10,26 @@ function sanitizePositiveInteger(value: number): number {
   return Math.floor(Math.abs(normalized));
 }
 
-function buildUnsignedTerm(term: Term): string {
-  const numCoeff = sanitizePositiveInteger(term.numCoeff);
+function sanitizeNonNegativeInteger(value: number): number {
+  const normalized = Number(value);
+
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    return 0;
+  }
+
+  return Math.floor(Math.abs(normalized));
+}
+
+function buildUnsignedTerm(term: Term, options?: { allowZeroNumerator?: boolean }): string {
+  const allowZeroNumerator = options?.allowZeroNumerator ?? false;
+  const numCoeff = allowZeroNumerator
+    ? sanitizeNonNegativeInteger(term.numCoeff)
+    : sanitizePositiveInteger(term.numCoeff);
+
+  if (allowZeroNumerator && numCoeff === 0) {
+    return '0';
+  }
+
   const numRad = sanitizePositiveInteger(term.numRad);
   const denCoeff = sanitizePositiveInteger(term.denCoeff);
   const denRad = sanitizePositiveInteger(term.denRad);
@@ -52,7 +70,11 @@ function buildUnsignedTerm(term: Term): string {
  * Examples: 1 -> '', -1 -> '-' and √2 -> '\\sqrt{2}'.
  */
 export function variableCoeffToLatex(term: Term): string {
-  const unsigned = buildUnsignedTerm(term);
+  const unsigned = buildUnsignedTerm(term, { allowZeroNumerator: true });
+  if (unsigned === '0') {
+    return '0';
+  }
+
   const signPrefix = term.sign === -1 ? '-' : '';
 
   if (unsigned === '1') {
@@ -63,11 +85,15 @@ export function variableCoeffToLatex(term: Term): string {
 }
 
 /**
- * Formats a constant term and always keeps 1 visible.
- * Examples: +1 -> '1', -1 -> '-1'.
+ * Formats a constant term and always keeps 0/1 visible.
+ * Examples: +1 -> '1', -1 -> '-1', 0 -> '0'.
  */
 export function constantToLatex(term: Term): string {
-  const unsigned = buildUnsignedTerm(term);
+  const unsigned = buildUnsignedTerm(term, { allowZeroNumerator: true });
+
+  if (unsigned === '0') {
+    return '0';
+  }
 
   if (term.sign === -1) {
     return `-${unsigned}`;
@@ -80,5 +106,5 @@ export function constantToLatex(term: Term): string {
  * Backward-compatible generic formatter.
  */
 export function termToLatex(term: Term): string {
-  return buildUnsignedTerm(term);
+  return buildUnsignedTerm(term, { allowZeroNumerator: true });
 }

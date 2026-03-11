@@ -9,7 +9,8 @@
   <div *ngFor="let sys of pagedSystems" class="system-card">
     <div class="system-text">{{ buildSystemText(sys) }}</div>
     <div class="actions">
-      <button type="button" (click)="editSystem(sys)">Edit</button>
+      <button type="button" [class.active-edit]="sys.id === editingSystemId" (click)="editSystem(sys)">Edit</button>
+      <button type="button" class="delete" (click)="openDeleteModal(sys)">Delete</button>
       <button type="button" class="solution" [class.has-solution]="sys.has_solution" [disabled]="!sys.has_solution" (click)="showSolution(sys)">Solution</button>
     </div>
   </div>
@@ -22,3 +23,12 @@
     <button type="button" (click)="currentPage=currentPage+1" [disabled]="currentPage === totalPages">Next</button>
   </div>
 </div>
+
+<app-confirm-delete-modal
+  [isOpen]="!!pendingDeleteSystem"
+  [isDeleting]="isDeleting"
+  title="Delete System"
+  message="Are you sure you want to delete this system?"
+  (cancel)="cancelDelete()"
+  (confirmDelete)="confirmDelete()">
+</app-confirm-delete-modal>

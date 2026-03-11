@@ -119,3 +119,13 @@ def get_saved_systems(db: Session):
         )
 
     return result
+
+
+def delete_system_by_id(db: Session, system_id: int):
+    """Delete solution methods for a system and then delete the system itself."""
+
+    db.query(SolutionMethod).filter(SolutionMethod.system_id == system_id).delete(synchronize_session=False)
+    db.query(EquationSystem).filter(EquationSystem.id == system_id).delete(synchronize_session=False)
+    db.commit()
+
+    return {"status": "deleted"}

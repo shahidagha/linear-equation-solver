@@ -1,36 +1,48 @@
 <section class="panel-card">
-  <h3>Solution Viewer</h3>
-
-  <app-method-selector
-    [selectedMethod]="(state.selectedMethod$ | async) || 'elimination'"
-    (methodSelected)="onMethodSelected($event)">
-  </app-method-selector>
-
-  <div class="verbosity-row">
-    <button *ngFor="let level of verbosities" type="button" [class.active]="(state.verbosity$ | async) === level" (click)="setVerbosity(level)">
-      {{ level | titlecase }}
-    </button>
+  <div class="header-row">
+    <h3>Solution Viewer</h3>
+    <app-method-selector
+      [disabled]="!(state.methods$ | async)"
+      [selectedMethod]="(state.selectedMethod$ | async) || 'elimination'"
+      (methodSelected)="onMethodSelected($event)">
+    </app-method-selector>
   </div>
 
-  <div class="controls-row">
-    <button type="button" (click)="copyQuestion()">Copy Question</button>
-    <button type="button" (click)="copySolution()">Copy Solution</button>
-    <ng-container *ngIf="(state.selectedMethod$ | async) === 'graphical'">
-      <button type="button" (click)="viewGraph()">View Graph</button>
-      <button type="button" (click)="copyGraphImage()">Copy Graph Image</button>
-    </ng-container>
+  <div class="toolbar-row">
+    <div class="verbosity-row">
+      <button
+        *ngFor="let level of verbosities"
+        type="button"
+        [disabled]="!(state.methods$ | async)"
+        [class.active]="(state.verbosity$ | async) === level"
+        (click)="setVerbosity(level)">
+        {{ level | titlecase }}
+      </button>
+    </div>
+
+    <div class="controls-row">
+      <button type="button" [disabled]="!(state.methods$ | async)" (click)="copyQuestion()">Copy Question</button>
+      <button type="button" [disabled]="!(state.methods$ | async)" (click)="copySolution()">Copy Solution</button>
+      <button type="button" (click)="exitSolution()">Exit Solution</button>
+    </div>
   </div>
 
-  <div class="solution-value" *ngIf="state.solution$ | async as solution">
-    <span *ngFor="let entry of solution | keyvalue">{{ entry.key }} = {{ entry.value }}</span>
-  </div>
+  <ng-container *ngIf="state.methods$ | async as methods; else noSolution">
+    <div class="solution-value" *ngIf="state.solution$ | async as solution">
+      <span *ngFor="let entry of solution | keyvalue">{{ entry.key }} = {{ entry.value }}</span>
+    </div>
 
-  <app-solution-steps
-    [methods]="state.methods$ | async"
-    [graph]="state.graph$ | async"
-    [selectedMethod]="(state.selectedMethod$ | async) || 'elimination'"
-    [verbosity]="(state.verbosity$ | async) || 'detailed'">
-  </app-solution-steps>
+    <app-solution-steps
+      [methods]="methods"
+      [graph]="state.graph$ | async"
+      [selectedMethod]="(state.selectedMethod$ | async) || 'elimination'"
+      [verbosity]="(state.verbosity$ | async) || 'detailed'">
+    </app-solution-steps>
+  </ng-container>
 
-  <button type="button" class="exit-btn" (click)="exitSolution()">Exit Solution</button>
+  <ng-template #noSolution>
+    <div class="empty-solution-message">
+      No solution yet. Build equations and click Solve System.
+    </div>
+  </ng-template>
 </section>

@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 })
 export class MethodSelectorComponent {
   @Input() selectedMethod = 'elimination';
+  @Input() disabled = false;
   @Output() methodSelected = new EventEmitter<string>();
 
   readonly methods = [
@@ -20,6 +21,7 @@ export class MethodSelectorComponent {
   ];
 
   selectMethod(methodKey: string): void {
+    if (this.disabled) return;
     this.methodSelected.emit(methodKey);
   }
 }

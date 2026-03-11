@@ -1,9 +1,11 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { VariableSelectorComponent } from '../variable-selector/variable-selector.component';
 import { EquationBuilderComponent } from '../equation-builder/equation-builder.component';
 import { EquationApiService } from '../../services/equation-api.service';
 import { SolverResponse } from '../../models/solver-response.model';
+import { SolverStateService } from '../../services/solver-state.service';
 
 @Component({
   selector: 'app-input-panel',
@@ -12,17 +14,42 @@ import { SolverResponse } from '../../models/solver-response.model';
   templateUrl: './input-panel.component.html',
   styleUrls: ['./input-panel.component.css']
 })
-export class InputPanelComponent {
+export class InputPanelComponent implements OnInit, OnDestroy {
   @Output() solved = new EventEmitter<SolverResponse>();
 
   variable1 = 'x';
   variable2 = 'y';
   equation1Data: any = null;
   equation2Data: any = null;
+  initialEquation1: any = null;
+  initialEquation2: any = null;
+  canSolve = true;
   isSubmitting = false;
   errorMessage = '';
 
-  constructor(private equationApi: EquationApiService) {}
+  private readonly subscriptions: Subscription[] = [];
+
+  constructor(private equationApi: EquationApiService, private readonly state: SolverStateService) {}
+
+  ngOnInit(): void {
+    this.subscriptions.push(
+      this.state.variables$.subscribe((variables) => {
+        this.variable1 = variables.var1 || 'x';
+        this.variable2 = variables.var2 || 'y';
+      }),
+      this.state.equations$.subscribe((equations) => {
+        this.initialEquation1 = equations.equation1;
+        this.initialEquation2 = equations.equation2;
+      }),
+      this.state.canSolve$.subscribe((canSolve) => {
+        this.canSolve = canSolve;
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((s) => s.unsubscribe());
+  }
 
   onVariable1Change(variable: string): void { this.variable1 = variable || 'x'; }
   onVariable2Change(variable: string): void { this.variable2 = variable || 'y'; }
@@ -30,7 +57,7 @@ export class InputPanelComponent {
   onEquation2Change(data: any): void { this.equation2Data = data; }
 
   saveSystem(): void {
-    if (!this.equation1Data || !this.equation2Data || this.isSubmitting) return;
+    if (!this.equation1Data || !this.equation2Data || this.isSubmitting || !this.canSolve) return;
     this.errorMessage = '';
     this.isSubmitting = true;
 
@@ -39,6 +66,8 @@ export class InputPanelComponent {
       equation1: this.equation1Data,
       equation2: this.equation2Data
     };
+
+    this.state.setBuilderState(payload);
 
     this.equationApi.solveSystem(payload).subscribe({
       next: (response: SolverResponse) => {

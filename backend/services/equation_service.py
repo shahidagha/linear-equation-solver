@@ -74,15 +74,35 @@ def get_saved_systems(db: Session):
     for s in systems:
         per_system = methods_by_system.get(s.id, {})
         elimination = per_system.get("elimination")
+        substitution = per_system.get("substitution")
+        cramer = per_system.get("cramer")
         graphical = per_system.get("graphical")
 
         stored_response = None
         if elimination and graphical:
             stored_response = {
-                "solution": elimination.solution,
+                "solution": elimination.solution_json,
                 "methods": {
-                    "elimination": elimination.steps,
-                    "graphical_steps": graphical.steps,
+                    "elimination_latex": {
+                        "latex_detailed": elimination.latex_detailed,
+                        "latex_medium": elimination.latex_medium,
+                        "latex_short": elimination.latex_short,
+                    },
+                    "substitution_latex": None if substitution is None else {
+                        "latex_detailed": substitution.latex_detailed,
+                        "latex_medium": substitution.latex_medium,
+                        "latex_short": substitution.latex_short,
+                    },
+                    "cramer_latex": None if cramer is None else {
+                        "latex_detailed": cramer.latex_detailed,
+                        "latex_medium": cramer.latex_medium,
+                        "latex_short": cramer.latex_short,
+                    },
+                    "graphical_latex": {
+                        "latex_detailed": graphical.latex_detailed,
+                        "latex_medium": graphical.latex_medium,
+                        "latex_short": graphical.latex_short,
+                    },
                 },
                 "graph": graphical.graph_data,
             }

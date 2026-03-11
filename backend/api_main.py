@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import engine, Base
+from database import engine, Base, ensure_solution_methods_schema
 
 # Import models so SQLAlchemy registers them
 from models.equation_models import EquationSystem
@@ -14,6 +14,7 @@ app = FastAPI()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+ensure_solution_methods_schema()
 
 # Allow Angular frontend to call API
 app.add_middleware(

@@ -1,5 +1,31 @@
 import { Term } from '../models/term.model';
 
+type EquationVars = {
+  var1?: string;
+  var2?: string;
+  variable1?: string;
+  variable2?: string;
+};
+
+type EquationJson = {
+  positions?: {
+    term1?: number;
+    term2?: number;
+    equals?: number;
+    constant?: number;
+  };
+  term1: Term;
+  term2: Term;
+  constant: Term;
+};
+
+type FrameKey = 'term1' | 'term2' | 'equals' | 'constant';
+
+interface SignedExpressionTerm {
+  sign: 1 | -1;
+  value: string;
+}
+
 function sanitizePositiveInteger(value: number): number {
   const normalized = Number(value);
 
@@ -107,4 +133,69 @@ export function constantToLatex(term: Term): string {
  */
 export function termToLatex(term: Term): string {
   return buildUnsignedTerm(term, { allowZeroNumerator: true });
+}
+
+export function equationToLatex(equation: EquationJson, variables: EquationVars): string {
+  const positions = equation.positions ?? { term1: 1, term2: 2, equals: 3, constant: 4 };
+  const variable1 = variables.var1 ?? variables.variable1 ?? 'x';
+  const variable2 = variables.var2 ?? variables.variable2 ?? 'y';
+
+  const orderedKeys: FrameKey[] = (['term1', 'term2', 'equals', 'constant'] as FrameKey[]).sort(
+    (a, b) => (positions[a] ?? 0) - (positions[b] ?? 0)
+  );
+  const equalsIndex = orderedKeys.indexOf('equals');
+  const leftExpression = buildSide(equation, orderedKeys.slice(0, equalsIndex), 'left', variable1, variable2);
+  const rightExpression = buildSide(equation, orderedKeys.slice(equalsIndex + 1), 'right', variable1, variable2);
+
+  return `${leftExpression} = ${rightExpression}`;
+}
+
+function buildSide(
+  equation: EquationJson,
+  keys: FrameKey[],
+  side: 'left' | 'right',
+  variable1: string,
+  variable2: string
+): string {
+  const terms = keys
+    .map((key) => frameKeyToTerm(equation, key, side, variable1, variable2))
+    .filter((term): term is SignedExpressionTerm => term !== null);
+
+  return joinTerms(terms);
+}
+
+function frameKeyToTerm(
+  equation: EquationJson,
+  key: FrameKey,
+  side: 'left' | 'right',
+  variable1: string,
+  variable2: string
+): SignedExpressionTerm | null {
+  if (key === 'equals') return null;
+
+  if (key === 'constant') {
+    const sign = side === 'left' ? (equation.constant.sign * -1) as 1 | -1 : equation.constant.sign as 1 | -1;
+    return { sign, value: constantToLatex({ ...equation.constant, sign: 1 }) };
+  }
+
+  if (key === 'term1') {
+    const coeff = variableCoeffToLatex({ ...equation.term1, sign: 1 });
+    if (coeff === '0') return null;
+    return { sign: equation.term1.sign as 1 | -1, value: `${coeff}${variable1}` };
+  }
+
+  const coeff = variableCoeffToLatex({ ...equation.term2, sign: 1 });
+  if (coeff === '0') return null;
+  return { sign: equation.term2.sign as 1 | -1, value: `${coeff}${variable2}` };
+}
+
+function joinTerms(terms: SignedExpressionTerm[]): string {
+  if (terms.length === 0) return '0';
+
+  return terms
+    .map((term, index) => {
+      if (index === 0) return term.sign === -1 ? `-${term.value}` : term.value;
+      return term.sign === -1 ? ` - ${term.value}` : ` + ${term.value}`;
+    })
+    .join('');
 }

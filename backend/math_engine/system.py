@@ -1,4 +1,4 @@
-from math_engine.equation import Equation
+from backend.math_engine.equation import Equation
 
 
 class EquationSystem:

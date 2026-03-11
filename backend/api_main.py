@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import engine, Base, ensure_solution_methods_schema
+from backend.database import engine, Base, ensure_solution_methods_schema
 
 # Import models so SQLAlchemy registers them
-from models.equation_models import EquationSystem
-from models.solution_methods import SolutionMethod
+from backend.models.equation_models import EquationSystem
+from backend.models.solution_methods import SolutionMethod
 
-from routes.equation_routes import router as equation_router
+from backend.routes.equation_routes import router as equation_router
 
 
 app = FastAPI()

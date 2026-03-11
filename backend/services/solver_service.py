@@ -1,15 +1,16 @@
 from sqlalchemy.orm import Session
 
-from math_engine.equation import Equation
-from math_engine.fraction_surd import FractionSurd
-from math_engine.system import EquationSystem
-from models.solution_methods import SolutionMethod
-from solver.elimination_solver import EliminationSolver
-from solver.graphical_solver import GraphicalSolver
-from solver.substitution_solver import SubstitutionSolver
-from solver.cramer_solver import CramerSolver
-from latex.equation_formatter import EquationFormatter
-from latex.solution_renderer import SolutionLatexRenderer
+from backend.math_engine.equation import Equation
+from backend.math_engine.fraction_surd import FractionSurd
+from backend.math_engine.system import EquationSystem
+from backend.models.solution_methods import SolutionMethod
+from backend.normalization.normalizer import Normalizer
+from backend.solver.elimination_solver import EliminationSolver
+from backend.solver.graphical_solver import GraphicalSolver
+from backend.solver.substitution_solver import SubstitutionSolver
+from backend.solver.cramer_solver import CramerSolver
+from backend.latex.equation_formatter import EquationFormatter
+from backend.latex.solution_renderer import SolutionLatexRenderer
 
 
 def build_fraction_surd(term: dict):
@@ -99,8 +100,11 @@ def solve_system(db: Session, system_id: int, payload: dict):
     methods = {}
     system = EquationSystem(eq1, eq2)
 
+    normalizer = Normalizer()
+    system = normalizer.normalize(system)
+
     renderer = SolutionLatexRenderer(var1=var1, var2=var2)
-    equations = _equation_lines(eq1, eq2, var1, var2)
+    equations = _equation_lines(system.eq1, system.eq2, var1, var2)
 
     elimination_solver = EliminationSolver(system)
     elimination_raw_solution = elimination_solver.solve()

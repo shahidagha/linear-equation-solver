@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from database import get_db
-from services.equation_service import save_equation_system, get_saved_systems, delete_system_by_id
-from services.solver_service import solve_system
+from backend.database import get_db
+from backend.services.equation_service import save_equation_system, get_saved_systems, delete_system_by_id
+from backend.services.solver_service import solve_system
 
 router = APIRouter()
 

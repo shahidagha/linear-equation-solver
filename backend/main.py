@@ -1,11 +1,11 @@
-from math_engine.fraction_surd import FractionSurd
-from math_engine.equation import Equation
-from math_engine.system import EquationSystem
+from backend.math_engine.fraction_surd import FractionSurd
+from backend.math_engine.equation import Equation
+from backend.math_engine.system import EquationSystem
 
-from solver.elimination_solver import EliminationSolver
-from solver.graphical_solver import GraphicalSolver
+from backend.solver.elimination_solver import EliminationSolver
+from backend.solver.graphical_solver import GraphicalSolver
 
-from latex.latex_generator import LatexGenerator
+from backend.latex.latex_generator import LatexGenerator
 
 
 # -----------------------------

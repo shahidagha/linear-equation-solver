@@ -1,5 +1,5 @@
 import hashlib
-from utils.canonical_encoder import canonicalize_equation
+from backend.utils.canonical_encoder import canonicalize_equation
 
 
 def generate_equation_hash(eq1_data: dict, eq2_data: dict) -> str:

@@ -1,5 +1,5 @@
-from database import engine, ensure_solution_methods_schema
-from models.equation_models import Base
+from backend.database import engine, ensure_solution_methods_schema
+from backend.models.equation_models import Base
 
 
 def init_db():

@@ -33,6 +33,7 @@ class VariablesSchema(BaseModel):
 
 
 class SolveRequestSchema(BaseModel):
+    system_id: int | None = None
     variables: list[str] | VariablesSchema
     equation1: EquationSchema
     equation2: EquationSchema

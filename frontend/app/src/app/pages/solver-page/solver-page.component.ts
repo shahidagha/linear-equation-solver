@@ -15,6 +15,7 @@ export class SolverPageComponent {
   constructor(private readonly state: SolverStateService) {}
 
   onSolved(response: SolverResponse): void {
-    this.state.setResponse(null, response);
+    const resolvedSystemId = response.system_id ?? this.state.getCurrentSystemId();
+    this.state.setResponse(resolvedSystemId ?? null, response);
   }
 }

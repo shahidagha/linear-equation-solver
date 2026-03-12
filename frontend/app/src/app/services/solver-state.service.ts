@@ -44,6 +44,10 @@ export class SolverStateService {
   readonly canSolve$ = this.canSolveSubject.asObservable();
   readonly savedSystemsRefresh$ = this.savedSystemsRefreshSubject.asObservable();
 
+  getCurrentSystemId(): number | null {
+    return this.currentSystemIdSubject.value;
+  }
+
   setBuilderState(builder: BuilderState): void {
     this.variablesSubject.next(builder.variables);
     this.equationsSubject.next({ equation1: builder.equation1, equation2: builder.equation2 });

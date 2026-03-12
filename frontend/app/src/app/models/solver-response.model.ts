@@ -13,6 +13,7 @@ export interface MethodLatexPayload {
 }
 
 export interface SolverResponse {
+  system_id?: number;
   solution: Record<string, string | number>;
   methods: {
     elimination_latex?: MethodLatexPayload;

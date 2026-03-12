@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.schemas.equation_schema import SolveRequestSchema
 from backend.services.equation_service import (
     save_equation_system,
     get_saved_systems,
@@ -25,9 +26,10 @@ def save_system(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.post('/solve-system')
-def solve_equation_system(payload: dict, db: Session = Depends(get_db)):
+def solve_equation_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
+    payload_dict = payload.model_dump()
 
-    save_result = save_equation_system(db, payload)
+    save_result = save_equation_system(db, payload_dict)
 
     if save_result['status'] in ('saved', 'duplicate'):
         system_id = save_result['id']
@@ -39,7 +41,7 @@ def solve_equation_system(payload: dict, db: Session = Depends(get_db)):
     if cached_result is not None:
         return cached_result
 
-    result = solve_system(db, system_id, payload)
+    result = solve_system(db, system_id, payload_dict)
 
     return result
 

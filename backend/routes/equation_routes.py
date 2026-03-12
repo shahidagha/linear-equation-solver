@@ -14,20 +14,42 @@ from backend.services.solver_service import solve_system
 router = APIRouter()
 
 
+def _normalize_payload(payload: SolveRequestSchema | dict) -> dict:
+    """Normalize request payload to the service contract."""
+
+    if isinstance(payload, SolveRequestSchema):
+        data = payload.model_dump()
+    else:
+        data = payload
+
+    variables = data.get("variables")
+    if isinstance(variables, dict):
+        data["variables"] = [variables.get("var1"), variables.get("var2")]
+
+    for key in ("equation1", "equation2"):
+        equation = data.get(key, {})
+        if "terms" not in equation and "term1" in equation and "term2" in equation:
+            equation["terms"] = [equation["term1"], equation["term2"]]
+
+    return data
+
+
 @router.post('/save-system')
-def save_system(payload: dict, db: Session = Depends(get_db)):
+def save_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
     """
     API endpoint to save equation systems.
     """
 
-    result = save_equation_system(db, payload)
+    normalized_payload = _normalize_payload(payload)
+
+    result = save_equation_system(db, normalized_payload)
 
     return result
 
 
 @router.post('/solve-system')
 def solve_equation_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
-    payload_dict = payload.model_dump()
+    payload_dict = _normalize_payload(payload)
 
     save_result = save_equation_system(db, payload_dict)
 

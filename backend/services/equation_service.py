@@ -40,12 +40,11 @@ def save_equation_system(db: Session, payload: dict):
 
     existing_equation = db.query(EquationSystem).filter(EquationSystem.equation_hash == equation_hash).first()
 
-    if existing_equation:
-        old_vars = existing_equation.variables
+    if existing_equation and existing_equation.variables != payload["variables"]:
         return {
             "status": "variable_conflict",
             "message": "Same equations exist but variables are different.",
-            "existing_variables": old_vars
+            "existing_variables": existing_equation.variables
         }
 
     new_system = EquationSystem(

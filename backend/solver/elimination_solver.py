@@ -8,6 +8,7 @@ class EliminationSolver:
 
     def __init__(self, system):
 
+        self.system = system
         self.eq1 = system.eq1
         self.eq2 = system.eq2
 
@@ -244,11 +245,11 @@ class EliminationSolver:
             x_value = sp.simplify(rhs / a1)
             self.recorder.add(f"x = {sp.latex(x_value)}")
 
-        x = sp.Symbol(self.eq1.var1)
-        y = sp.Symbol(self.eq1.var2)
+        x = sp.Symbol(self.system.var1)
+        y = sp.Symbol(self.system.var2)
 
-        eq1 = self.eq1.sympy_equation()
-        eq2 = self.eq2.sympy_equation()
+        eq1 = self.eq1.sympy_equation(self.system.var1, self.system.var2)
+        eq2 = self.eq2.sympy_equation(self.system.var1, self.system.var2)
 
         solution = sp.solve((eq1, eq2), (x, y))
 

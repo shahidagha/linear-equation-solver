@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.services.equation_service import save_equation_system, get_saved_systems, delete_system_by_id
+from backend.services.equation_service import (
+    save_equation_system,
+    get_saved_systems,
+    delete_system_by_id,
+    get_cached_solution_response,
+)
 from backend.services.solver_service import solve_system
 
 router = APIRouter()
@@ -28,6 +33,11 @@ def solve_equation_system(payload: dict, db: Session = Depends(get_db)):
         system_id = save_result['id']
     else:
         return save_result
+
+    cached_result = get_cached_solution_response(db, system_id)
+
+    if cached_result is not None:
+        return cached_result
 
     result = solve_system(db, system_id, payload)
 

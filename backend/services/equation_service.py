@@ -5,6 +5,9 @@ from backend.utils.hash_utils import generate_equation_hash, generate_system_has
 from backend.utils.canonical_encoder import canonicalize_equation
 
 
+REQUIRED_SOLUTION_METHODS = {"elimination", "substitution", "cramer", "graphical"}
+
+
 def save_equation_system(db: Session, payload: dict):
     """Save an equation system with duplicate detection."""
 
@@ -129,3 +132,45 @@ def delete_system_by_id(db: Session, system_id: int):
     db.commit()
 
     return {"status": "deleted"}
+
+
+def get_cached_solution_response(db: Session, system_id: int):
+    """Return a solve-system response from cached method records if all methods exist."""
+
+    method_rows = db.query(SolutionMethod).filter(SolutionMethod.system_id == system_id).all()
+    method_map = {row.method_name: row for row in method_rows}
+
+    if not REQUIRED_SOLUTION_METHODS.issubset(method_map.keys()):
+        return None
+
+    elimination = method_map["elimination"]
+    substitution = method_map["substitution"]
+    cramer = method_map["cramer"]
+    graphical = method_map["graphical"]
+
+    return {
+        "solution": elimination.solution_json,
+        "methods": {
+            "elimination_latex": {
+                "latex_detailed": elimination.latex_detailed,
+                "latex_medium": elimination.latex_medium,
+                "latex_short": elimination.latex_short,
+            },
+            "substitution_latex": {
+                "latex_detailed": substitution.latex_detailed,
+                "latex_medium": substitution.latex_medium,
+                "latex_short": substitution.latex_short,
+            },
+            "cramer_latex": {
+                "latex_detailed": cramer.latex_detailed,
+                "latex_medium": cramer.latex_medium,
+                "latex_short": cramer.latex_short,
+            },
+            "graphical_latex": {
+                "latex_detailed": graphical.latex_detailed,
+                "latex_medium": graphical.latex_medium,
+                "latex_short": graphical.latex_short,
+            },
+        },
+        "graph": graphical.graph_data,
+    }

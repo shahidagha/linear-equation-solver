@@ -185,6 +185,92 @@ def _serialize_steps(steps):
     return serialized
 
 
+def _standardization_steps_for_equation(steps, number: int):
+    """Convert EquationStandardizer steps into renderer-friendly step dicts."""
+    out = []
+    label = f"({number})"
+
+    for step in steps:
+        s_type = step.get("type")
+
+        if s_type == "write_equation":
+            eq = step.get("equation", "")
+            if eq:
+                out.append({"type": "equation", "content": f"{eq} {label}"})
+        elif s_type == "rearrange_standard_form":
+            result = step.get("result", "")
+            if result:
+                out.append(
+                    {
+                        "type": "equation",
+                        "content": f"{result} {label}",
+                    }
+                )
+        elif s_type == "make_leading_positive":
+            if step.get("applied", False):
+                out.append(
+                    {
+                        "type": "text",
+                        "content": f"Multiply equation {label} by -1 to make the leading coefficient positive.",
+                    }
+                )
+            else:
+                out.append(
+                    {
+                        "type": "text",
+                        "content": f"Leading coefficient of equation {label} is already positive.",
+                    }
+                )
+        elif s_type == "remove_denominator":
+            multiplier = step.get("multiplier")
+            result = step.get("result", "")
+            if multiplier and result:
+                out.append(
+                    {
+                        "type": "text",
+                        "content": f"Multiply equation {label} by {multiplier} to remove denominators.",
+                    }
+                )
+                out.append(
+                    {
+                        "type": "equation",
+                        "content": f"{result} {label}",
+                    }
+                )
+        elif s_type == "reduce_equation":
+            divisor = step.get("divisor")
+            result = step.get("result", "")
+            if divisor and result:
+                out.append(
+                    {
+                        "type": "text",
+                        "content": f"Divide equation {label} by {divisor} to simplify coefficients.",
+                    }
+                )
+                out.append(
+                    {
+                        "type": "equation",
+                        "content": f"{result} {label}",
+                    }
+                )
+        elif s_type == "assign_equation_number":
+            # Numbering is already embedded via `label`; no extra step needed.
+            continue
+
+    return out
+
+
+def _standardization_steps_combined(standardization: dict):
+    """Build a single ordered step list for both equations."""
+    steps_eq1 = standardization.get("steps_eq1") or []
+    steps_eq2 = standardization.get("steps_eq2") or []
+
+    combined = []
+    combined.extend(_standardization_steps_for_equation(steps_eq1, 1))
+    combined.extend(_standardization_steps_for_equation(steps_eq2, 2))
+    return combined
+
+
 def solve_system(db: Session, system_id: int, payload: dict):
     var1 = payload["variables"][0]
     var2 = payload["variables"][1]
@@ -211,10 +297,12 @@ def solve_system(db: Session, system_id: int, payload: dict):
 
     standardization = EquationStandardizer().standardize(system, raw_equations=raw_equations)
     standardized_system = standardization["system"]
+    standardization_steps = _standardization_steps_combined(standardization)
 
     elimination_solver = EliminationSolver(standardized_system)
     elimination_raw = elimination_solver.solve()
-    elimination_steps = _serialize_steps(elimination_solver.recorder.get_steps())
+    elimination_method_steps = _serialize_steps(elimination_solver.recorder.get_steps())
+    elimination_steps = standardization_steps + elimination_method_steps
     elimination_solution = _normalize_method_solution(elimination_raw, var1, var2)
 
     substitution_solver = SubstitutionSolver()

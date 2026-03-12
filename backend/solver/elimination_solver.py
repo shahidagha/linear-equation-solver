@@ -1,6 +1,5 @@
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
-from backend.utils.equation_numbering import EquationNumbering
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -12,8 +11,10 @@ class EliminationSolver:
         self.eq1 = system.eq1
         self.eq2 = system.eq2
 
+        # Records only elimination‑specific steps.
+        # Standardization and equation numbering are handled upstream
+        # by EquationStandardizer and the LaTeX renderer.
         self.recorder = StepRecorder()
-        self.eq_numbers = EquationNumbering()
 
     # -----------------------------
     # vertical elimination display
@@ -97,29 +98,6 @@ class EliminationSolver:
     def solve(self):
 
         strategy = self.detect_strategy()
-
-        eq1_str = EquationFormatter.format_equation(
-            self.eq1.a.to_sympy(),
-            self.eq1.b.to_sympy(),
-            self.eq1.c.to_sympy()
-        )
-
-        n1 = self.eq_numbers.add(eq1_str)
-
-        self.recorder.add(f"Equation ({n1})")
-        self.recorder.add(f"{eq1_str} ... ({n1})")
-
-        eq2_str = EquationFormatter.format_equation(
-            self.eq2.a.to_sympy(),
-            self.eq2.b.to_sympy(),
-            self.eq2.c.to_sympy()
-        )
-
-        n2 = self.eq_numbers.add(eq2_str)
-
-        self.recorder.add(f"Equation ({n2})")
-        self.recorder.add(f"{eq2_str} ... ({n2})")
-
         self.recorder.add(f"Elimination strategy: {strategy}")
 
         var = self.choose_variable()

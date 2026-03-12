@@ -94,6 +94,11 @@ def _normalize_solution_map(raw_solution, var1: str, var2: str) -> dict:
     if isinstance(raw_solution, tuple) and len(raw_solution) >= 2:
         return {var1: raw_solution[0], var2: raw_solution[1]}
 
+    if raw_solution == []:
+        # SymPy returns [] when no unique solution exists.
+        no_unique = "No unique solution"
+        return {var1: no_unique, var2: no_unique}
+
     raise ValueError(f"Unsupported solver output format: {type(raw_solution).__name__}")
 
 

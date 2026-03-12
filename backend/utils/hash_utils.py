@@ -1,37 +1,44 @@
 import hashlib
+import json
+
 from backend.utils.canonical_encoder import canonicalize_equation
+
+
+def _hash_parts(parts: list[str]) -> str:
+    """Create a stable SHA-256 hash from ordered string parts."""
+
+    payload = json.dumps(parts, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()
 
 
 def generate_equation_hash(eq1_data: dict, eq2_data: dict) -> str:
     """
-    Generate a hash based only on the equation structures.
-    Variables are NOT included.
+    Generate a hash from canonical raw equations only (variables excluded).
+
+    Equation order is ignored.
     """
 
-    eq1 = canonicalize_equation(eq1_data)
-    eq2 = canonicalize_equation(eq2_data)
-
-    # Order equations consistently
-    ordered = sorted([eq1, eq2])
-
-    combined = "".join(ordered)
-
-    return hashlib.sha256(combined.encode()).hexdigest()
+    canonical_equations = sorted(
+        [
+            canonicalize_equation(eq1_data),
+            canonicalize_equation(eq2_data),
+        ]
+    )
+    return _hash_parts(canonical_equations)
 
 
 def generate_system_hash(var1: str, var2: str, eq1_data: dict, eq2_data: dict) -> str:
     """
-    Generate a hash including variables.
-    Used for detecting exact duplicates.
+    Generate a hash from canonical raw equations and the variable tuple.
+
+    Equation order is ignored, variable order is preserved.
     """
 
-    eq1 = canonicalize_equation(eq1_data)
-    eq2 = canonicalize_equation(eq2_data)
+    canonical_equations = sorted(
+        [
+            canonicalize_equation(eq1_data),
+            canonicalize_equation(eq2_data),
+        ]
+    )
 
-    ordered_eq = sorted([eq1, eq2])
-
-    ordered_vars = sorted([var1, var2])
-
-    combined = "".join(ordered_vars) + "".join(ordered_eq)
-
-    return hashlib.sha256(combined.encode()).hexdigest()
+    return _hash_parts(canonical_equations + [var1, var2])

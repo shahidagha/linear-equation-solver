@@ -11,6 +11,7 @@ from backend.solver.substitution_solver import SubstitutionSolver
 from backend.solver.cramer_solver import CramerSolver
 from backend.latex.equation_formatter import EquationFormatter
 from backend.latex.solution_renderer import SolutionLatexRenderer
+import sympy as sp
 
 
 def build_fraction_surd(term: dict):
@@ -67,6 +68,31 @@ def _equation_lines(eq1: Equation, eq2: Equation, var1: str, var2: str):
     ]
 
 
+def _normalize_solution_map(raw_solution, var1: str, var2: str) -> dict:
+    """Normalize solver outputs to a stable {var1: value, var2: value} mapping."""
+
+    sym_var1 = sp.Symbol(var1)
+    sym_var2 = sp.Symbol(var2)
+
+    if isinstance(raw_solution, dict):
+        if sym_var1 in raw_solution and sym_var2 in raw_solution:
+            return {var1: raw_solution[sym_var1], var2: raw_solution[sym_var2]}
+        if var1 in raw_solution and var2 in raw_solution:
+            return {var1: raw_solution[var1], var2: raw_solution[var2]}
+
+    if isinstance(raw_solution, list) and raw_solution:
+        first = raw_solution[0]
+        if isinstance(first, dict):
+            return _normalize_solution_map(first, var1, var2)
+        if isinstance(first, (tuple, list)) and len(first) >= 2:
+            return {var1: first[0], var2: first[1]}
+
+    if isinstance(raw_solution, tuple) and len(raw_solution) >= 2:
+        return {var1: raw_solution[0], var2: raw_solution[1]}
+
+    raise ValueError(f"Unsupported solver output format: {type(raw_solution).__name__}")
+
+
 def _upsert_method_record(
     db: Session,
     system_id: int,
@@ -119,9 +145,10 @@ def solve_system(db: Session, system_id: int, payload: dict):
 
     elimination_solver = EliminationSolver(system)
     elimination_raw_solution = elimination_solver.solve()
+    elimination_map = _normalize_solution_map(elimination_raw_solution, var1, var2)
     elimination_solution = {
-        var1: to_python_number(elimination_raw_solution[list(elimination_raw_solution.keys())[0]]),
-        var2: to_python_number(elimination_raw_solution[list(elimination_raw_solution.keys())[1]]),
+        var1: to_python_number(elimination_map[var1]),
+        var2: to_python_number(elimination_map[var2]),
     }
 
     elimination_steps = []
@@ -150,9 +177,10 @@ def solve_system(db: Session, system_id: int, payload: dict):
 
     substitution_solver = SubstitutionSolver()
     substitution_raw = substitution_solver.solve(system)
+    substitution_map = _normalize_solution_map(substitution_raw, var1, var2)
     substitution_solution = {
-        var1: to_python_number(substitution_raw[list(substitution_raw.keys())[0]]),
-        var2: to_python_number(substitution_raw[list(substitution_raw.keys())[1]]),
+        var1: to_python_number(substitution_map[var1]),
+        var2: to_python_number(substitution_map[var2]),
     }
     substitution_latex = renderer.render(
         method_name="substitution",

@@ -1,7 +1,7 @@
 import { AfterViewChecked, Component, ElementRef, Input, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import katex from 'katex';
-import { SolverResponse, SolverStep } from '../../models/solver-response.model';
+import { SolverResponse } from '../../models/solver-response.model';
 import { VerbosityLevel } from '../../services/solver-state.service';
 
 @Component({
@@ -19,19 +19,17 @@ export class SolutionStepsComponent implements AfterViewChecked {
 
   @ViewChildren('mathBlock') mathBlocks!: QueryList<ElementRef<HTMLDivElement>>;
 
-  get eliminationSteps(): SolverStep[] {
-    const steps = this.methods?.elimination ?? [];
-    if (this.verbosity === 'short') {
-      return steps.length > 1 ? [steps[0], steps[steps.length - 1]] : steps;
-    }
-    if (this.verbosity === 'medium') {
-      return steps.filter((_, index) => index % 2 === 0 || index === steps.length - 1);
-    }
-    return steps;
-  }
+  get selectedLatex(): string | null {
+    const methodKey = `${this.selectedMethod}_latex`;
+    const methodPayload = this.methods?.[methodKey] as SolverResponse['methods']['elimination_latex'] | undefined;
 
-  get graphicalSteps(): string[] {
-    return this.methods?.graphical_steps ?? [];
+    if (!methodPayload) {
+      return null;
+    }
+
+    const verbosityKey = `latex_${this.verbosity}` as keyof typeof methodPayload;
+
+    return methodPayload[verbosityKey] ?? null;
   }
 
   ngAfterViewChecked(): void {
@@ -39,12 +37,5 @@ export class SolutionStepsComponent implements AfterViewChecked {
       const content = block.nativeElement.dataset['latex'] ?? '';
       katex.render(content, block.nativeElement, { throwOnError: false, displayMode: true });
     });
-  }
-
-  toLatex(step: SolverStep): string {
-    if (step.type === 'vertical_elimination') {
-      return `\\begin{aligned}${step.eq1}\\\\${step.eq2}\\\\\\hline ${step.result}\\end{aligned}`;
-    }
-    return step.content ?? '';
   }
 }

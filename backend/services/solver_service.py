@@ -126,6 +126,47 @@ def _upsert_method_record(
     record.graph_data = graph_data
 
 
+def _normalize_cramer_solution(raw_solution, var1: str, var2: str):
+    if isinstance(raw_solution, dict):
+        if var1 in raw_solution and var2 in raw_solution:
+            return raw_solution
+        if "x" in raw_solution and "y" in raw_solution:
+            return {var1: raw_solution["x"], var2: raw_solution["y"]}
+    return raw_solution
+
+
+def _no_unique_solution(var1: str, var2: str):
+    value = "No unique solution"
+    return {var1: value, var2: value}
+
+
+def _normalize_method_solution(raw_solution, var1: str, var2: str):
+    if raw_solution == "No unique solution":
+        return _no_unique_solution(var1, var2)
+
+    if raw_solution == []:
+        return _no_unique_solution(var1, var2)
+
+    return _normalize_solution_map(raw_solution, var1, var2)
+
+
+def _serialize_steps(steps):
+    serialized = []
+    for step in steps:
+        if step.type == "vertical_elimination":
+            serialized.append(
+                {
+                    "type": step.type,
+                    "eq1": step.content.get("eq1"),
+                    "eq2": step.content.get("eq2"),
+                    "result": step.content.get("result"),
+                }
+            )
+        else:
+            serialized.append({"type": step.type, "content": str(step.content)})
+    return serialized
+
+
 def solve_system(db: Session, system_id: int, payload: dict):
     var1 = payload["variables"][0]
     var2 = payload["variables"][1]
@@ -147,30 +188,81 @@ def solve_system(db: Session, system_id: int, payload: dict):
     normalizer = Normalizer()
     normalizer.normalize(system)
 
-    method_labels = ["Elimination", "Substitution", "Cramer", "Graphical"]
-    level_map = {
-        "Explain": "explain",
-        "Student Solution": "student",
-        "Brief": "brief",
+    elimination_solver = EliminationSolver(system)
+    elimination_raw = elimination_solver.solve()
+    elimination_steps = _serialize_steps(elimination_solver.recorder.get_steps())
+    elimination_solution = _normalize_method_solution(elimination_raw, var1, var2)
+
+    substitution_solver = SubstitutionSolver()
+    substitution_raw = substitution_solver.solve(system)
+    substitution_solution = _normalize_method_solution(substitution_raw, var1, var2)
+
+    cramer_solver = CramerSolver()
+    cramer_raw = _normalize_cramer_solution(cramer_solver.solve(system), var1, var2)
+    cramer_solution = _normalize_method_solution(cramer_raw, var1, var2)
+
+    graphical_solver = GraphicalSolver(system)
+    points1, points2 = graphical_solver.generate_tables()
+    graph_data = {
+        "equation1_points": convert_points(points1),
+        "equation2_points": convert_points(points2),
+        "intersection": {
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        },
     }
 
-    placeholder_methods = {}
-    for method in method_labels:
-        method_key = method.lower()
-        placeholder_methods[method_key] = {}
-        for level_label, level_key in level_map.items():
-            placeholder_methods[method_key][level_key] = f"{method}-{level_label}"
+    equations = _equation_lines(eq1, eq2, var1, var2)
+    renderer = SolutionLatexRenderer(var1=var1, var2=var2)
+
+    elimination_latex = renderer.render(
+        method_name="elimination",
+        equations=equations,
+        solution={
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        },
+        steps=elimination_steps,
+    )
+    substitution_latex = renderer.render(
+        method_name="substitution",
+        equations=equations,
+        solution={
+            var1: to_python_number(substitution_solution[var1]),
+            var2: to_python_number(substitution_solution[var2]),
+        },
+    )
+    cramer_latex = renderer.render(
+        method_name="cramer",
+        equations=equations,
+        solution={
+            var1: to_python_number(cramer_solution[var1]),
+            var2: to_python_number(cramer_solution[var2]),
+        },
+    )
+    graphical_latex = renderer.render(
+        method_name="graphical",
+        equations=equations,
+        solution={
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        },
+        graph_data=graph_data,
+    )
 
     _upsert_method_record(
         db,
         system_id,
         "elimination",
         {
-            "latex_detailed": placeholder_methods["elimination"]["explain"],
-            "latex_medium": placeholder_methods["elimination"]["student"],
-            "latex_short": placeholder_methods["elimination"]["brief"],
+            "latex_detailed": elimination_latex["latex_detailed"],
+            "latex_medium": elimination_latex["latex_medium"],
+            "latex_short": elimination_latex["latex_short"],
         },
-        {"x": "pipeline-test", "y": "pipeline-test"},
+        {
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        },
         None,
     )
     _upsert_method_record(
@@ -178,11 +270,14 @@ def solve_system(db: Session, system_id: int, payload: dict):
         system_id,
         "substitution",
         {
-            "latex_detailed": placeholder_methods["substitution"]["explain"],
-            "latex_medium": placeholder_methods["substitution"]["student"],
-            "latex_short": placeholder_methods["substitution"]["brief"],
+            "latex_detailed": substitution_latex["latex_detailed"],
+            "latex_medium": substitution_latex["latex_medium"],
+            "latex_short": substitution_latex["latex_short"],
         },
-        {"x": "pipeline-test", "y": "pipeline-test"},
+        {
+            var1: to_python_number(substitution_solution[var1]),
+            var2: to_python_number(substitution_solution[var2]),
+        },
         None,
     )
     _upsert_method_record(
@@ -190,11 +285,14 @@ def solve_system(db: Session, system_id: int, payload: dict):
         system_id,
         "cramer",
         {
-            "latex_detailed": placeholder_methods["cramer"]["explain"],
-            "latex_medium": placeholder_methods["cramer"]["student"],
-            "latex_short": placeholder_methods["cramer"]["brief"],
+            "latex_detailed": cramer_latex["latex_detailed"],
+            "latex_medium": cramer_latex["latex_medium"],
+            "latex_short": cramer_latex["latex_short"],
         },
-        {"x": "pipeline-test", "y": "pipeline-test"},
+        {
+            var1: to_python_number(cramer_solution[var1]),
+            var2: to_python_number(cramer_solution[var2]),
+        },
         None,
     )
     _upsert_method_record(
@@ -202,39 +300,45 @@ def solve_system(db: Session, system_id: int, payload: dict):
         system_id,
         "graphical",
         {
-            "latex_detailed": placeholder_methods["graphical"]["explain"],
-            "latex_medium": placeholder_methods["graphical"]["student"],
-            "latex_short": placeholder_methods["graphical"]["brief"],
+            "latex_detailed": graphical_latex["latex_detailed"],
+            "latex_medium": graphical_latex["latex_medium"],
+            "latex_short": graphical_latex["latex_short"],
         },
-        {"x": "pipeline-test", "y": "pipeline-test"},
-        {"status": "pipeline-test"},
+        {
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        },
+        graph_data,
     )
 
     db.commit()
 
     return {
-        "solution": {var1: "pipeline-test", var2: "pipeline-test"},
+        "solution": {
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        },
         "methods": {
             "elimination_latex": {
-                "latex_detailed": placeholder_methods["elimination"]["explain"],
-                "latex_medium": placeholder_methods["elimination"]["student"],
-                "latex_short": placeholder_methods["elimination"]["brief"],
+                "latex_detailed": elimination_latex["latex_detailed"],
+                "latex_medium": elimination_latex["latex_medium"],
+                "latex_short": elimination_latex["latex_short"],
             },
             "substitution_latex": {
-                "latex_detailed": placeholder_methods["substitution"]["explain"],
-                "latex_medium": placeholder_methods["substitution"]["student"],
-                "latex_short": placeholder_methods["substitution"]["brief"],
+                "latex_detailed": substitution_latex["latex_detailed"],
+                "latex_medium": substitution_latex["latex_medium"],
+                "latex_short": substitution_latex["latex_short"],
             },
             "cramer_latex": {
-                "latex_detailed": placeholder_methods["cramer"]["explain"],
-                "latex_medium": placeholder_methods["cramer"]["student"],
-                "latex_short": placeholder_methods["cramer"]["brief"],
+                "latex_detailed": cramer_latex["latex_detailed"],
+                "latex_medium": cramer_latex["latex_medium"],
+                "latex_short": cramer_latex["latex_short"],
             },
             "graphical_latex": {
-                "latex_detailed": placeholder_methods["graphical"]["explain"],
-                "latex_medium": placeholder_methods["graphical"]["student"],
-                "latex_short": placeholder_methods["graphical"]["brief"],
+                "latex_detailed": graphical_latex["latex_detailed"],
+                "latex_medium": graphical_latex["latex_medium"],
+                "latex_short": graphical_latex["latex_short"],
             },
         },
-        "graph": {"status": "pipeline-test"},
+        "graph": graph_data,
     }

@@ -17,6 +17,7 @@ type EquationJson = {
   term1: Term;
   term2: Term;
   constant: Term;
+  terms?: Term[];
 };
 
 type FrameKey = 'term1' | 'term2' | 'equals' | 'constant';
@@ -136,18 +137,47 @@ export function termToLatex(term: Term): string {
 }
 
 export function equationToLatex(equation: EquationJson, variables: EquationVars): string {
-  const positions = equation.positions ?? { term1: 1, term2: 2, equals: 3, constant: 4 };
-  const variable1 = variables.var1 ?? variables.variable1 ?? 'x';
-  const variable2 = variables.var2 ?? variables.variable2 ?? 'y';
+  const normalized = normalizeEquation(equation);
+  const positions = normalized.positions ?? { term1: 1, term2: 2, equals: 3, constant: 4 };
+  const variable1 = extractVar(variables, 'first');
+  const variable2 = extractVar(variables, 'second');
 
   const orderedKeys: FrameKey[] = (['term1', 'term2', 'equals', 'constant'] as FrameKey[]).sort(
     (a, b) => (positions[a] ?? 0) - (positions[b] ?? 0)
   );
   const equalsIndex = orderedKeys.indexOf('equals');
-  const leftExpression = buildSide(equation, orderedKeys.slice(0, equalsIndex), 'left', variable1, variable2);
-  const rightExpression = buildSide(equation, orderedKeys.slice(equalsIndex + 1), 'right', variable1, variable2);
+  const leftExpression = buildSide(normalized, orderedKeys.slice(0, equalsIndex), 'left', variable1, variable2);
+  const rightExpression = buildSide(normalized, orderedKeys.slice(equalsIndex + 1), 'right', variable1, variable2);
 
   return `${leftExpression} = ${rightExpression}`;
+}
+
+function extractVar(variables: EquationVars, slot: 'first' | 'second'): string {
+  const fromObject = slot === 'first' ? variables.var1 ?? variables.variable1 : variables.var2 ?? variables.variable2;
+  if (fromObject) {
+    return fromObject;
+  }
+
+  const fallback = (variables as unknown as { [key: string]: unknown })['variables'];
+  if (Array.isArray(fallback)) {
+    const value = fallback[slot === 'first' ? 0 : 1];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+
+  return slot === 'first' ? 'x' : 'y';
+}
+
+function normalizeEquation(equation: EquationJson): EquationJson {
+  const terms = Array.isArray(equation.terms) ? equation.terms : [];
+
+  return {
+    ...equation,
+    term1: equation.term1 ?? terms[0],
+    term2: equation.term2 ?? terms[1],
+    constant: equation.constant
+  };
 }
 
 function buildSide(

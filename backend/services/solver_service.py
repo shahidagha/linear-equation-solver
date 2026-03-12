@@ -125,6 +125,8 @@ def _upsert_method_record(
     record.solution_json = solution_json
     record.graph_data = graph_data
 
+    return record
+
 
 def _normalize_cramer_solution(raw_solution, var1: str, var2: str):
     if isinstance(raw_solution, dict):
@@ -256,7 +258,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         graph_data=graph_data,
     )
 
-    _upsert_method_record(
+    elimination_record = _upsert_method_record(
         db,
         system_id,
         "elimination",
@@ -271,7 +273,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         },
         None,
     )
-    _upsert_method_record(
+    substitution_record = _upsert_method_record(
         db,
         system_id,
         "substitution",
@@ -286,7 +288,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         },
         None,
     )
-    _upsert_method_record(
+    cramer_record = _upsert_method_record(
         db,
         system_id,
         "cramer",
@@ -301,7 +303,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         },
         None,
     )
-    _upsert_method_record(
+    graphical_record = _upsert_method_record(
         db,
         system_id,
         "graphical",
@@ -318,6 +320,10 @@ def solve_system(db: Session, system_id: int, payload: dict):
     )
 
     db.commit()
+    db.refresh(elimination_record)
+    db.refresh(substitution_record)
+    db.refresh(cramer_record)
+    db.refresh(graphical_record)
 
     return {
         "solution": {
@@ -326,24 +332,24 @@ def solve_system(db: Session, system_id: int, payload: dict):
         },
         "methods": {
             "elimination_latex": {
-                "latex_detailed": elimination_latex["latex_detailed"],
-                "latex_medium": elimination_latex["latex_medium"],
-                "latex_short": elimination_latex["latex_short"],
+                "latex_detailed": elimination_record.latex_detailed,
+                "latex_medium": elimination_record.latex_medium,
+                "latex_short": elimination_record.latex_short,
             },
             "substitution_latex": {
-                "latex_detailed": substitution_latex["latex_detailed"],
-                "latex_medium": substitution_latex["latex_medium"],
-                "latex_short": substitution_latex["latex_short"],
+                "latex_detailed": substitution_record.latex_detailed,
+                "latex_medium": substitution_record.latex_medium,
+                "latex_short": substitution_record.latex_short,
             },
             "cramer_latex": {
-                "latex_detailed": cramer_latex["latex_detailed"],
-                "latex_medium": cramer_latex["latex_medium"],
-                "latex_short": cramer_latex["latex_short"],
+                "latex_detailed": cramer_record.latex_detailed,
+                "latex_medium": cramer_record.latex_medium,
+                "latex_short": cramer_record.latex_short,
             },
             "graphical_latex": {
-                "latex_detailed": graphical_latex["latex_detailed"],
-                "latex_medium": graphical_latex["latex_medium"],
-                "latex_short": graphical_latex["latex_short"],
+                "latex_detailed": graphical_record.latex_detailed,
+                "latex_medium": graphical_record.latex_medium,
+                "latex_short": graphical_record.latex_short,
             },
         },
         "graph": graph_data,

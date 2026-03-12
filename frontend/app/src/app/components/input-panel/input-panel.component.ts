@@ -70,13 +70,19 @@ export class InputPanelComponent implements OnInit, OnDestroy {
     this.state.setBuilderState(payload);
 
     this.equationApi.solveSystem(payload).subscribe({
-      next: (response: SolverResponse) => {
+      next: (response: SolverResponse | any) => {
         this.isSubmitting = false;
         if (!response) {
           this.errorMessage = 'No response from server.';
           return;
         }
-        this.solved.emit(response);
+
+        if (!response.solution) {
+          this.errorMessage = response.message ?? 'Unable to solve system.';
+          return;
+        }
+
+        this.solved.emit(response as SolverResponse);
       },
       error: (error) => {
         this.isSubmitting = false;

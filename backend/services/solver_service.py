@@ -185,76 +185,92 @@ def _serialize_steps(steps):
     return serialized
 
 
+def _normalize_eq_for_compare(s: str) -> str:
+    """Normalize equation string for step comparison (strip, collapse spaces)."""
+    if not s:
+        return ""
+    return " ".join(str(s).strip().split())
+
+
 def _standardization_steps_for_equation(steps, number: int):
-    """Convert EquationStandardizer steps into renderer-friendly step dicts."""
+    """Convert EquationStandardizer steps into renderer-friendly step dicts.
+    A step is rendered only when its result differs from the previous step
+    (so step N is shown only if result_N != result_{N-1}).
+    When the raw equation is already in standard form, it is shown only once.
+    """
     out = []
     label = f"({number})"
+    last_shown = None  # last equation string we emitted (without label)
+    steps_list = list(steps)
 
-    for step in steps:
+    for i, step in enumerate(steps_list):
         s_type = step.get("type")
 
         if s_type == "write_equation":
             eq = step.get("equation", "")
-            if eq:
+            if not eq:
+                continue
+            # If already in standard form, show equation only once (skip redundant rearrange)
+            std_result = None
+            for j in range(i + 1, len(steps_list)):
+                if steps_list[j].get("type") == "rearrange_standard_form":
+                    std_result = steps_list[j].get("result")
+                    break
+            if std_result is not None and _normalize_eq_for_compare(eq) == _normalize_eq_for_compare(std_result):
+                out.append({"type": "equation", "content": f"{std_result} {label}"})
+                last_shown = _normalize_eq_for_compare(std_result)
+            else:
                 out.append({"type": "equation", "content": f"{eq} {label}"})
+                last_shown = _normalize_eq_for_compare(eq)
+
         elif s_type == "rearrange_standard_form":
             result = step.get("result", "")
-            if result:
-                out.append(
-                    {
-                        "type": "equation",
-                        "content": f"{result} {label}",
-                    }
-                )
+            if result and _normalize_eq_for_compare(result) != last_shown:
+                out.append({"type": "equation", "content": f"{result} {label}"})
+                last_shown = _normalize_eq_for_compare(result)
+
         elif s_type == "make_leading_positive":
-            if step.get("applied", False):
+            # Only show when we actually applied (multiply by -1); skip "already positive"
+            if step.get("multiplied_by") is not None:
                 out.append(
                     {
                         "type": "text",
                         "content": f"Multiply equation {label} by -1 to make the leading coefficient positive.",
                     }
                 )
-            else:
-                out.append(
-                    {
-                        "type": "text",
-                        "content": f"Leading coefficient of equation {label} is already positive.",
-                    }
-                )
+            # When applied, we don't have a new equation string here; next step will
+
         elif s_type == "remove_denominator":
             multiplier = step.get("multiplier")
             result = step.get("result", "")
-            if multiplier and result:
-                out.append(
-                    {
-                        "type": "text",
-                        "content": f"Multiply equation {label} by {multiplier} to remove denominators.",
-                    }
-                )
-                out.append(
-                    {
-                        "type": "equation",
-                        "content": f"{result} {label}",
-                    }
-                )
+            result_norm = _normalize_eq_for_compare(result)
+            if result and result_norm != last_shown:
+                if multiplier:
+                    out.append(
+                        {
+                            "type": "text",
+                            "content": f"Multiply equation {label} by {multiplier} to remove denominators.",
+                        }
+                    )
+                out.append({"type": "equation", "content": f"{result} {label}"})
+                last_shown = result_norm
+
         elif s_type == "reduce_equation":
             divisor = step.get("divisor")
             result = step.get("result", "")
-            if divisor and result:
-                out.append(
-                    {
-                        "type": "text",
-                        "content": f"Divide equation {label} by {divisor} to simplify coefficients.",
-                    }
-                )
-                out.append(
-                    {
-                        "type": "equation",
-                        "content": f"{result} {label}",
-                    }
-                )
+            result_norm = _normalize_eq_for_compare(result)
+            if result and result_norm != last_shown:
+                if divisor:
+                    out.append(
+                        {
+                            "type": "text",
+                            "content": f"Divide equation {label} by {divisor} to simplify coefficients.",
+                        }
+                    )
+                out.append({"type": "equation", "content": f"{result} {label}"})
+                last_shown = result_norm
+
         elif s_type == "assign_equation_number":
-            # Numbering is already embedded via `label`; no extra step needed.
             continue
 
     return out

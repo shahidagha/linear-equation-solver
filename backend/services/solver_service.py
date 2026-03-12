@@ -4,7 +4,7 @@ from backend.math_engine.equation import Equation
 from backend.math_engine.fraction_surd import FractionSurd
 from backend.math_engine.system import EquationSystem
 from backend.models.solution_methods import SolutionMethod
-from backend.normalization.normalizer import Normalizer
+from backend.normalization.equation_standardizer import EquationStandardizer
 from backend.solver.elimination_solver import EliminationSolver
 from backend.solver.graphical_solver import GraphicalSolver
 from backend.solver.substitution_solver import SubstitutionSolver
@@ -177,31 +177,37 @@ def solve_system(db: Session, system_id: int, payload: dict):
     a1 = build_fraction_surd(eq1_data["terms"][0])
     b1 = build_fraction_surd(eq1_data["terms"][1])
     c1 = build_fraction_surd(eq1_data["constant"])
-    eq1 = Equation(a1, b1, c1, var1=var1, var2=var2)
+    eq1 = Equation(a1, b1, c1)
 
     a2 = build_fraction_surd(eq2_data["terms"][0])
     b2 = build_fraction_surd(eq2_data["terms"][1])
     c2 = build_fraction_surd(eq2_data["constant"])
-    eq2 = Equation(a2, b2, c2, var1=var1, var2=var2)
+    eq2 = Equation(a2, b2, c2)
 
-    system = EquationSystem(eq1, eq2)
-    normalizer = Normalizer()
-    normalizer.normalize(system)
+    system = EquationSystem(eq1, eq2, var1=var1, var2=var2)
 
-    elimination_solver = EliminationSolver(system)
+    raw_equations = [
+        payload.get("equation1_raw") or EquationFormatter.format_equation(eq1.a.to_sympy(), eq1.b.to_sympy(), eq1.c.to_sympy(), var1, var2),
+        payload.get("equation2_raw") or EquationFormatter.format_equation(eq2.a.to_sympy(), eq2.b.to_sympy(), eq2.c.to_sympy(), var1, var2),
+    ]
+
+    standardization = EquationStandardizer().standardize(system, raw_equations=raw_equations)
+    standardized_system = standardization["system"]
+
+    elimination_solver = EliminationSolver(standardized_system)
     elimination_raw = elimination_solver.solve()
     elimination_steps = _serialize_steps(elimination_solver.recorder.get_steps())
     elimination_solution = _normalize_method_solution(elimination_raw, var1, var2)
 
     substitution_solver = SubstitutionSolver()
-    substitution_raw = substitution_solver.solve(system)
+    substitution_raw = substitution_solver.solve(standardized_system)
     substitution_solution = _normalize_method_solution(substitution_raw, var1, var2)
 
     cramer_solver = CramerSolver()
-    cramer_raw = _normalize_cramer_solution(cramer_solver.solve(system), var1, var2)
+    cramer_raw = _normalize_cramer_solution(cramer_solver.solve(standardized_system), var1, var2)
     cramer_solution = _normalize_method_solution(cramer_raw, var1, var2)
 
-    graphical_solver = GraphicalSolver(system)
+    graphical_solver = GraphicalSolver(standardized_system)
     points1, points2 = graphical_solver.generate_tables()
     graph_data = {
         "equation1_points": convert_points(points1),
@@ -212,7 +218,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         },
     }
 
-    equations = _equation_lines(eq1, eq2, var1, var2)
+    equations = _equation_lines(standardized_system.eq1, standardized_system.eq2, var1, var2)
     renderer = SolutionLatexRenderer(var1=var1, var2=var2)
 
     elimination_latex = renderer.render(

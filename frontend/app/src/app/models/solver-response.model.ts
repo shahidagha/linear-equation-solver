@@ -6,13 +6,19 @@ export interface SolverStep {
   result?: string;
 }
 
+export interface MethodLatexPayload {
+  latex_detailed: string;
+  latex_medium: string;
+  latex_short: string;
+}
+
 export interface SolverResponse {
   solution: Record<string, string | number>;
   methods: {
-    elimination?: SolverStep[];
-    graphical_steps?: string[];
-    substitution?: SolverStep[];
-    cramer?: SolverStep[];
+    elimination_latex?: MethodLatexPayload;
+    substitution_latex?: MethodLatexPayload;
+    cramer_latex?: MethodLatexPayload;
+    graphical_latex?: MethodLatexPayload;
     [key: string]: unknown;
   };
   graph: {

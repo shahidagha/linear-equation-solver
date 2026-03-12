@@ -1,17 +1,7 @@
-<div class="flow" *ngIf="selectedMethod === 'elimination'; else graphicalBlock">
-  <ng-container *ngFor="let step of eliminationSteps">
-    <p *ngIf="step.type === 'text'">{{ step.content }}</p>
-    <div *ngIf="step.type !== 'text'" #mathBlock [attr.data-latex]="toLatex(step)"></div>
-  </ng-container>
+<div class="flow" *ngIf="selectedLatex as latex; else emptyLatex">
+  <div #mathBlock [attr.data-latex]="latex"></div>
 </div>
 
-<ng-template #graphicalBlock>
-  <div class="flow" *ngIf="selectedMethod === 'graphical'; else comingSoonBlock">
-    <p *ngFor="let step of graphicalSteps">{{ step }}</p>
-    <p *ngIf="graph">Intersection: {{ graph.intersection | json }}</p>
-  </div>
-</ng-template>
-
-<ng-template #comingSoonBlock>
+<ng-template #emptyLatex>
   <div class="flow"><p>This method is planned and will be available soon.</p></div>
 </ng-template>

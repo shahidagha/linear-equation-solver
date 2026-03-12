@@ -8,11 +8,26 @@ from backend.utils.canonical_encoder import canonicalize_equation
 REQUIRED_SOLUTION_METHODS = {"elimination", "substitution", "cramer", "graphical"}
 
 
+def _normalize_variable_name(value: str) -> str:
+    """Normalize variable labels for stable duplicate detection."""
+
+    return str(value or "").strip().lower()
+
+
+def _system_signature(variables: list[str], eq1: dict, eq2: dict) -> tuple:
+    """Build a canonical signature that ignores equation order."""
+
+    canonical_equations = sorted([canonicalize_equation(eq1), canonicalize_equation(eq2)])
+    canonical_variables = tuple(_normalize_variable_name(var) for var in variables[:2])
+    return (canonical_variables, tuple(canonical_equations))
+
+
 def save_equation_system(db: Session, payload: dict):
     """Save an equation system with duplicate detection."""
 
-    var1 = payload["variables"][0]
-    var2 = payload["variables"][1]
+    var1 = _normalize_variable_name(payload["variables"][0])
+    var2 = _normalize_variable_name(payload["variables"][1])
+    variables = [var1, var2]
 
     eq1 = payload["equation1"]
     eq2 = payload["equation2"]
@@ -38,9 +53,34 @@ def save_equation_system(db: Session, payload: dict):
             "id": existing_system.id,
         }
 
+    # Fallback duplicate check for legacy rows created before hash/canonical updates.
+    incoming_signature = _system_signature(variables, eq1, eq2)
+    all_systems = db.query(EquationSystem).all()
+    for saved_system in all_systems:
+        saved_signature = _system_signature(
+            list(saved_system.variables or []),
+            saved_system.equation1,
+            saved_system.equation2,
+        )
+        if saved_signature != incoming_signature:
+            continue
+
+        # Backfill missing hashes on legacy rows so future lookups stay fast.
+        if not saved_system.equation_hash:
+            saved_system.equation_hash = equation_hash
+        if not saved_system.system_hash:
+            saved_system.system_hash = system_hash
+        db.commit()
+
+        return {
+            "status": "duplicate",
+            "message": "This equation system already exists.",
+            "id": saved_system.id,
+        }
+
     existing_equation = db.query(EquationSystem).filter(EquationSystem.equation_hash == equation_hash).first()
 
-    if existing_equation and existing_equation.variables != payload["variables"]:
+    if existing_equation and [_normalize_variable_name(var) for var in (existing_equation.variables or [])[:2]] != variables:
         return {
             "status": "variable_conflict",
             "message": "Same equations exist but variables are different.",
@@ -48,7 +88,7 @@ def save_equation_system(db: Session, payload: dict):
         }
 
     new_system = EquationSystem(
-        variables=payload["variables"],
+        variables=variables,
         equation1=payload["equation1"],
         equation2=payload["equation2"],
         equation_hash=equation_hash,

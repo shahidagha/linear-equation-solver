@@ -24,6 +24,7 @@ export class InputPanelComponent implements OnInit, OnDestroy {
   initialEquation1: any = null;
   initialEquation2: any = null;
   canSolve = true;
+  currentSystemId: number | null = null;
   isSubmitting = false;
   errorMessage = '';
 
@@ -43,6 +44,9 @@ export class InputPanelComponent implements OnInit, OnDestroy {
       }),
       this.state.canSolve$.subscribe((canSolve) => {
         this.canSolve = canSolve;
+      }),
+      this.state.currentSystemId$.subscribe((systemId) => {
+        this.currentSystemId = systemId;
       })
     );
   }
@@ -64,7 +68,8 @@ export class InputPanelComponent implements OnInit, OnDestroy {
     const payload = {
       variables: { var1: this.variable1, var2: this.variable2 },
       equation1: this.equation1Data,
-      equation2: this.equation2Data
+      equation2: this.equation2Data,
+      system_id: this.currentSystemId
     };
 
     this.state.setBuilderState(payload);

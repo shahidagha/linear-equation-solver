@@ -5,6 +5,7 @@ from backend.database import get_db
 from backend.schemas.equation_schema import SolveRequestSchema
 from backend.services.equation_service import (
     save_equation_system,
+    update_equation_system,
     get_saved_systems,
     delete_system_by_id,
     get_cached_solution_response,
@@ -51,9 +52,13 @@ def save_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
 def solve_equation_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
     payload_dict = _normalize_payload(payload)
 
-    save_result = save_equation_system(db, payload_dict)
+    incoming_system_id = payload_dict.get("system_id")
+    if incoming_system_id is not None:
+        save_result = update_equation_system(db, incoming_system_id, payload_dict)
+    else:
+        save_result = save_equation_system(db, payload_dict)
 
-    if save_result['status'] in ('saved', 'duplicate'):
+    if save_result['status'] in ('saved', 'duplicate', 'updated'):
         system_id = save_result['id']
     else:
         return save_result
@@ -61,9 +66,11 @@ def solve_equation_system(payload: SolveRequestSchema, db: Session = Depends(get
     cached_result = get_cached_solution_response(db, system_id)
 
     if cached_result is not None:
+        cached_result["system_id"] = system_id
         return cached_result
 
     result = solve_system(db, system_id, payload_dict)
+    result["system_id"] = system_id
 
     return result
 

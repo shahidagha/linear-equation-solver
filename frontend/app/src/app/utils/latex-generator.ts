@@ -27,6 +27,14 @@ interface SignedExpressionTerm {
   value: string;
 }
 
+function normalizeSign(sign: unknown): 1 | -1 {
+  if (sign === -1 || sign === '-1' || sign === '-' || sign === '−') {
+    return -1;
+  }
+
+  return 1;
+}
+
 function sanitizePositiveInteger(value: number): number {
   const normalized = Number(value);
 
@@ -102,7 +110,7 @@ export function variableCoeffToLatex(term: Term): string {
     return '0';
   }
 
-  const signPrefix = term.sign === -1 ? '-' : '';
+  const signPrefix = normalizeSign(term.sign) === -1 ? '-' : '';
 
   if (unsigned === '1') {
     return signPrefix;
@@ -122,7 +130,7 @@ export function constantToLatex(term: Term): string {
     return '0';
   }
 
-  if (term.sign === -1) {
+  if (normalizeSign(term.sign) === -1) {
     return `-${unsigned}`;
   }
 
@@ -204,19 +212,20 @@ function frameKeyToTerm(
   if (key === 'equals') return null;
 
   if (key === 'constant') {
-    const sign = side === 'left' ? (equation.constant.sign * -1) as 1 | -1 : equation.constant.sign as 1 | -1;
+    const constantSign = normalizeSign(equation.constant.sign);
+    const sign = side === 'left' ? (constantSign * -1) as 1 | -1 : constantSign;
     return { sign, value: constantToLatex({ ...equation.constant, sign: 1 }) };
   }
 
   if (key === 'term1') {
     const coeff = variableCoeffToLatex({ ...equation.term1, sign: 1 });
     if (coeff === '0') return null;
-    return { sign: equation.term1.sign as 1 | -1, value: `${coeff}${variable1}` };
+    return { sign: normalizeSign(equation.term1.sign), value: `${coeff}${variable1}` };
   }
 
   const coeff = variableCoeffToLatex({ ...equation.term2, sign: 1 });
   if (coeff === '0') return null;
-  return { sign: equation.term2.sign as 1 | -1, value: `${coeff}${variable2}` };
+  return { sign: normalizeSign(equation.term2.sign), value: `${coeff}${variable2}` };
 }
 
 function joinTerms(terms: SignedExpressionTerm[]): string {

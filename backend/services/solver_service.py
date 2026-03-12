@@ -81,6 +81,10 @@ def _normalize_solution_map(raw_solution, var1: str, var2: str) -> dict:
             return {var1: raw_solution[var1], var2: raw_solution[var2]}
 
     if isinstance(raw_solution, list) and raw_solution:
+        # SymPy may return a flat list like [x_value, y_value].
+        if len(raw_solution) >= 2 and not isinstance(raw_solution[0], (dict, tuple, list)):
+            return {var1: raw_solution[0], var2: raw_solution[1]}
+
         first = raw_solution[0]
         if isinstance(first, dict):
             return _normalize_solution_map(first, var1, var2)

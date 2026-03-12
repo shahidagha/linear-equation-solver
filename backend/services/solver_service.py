@@ -16,11 +16,22 @@ from backend.latex.solution_renderer import SolutionLatexRenderer
 def build_fraction_surd(term: dict):
     """Convert frontend term JSON into FractionSurd object."""
 
-    sign = term["sign"]
-    num_coeff = term["numCoeff"]
-    num_rad = term["numRad"]
-    den_coeff = term["denCoeff"]
-    den_rad = term["denRad"]
+    # helper to safely convert values
+    def safe_int(value, default=1):
+        if value in ["", "+", "++", None]:
+            return default
+        if value == "-":
+            return -1
+        return int(value)
+
+    sign = term.get("sign", 1)
+    num_coeff = safe_int(term.get("numCoeff", 1))
+    num_rad = safe_int(term.get("numRad", 1))
+    den_coeff = safe_int(term.get("denCoeff", 1))
+    den_rad = safe_int(term.get("denRad", 1))
+
+    # normalize sign
+    sign = -1 if str(sign).strip() == "-" else 1
 
     num_coeff = sign * num_coeff
 

@@ -12,16 +12,21 @@ class FractionSurd:
 
     def to_sympy(self):
 
-        num = self.num_mult * sp.sqrt(self.num_rad)
-        den = self.den_mult * sp.sqrt(self.den_rad)
+        num_mult = sp.Integer(self.num_mult)
+        num_rad = sp.Integer(self.num_rad)
+        den_mult = sp.Integer(self.den_mult)
+        den_rad = sp.Integer(self.den_rad)
+
+        num = num_mult * sp.sqrt(num_rad)
+        den = den_mult * sp.sqrt(den_rad)
 
         value = num / den
 
-        if self.sign < 0:
+        # apply sign safely
+        if str(self.sign) in ["-", "-1"] or self.sign < 0:
             value = -value
 
         return sp.simplify(value)
-
     def __str__(self):
         return str(self.to_sympy())
 

@@ -213,8 +213,28 @@ def solve_system(db: Session, system_id: int, payload: dict):
     db.commit()
 
     return {
-        "solution": "pipeline-test",
-        "method": "elimination",
-        "verbosity": "student",
-        "content": placeholder_methods["elimination"]["student"],
+        "solution": {var1: "pipeline-test", var2: "pipeline-test"},
+        "methods": {
+            "elimination_latex": {
+                "latex_detailed": placeholder_methods["elimination"]["explain"],
+                "latex_medium": placeholder_methods["elimination"]["student"],
+                "latex_short": placeholder_methods["elimination"]["brief"],
+            },
+            "substitution_latex": {
+                "latex_detailed": placeholder_methods["substitution"]["explain"],
+                "latex_medium": placeholder_methods["substitution"]["student"],
+                "latex_short": placeholder_methods["substitution"]["brief"],
+            },
+            "cramer_latex": {
+                "latex_detailed": placeholder_methods["cramer"]["explain"],
+                "latex_medium": placeholder_methods["cramer"]["student"],
+                "latex_short": placeholder_methods["cramer"]["brief"],
+            },
+            "graphical_latex": {
+                "latex_detailed": placeholder_methods["graphical"]["explain"],
+                "latex_medium": placeholder_methods["graphical"]["student"],
+                "latex_short": placeholder_methods["graphical"]["brief"],
+            },
+        },
+        "graph": {"status": "pipeline-test"},
     }

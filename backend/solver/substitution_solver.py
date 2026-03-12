@@ -5,8 +5,8 @@ class SubstitutionSolver:
 
     @staticmethod
     def _build_equations(system):
-        x = sp.Symbol(system.eq1.var1)
-        y = sp.Symbol(system.eq1.var2)
+        x = sp.Symbol(system.var1)
+        y = sp.Symbol(system.var2)
 
         eq1 = sp.Eq(
             system.eq1.a.to_sympy() * x + system.eq1.b.to_sympy() * y,

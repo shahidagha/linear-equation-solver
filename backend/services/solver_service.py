@@ -25,6 +25,22 @@ def build_fraction_surd(term: dict):
             return -1
         return int(value)
 
+    def normalize_sign(value) -> int:
+        """Normalize frontend sign payloads to +1 / -1."""
+
+        if value is None:
+            return 1
+
+        # Support UI glyph variants such as U+2212 (−).
+        text = str(value).strip().replace("−", "-")
+        if text in {"-", "-1"}:
+            return -1
+
+        try:
+            return -1 if int(text) < 0 else 1
+        except (TypeError, ValueError):
+            return 1
+
     sign = term.get("sign", 1)
     num_coeff = safe_int(term.get("numCoeff", 1))
     num_rad = safe_int(term.get("numRad", 1))
@@ -32,7 +48,7 @@ def build_fraction_surd(term: dict):
     den_rad = safe_int(term.get("denRad", 1))
 
     # normalize sign
-    sign = -1 if str(sign).strip() == "-" else 1
+    sign = normalize_sign(sign)
 
     num_coeff = sign * num_coeff
 

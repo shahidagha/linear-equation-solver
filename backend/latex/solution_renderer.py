@@ -74,6 +74,14 @@ class SolutionLatexRenderer:
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if content:
                     medium.append(f"\\text{{{self._escape_text(content)}}}")
+            elif s_type == "divide_step":
+                # Step (5): detailed and medium text; short blank
+                detailed_content = step.get("detailed", "")
+                medium_content = step.get("medium", "")
+                for ln in self._wrap_text(detailed_content):
+                    detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+                if medium_content:
+                    medium.append(f"\\text{{{self._escape_text(medium_content)}}}")
             elif s_type in {"operation", "text", "equation"}:
                 content = step.get("content", "")
                 if not content:
@@ -91,12 +99,13 @@ class SolutionLatexRenderer:
                     # no horizontal scrolling in the aligned environment.
                     lines = self._wrap_text(content)
 
-                    # LCM strategy explanations (overall choice + 'Using LCM Elimination strategy')
-                    # appear only in detailed view; other explanatory texts appear in both
-                    # detailed and medium.
+                    # LCM / Six step strategy explanations appear only in detailed view.
                     lcm_expl = (
                         "Elimination strategy: LCM" in content
                         or "Using LCM Elimination strategy" in content
+                        or "Six step Method" in content
+                        or "Using Six Step Method" in content
+                        or "Elimination Strategy: Six step" in content
                     )
                     for ln in lines:
                         text_line = f"\\text{{{self._escape_text(ln)}}}"

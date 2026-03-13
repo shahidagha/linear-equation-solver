@@ -399,7 +399,15 @@ class EliminationSolver:
         self.vertical_elimination(eq1_line, eq2_line, eq4_line, op="subtract")
         self.recorder.add_equation(f"{eq4_line}\\; ...(4)")
 
-        # Step (10): reduced equation (4) with label (step 9 divide message removed)
+        # Step (9): divide equation (4) — structured detailed/medium
+        divisor = a4
+        self.recorder.add({
+            "detailed": (
+                f"Divide this equation by {sp.latex(divisor)} so that coefficient of x and y becomes ±1 (x ∓ y = n)."
+            ),
+            "medium": f"Divide the equation by {sp.latex(divisor)}, we get,",
+        })
+        # Step (10): reduced equation (4) with label
         n = sp.simplify(c4 / a4)
         coeff_y4 = sp.simplify(b4 / a4)
         eq4_reduced = EquationFormatter.format_equation(
@@ -431,8 +439,13 @@ class EliminationSolver:
         self.recorder.add_equation(result_line)
 
         x_value = sp.simplify(result_rhs / 2)
-        # After (16): step e.g. x = 3
-        self.recorder.add_equation(f"{var1} = {sp.latex(x_value)}")
+        # Step (14): calculation x = result_rhs/2 (e.g. x = 6/2)
+        step14_line = f"{var1} = \\frac{{{sp.latex(result_rhs)}}}{{2}}"
+        self.recorder.add_equation(step14_line)
+        # Step (15): calculation ∴ x = value; suppress if no change from previous
+        step15_line = f"\\therefore {var1} = {sp.latex(x_value)}"
+        if sp.latex(x_value) != sp.latex(result_rhs / 2):
+            self.recorder.add_equation(step15_line)
 
         self._substitute_x(x_value)
 

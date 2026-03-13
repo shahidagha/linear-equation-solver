@@ -177,18 +177,17 @@ class EliminationSolver:
         self.recorder.add(subst_line)
 
         lhs = sp.simplify(a * x_value)
-        self.recorder.add(f"{sp.latex(lhs)} + {b_term} = {sp.latex(c)}")
+        next_line = f"{sp.latex(lhs)} + {b_term} = {sp.latex(c)}"
+        if next_line != subst_line:
+            self.recorder.add(next_line)
 
         rhs = sp.simplify(c - lhs)
-        equation_rhs_line = f"{b_term} = {sp.latex(rhs)}"
-
         y_value = sp.simplify(rhs / b)
-        final_y_line = f"y = {sp.latex(y_value)}"
-
-        if equation_rhs_line != final_y_line:
-            self.recorder.add(equation_rhs_line)
-
-        self.recorder.add(final_y_line)
+        var2 = getattr(self.system, "var2", "y")
+        final_y_line = f"{var2} = {sp.latex(y_value)}"
+        # Detailed steps: ∴ y = c - lhs, then ∴ y = value
+        self.recorder.add_equation(f"\\therefore {b_term} = {sp.latex(c)} - {sp.latex(lhs)}")
+        self.recorder.add_equation(f"\\therefore {final_y_line}")
         return y_value
 
     def _substitute_y(self, y_value):
@@ -205,13 +204,17 @@ class EliminationSolver:
         self.recorder.add(f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}")
 
         lhs = substituted
-        self.recorder.add(f"{a_term} + {sp.latex(lhs)} = {sp.latex(c)}")
+        next_line = f"{a_term} + {sp.latex(lhs)} = {sp.latex(c)}"
+        prev_line = f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}"
+        if next_line != prev_line:
+            self.recorder.add(next_line)
 
         rhs = sp.simplify(c - lhs)
-        self.recorder.add(f"{a_term} = {sp.latex(rhs)}")
-
         x_value = sp.simplify(rhs / a)
-        self.recorder.add(f"x = {sp.latex(x_value)}")
+        var1 = getattr(self.system, "var1", "x")
+        # Detailed steps: ∴ a_term = c - lhs, then ∴ x = value
+        self.recorder.add_equation(f"\\therefore {a_term} = {sp.latex(c)} - {sp.latex(lhs)}")
+        self.recorder.add_equation(f"\\therefore {var1} = {sp.latex(x_value)}")
         return x_value
 
     # -----------------------------

@@ -59,6 +59,7 @@ class SolutionLatexRenderer:
         return [block]
 
     def _append_elimination(self, steps, detailed, medium, short):
+        last_content = None
         for step in steps:
             s_type = step.get("type")
             if s_type == "vertical_elimination":
@@ -77,6 +78,9 @@ class SolutionLatexRenderer:
                 content = step.get("content", "")
                 if not content:
                     continue
+                if content == last_content:
+                    continue
+                last_content = content
                 if s_type == "equation":
                     # Equation content is LaTeX; append as-is so it renders in the aligned environment
                     detailed.append(content)
@@ -198,7 +202,7 @@ class SolutionLatexRenderer:
         b = solution.get(self.var2, "")
         a_latex = sp.latex(sp.simplify(sp.S(str(a)))) if a != "" and a is not None else ""
         b_latex = sp.latex(sp.simplify(sp.S(str(b)))) if b != "" and b is not None else ""
-        return f"({self.var1},{self.var2}) = ({a_latex},{b_latex})"
+        return f"\\therefore ({self.var1},{self.var2}) = ({a_latex},{b_latex}) \\text{{ is the solution of the given equations.}}"
 
     def _aligned(self, lines: List[str]) -> str:
         body = " \\\\\n".join(f"& {line}" for line in lines)

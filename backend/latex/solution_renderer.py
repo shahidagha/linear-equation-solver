@@ -210,7 +210,15 @@ class SolutionLatexRenderer:
         return f"\\therefore ({self.var1},{self.var2}) = ({a_latex},{b_latex}) \\text{{ is the solution of the given equations.}}"
 
     def _aligned(self, lines: List[str]) -> str:
-        body = " \\\\\n".join(f"& {line}" for line in lines)
+        """Build aligned block; add [6pt] vertical space after lines that contain fraction coefficients."""
+        if not lines:
+            return "\\begin{aligned}\n\\end{aligned}"
+        body_parts = []
+        for i, line in enumerate(lines):
+            body_parts.append(f"& {line}")
+            if i < len(lines) - 1:
+                body_parts.append(" \\\\[6pt]\n" if "\\frac" in line else " \\\\\n")
+        body = "".join(body_parts)
         return f"\\begin{{aligned}}\n{body}\n\\end{{aligned}}"
 
     def _points_to_latex(self, points: List[List[Any]]) -> str:

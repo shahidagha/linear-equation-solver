@@ -1,6 +1,6 @@
 /**
  * Draws the graphical solution (two lines, points, intersection) onto a 2D canvas context.
- * Math coordinates: x, y in [-8, 8]. Canvas is scaled to fit with margins.
+ * Graph display range: x, y in [-9, 9]. Point selection (backend) remains [-8, 8].
  */
 
 /** Matches SolverResponse['graph'] from the API. */
@@ -12,7 +12,7 @@ export interface GraphData {
   intersection: Record<string, string | number>;
 }
 
-const RANGE = 8; // -8 to 8
+const RANGE = 9; // graph axes and grid: -9 to 9 (point selection stays -8 to 8 in backend)
 const MARGIN = 28;
 const BLACK = '#000000';
 
@@ -86,7 +86,7 @@ function drawLabelAlongLine(
   ctx.save();
   ctx.translate(tx, ty);
   ctx.rotate(angle);
-  ctx.font = '11px sans-serif';
+  ctx.font = 'bold 13px sans-serif';
   ctx.fillStyle = BLACK;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
@@ -235,17 +235,19 @@ export function drawGraph(
   ctx.fillText('X', right.cx + 18, right.cy + 4);
   ctx.fillText('Y', top.cx - 4, top.cy - 12);
 
-  // Axis tick labels: -8 to 8 on X and Y
+  // Axis tick labels: -RANGE to RANGE on X and Y (single 0 at origin)
   const origin = toCanvas(0, 0, width, height);
   ctx.font = '11px sans-serif';
   ctx.fillStyle = BLACK;
+  const labelOffset = 3;
   for (let i = -RANGE; i <= RANGE; i++) {
     const v = toCanvas(i, 0, width, height);
-    ctx.textAlign = 'center';
-    ctx.fillText(String(i), v.cx, origin.cy + 16);
+    ctx.textAlign = i === 0 ? 'left' : 'center';
+    ctx.fillText(String(i), v.cx + labelOffset, origin.cy + 16);
+    if (i === 0) continue;
     const h = toCanvas(0, i, width, height);
     ctx.textAlign = 'right';
-    ctx.fillText(String(i), origin.cx - 6, h.cy + 4);
+    ctx.fillText(String(i), origin.cx - 6, h.cy + 4 + labelOffset);
   }
 
   // Equation line 1: clip to graph box so both end arrows are visible
@@ -298,7 +300,7 @@ export function drawGraph(
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.font = 'bold 11px sans-serif';
+  ctx.font = 'bold 15px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(`(${ix}, ${iy})`, intPt.cx + 10, intPt.cy - 5);
+  ctx.fillText(`(${ix}, ${iy})`, intPt.cx + 12, intPt.cy - 5);
 }

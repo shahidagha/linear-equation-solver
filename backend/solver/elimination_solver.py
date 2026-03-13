@@ -246,7 +246,9 @@ class EliminationSolver:
 
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
-            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            # Use _term so coefficient 1 is hidden in the result line.
+            x_term = self._term(A, "x")
+            result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 
@@ -293,7 +295,8 @@ class EliminationSolver:
 
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
-            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            y_term = self._term(B, "y")
+            result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 
@@ -445,7 +448,8 @@ class EliminationSolver:
             if A == 0:
                 return
 
-            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            x_term = self._term(A, "x")
+            result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 
@@ -519,7 +523,8 @@ class EliminationSolver:
             if B == 0:
                 return
 
-            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            y_term = self._term(B, "y")
+            result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 
@@ -587,7 +592,8 @@ class EliminationSolver:
             if A == 0:
                 return
 
-            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            x_term = self._term(A, "x")
+            result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 
@@ -670,7 +676,8 @@ class EliminationSolver:
             if A == 0:
                 return
 
-            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            x_term = self._term(A, "x")
+            result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 
@@ -702,7 +709,8 @@ class EliminationSolver:
             if B == 0:
                 return
 
-            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            y_term = self._term(B, "y")
+            result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line)
             self.recorder.add_equation(result_line)
 

@@ -24,6 +24,9 @@
       <button type="button" [disabled]="!(state.methods$ | async)" (click)="copyQuestion()">Copy Question</button>
       <button type="button" [disabled]="!(state.methods$ | async)" (click)="copySolution()">Copy Solution</button>
       <button type="button" (click)="exitSolution()">Exit Solution</button>
+      <span *ngIf="copySolutionMessage" class="copy-message" [class.copy-success]="copySolutionMessage === 'success'" [class.copy-failure]="copySolutionMessage === 'failure'">
+        {{ copySolutionMessage === 'success' ? 'Copied to clipboard.' : 'Copy failed.' }}
+      </span>
     </div>
   </div>
 

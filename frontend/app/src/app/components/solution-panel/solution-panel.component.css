@@ -5,7 +5,11 @@
 
 .toolbar-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .verbosity-row, .controls-row { display:flex; gap:8px; flex-wrap:wrap; }
-.controls-row { margin-left:auto; justify-content:flex-end; }
+.controls-row { margin-left:auto; justify-content:flex-end; align-items:center; gap:8px; }
+
+.copy-message { font-size:13px; font-weight:500; }
+.copy-message.copy-success { color:#059669; }
+.copy-message.copy-failure { color:#dc2626; }
 
 button { padding:6px 10px; border:1px solid #d5dbec; border-radius:8px; background:#f8faff; cursor:pointer; }
 button.active { background:#2563eb; color:#fff; border-color:#2563eb; }

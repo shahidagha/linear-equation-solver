@@ -346,6 +346,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
     elimination_latex = renderer.render(
         method_name="elimination",
         equations=equations,
+        raw_equations=raw_equations,
         solution={
             var1: to_python_number(elimination_solution[var1]),
             var2: to_python_number(elimination_solution[var2]),
@@ -355,6 +356,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
     substitution_latex = renderer.render(
         method_name="substitution",
         equations=equations,
+        raw_equations=raw_equations,
         solution={
             var1: to_python_number(substitution_solution[var1]),
             var2: to_python_number(substitution_solution[var2]),
@@ -363,6 +365,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
     cramer_latex = renderer.render(
         method_name="cramer",
         equations=equations,
+        raw_equations=raw_equations,
         solution={
             var1: to_python_number(cramer_solution[var1]),
             var2: to_python_number(cramer_solution[var2]),
@@ -371,6 +374,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
     graphical_latex = renderer.render(
         method_name="graphical",
         equations=equations,
+        raw_equations=raw_equations,
         solution={
             var1: to_python_number(elimination_solution[var1]),
             var2: to_python_number(elimination_solution[var2]),

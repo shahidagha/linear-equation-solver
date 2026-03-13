@@ -13,15 +13,17 @@ class SolutionLatexRenderer:
         self,
         method_name: str,
         equations: List[str],
+        raw_equations: Optional[List[str]] = None,
         solution: Dict[str, Any],
         steps: Optional[List[Dict[str, Any]]] = None,
         graph_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, str]:
         steps = steps or []
+        raw_equations = raw_equations or equations
 
-        detailed_lines = self._equation_lines(equations)
-        medium_lines = self._equation_lines(equations)
-        short_lines = self._equation_lines(equations)
+        detailed_lines = self._given_equations_block(raw_equations)
+        medium_lines = self._given_equations_block(raw_equations)
+        short_lines = self._given_equations_block(raw_equations)
 
         if method_name == "elimination":
             self._append_elimination(steps, detailed_lines, medium_lines, short_lines)
@@ -43,11 +45,14 @@ class SolutionLatexRenderer:
             "latex_short": self._aligned(short_lines),
         }
 
-    def _equation_lines(self, equations: List[str]) -> List[str]:
-        rendered = []
-        for idx, eq in enumerate(equations, start=1):
-            rendered.append(f"{eq}\\quad ({idx})")
-        return rendered
+    def _given_equations_block(self, equations: List[str]) -> List[str]:
+        """Render raw user input as a right-brace 'Given equations' block."""
+        if not equations:
+            return ["\\text{Given equations}"]
+
+        body = " \\\\ ".join(equations)
+        block = f"\\left.\\begin{{aligned}} {body} \\end{{aligned}}\\right\\}}\\;\\text{{Given equations}}"
+        return [block]
 
     def _append_elimination(self, steps, detailed, medium, short):
         for step in steps:

@@ -19,6 +19,7 @@ class SolutionLatexRenderer:
         steps: Optional[List[Dict[str, Any]]] = None,
         graph_data: Optional[Dict[str, Any]] = None,
         raw_equations: Optional[List[str]] = None,
+        standardization_steps: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, str]:
         steps = steps or []
         raw_equations = raw_equations or equations
@@ -27,7 +28,18 @@ class SolutionLatexRenderer:
 
         detailed_lines = self._given_equations_block(given_equations)
         medium_lines = self._given_equations_block(given_equations)
-        short_lines = self._given_equations_block(given_equations)
+        # Short: standardization = Given + eq (1) + eq (2) only; method steps appended later as before
+        if standardization_steps:
+            short_lines = self._given_equations_block(given_equations)
+            if equations:
+                short_lines.append(f"{equations[0]}\\; ...(1)")
+            if len(equations) > 1:
+                short_lines.append(f"{equations[1]}\\; ...(2)")
+        else:
+            short_lines = self._given_equations_block(given_equations)
+
+        if standardization_steps:
+            self._append_standardization(standardization_steps, detailed_lines, medium_lines)
 
         if method_name == "elimination":
             self._append_elimination(steps, detailed_lines, medium_lines, short_lines)
@@ -57,6 +69,22 @@ class SolutionLatexRenderer:
         body = " \\\\ ".join(equations)
         block = f"\\left.\\begin{{aligned}} {body} \\end{{aligned}}\\right\\}}\\;\\text{{Given equations}}"
         return [block]
+
+    def _append_standardization(self, steps: List[Dict[str, Any]], detailed: List[str], medium: List[str]) -> None:
+        """Append standardization step content to detailed and medium only (short uses Given + eq1 + eq2)."""
+        for step in steps:
+            s_type = step.get("type")
+            content = step.get("content", "")
+            if not content:
+                continue
+            if s_type == "equation":
+                detailed.append(content)
+                medium.append(content)
+            elif s_type == "text":
+                for ln in self._wrap_text(content):
+                    line = f"\\text{{{self._escape_text(ln)}}}"
+                    detailed.append(line)
+                    medium.append(line)
 
     def _append_elimination(self, steps, detailed, medium, short):
         last_content = None

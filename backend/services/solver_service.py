@@ -386,7 +386,8 @@ def solve_system(db: Session, system_id: int, payload: dict):
             var1: to_python_number(elimination_solution[var1]),
             var2: to_python_number(elimination_solution[var2]),
         },
-        steps=elimination_steps,
+        steps=elimination_method_steps,
+        standardization_steps=standardization_steps,
     )
     substitution_latex = renderer.render(
         method_name="substitution",

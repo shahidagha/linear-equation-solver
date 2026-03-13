@@ -362,7 +362,13 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_lcm(self, a1, b1, c1, a2, b2, c2):
-        self.recorder.add("Using LCM Elimination strategy")
+        self.recorder.add(
+            "Using LCM Elimination strategy. In this method we first choose which variable to eliminate "
+            "by comparing the coefficients of x and y in both equations. We then multiply each equation "
+            "so that this chosen variable has the same numerical coefficient (but opposite signs), which "
+            "allows that variable to vanish when we add or subtract the equations, leaving a single-variable "
+            "equation that is easy to solve."
+        )
 
         # Step 1: |b1| = 1 or |b2| = 1 → eliminate y
         if abs(b1) == 1 or abs(b2) == 1:

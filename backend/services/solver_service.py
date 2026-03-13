@@ -199,7 +199,8 @@ def _standardization_steps_for_equation(steps, number: int):
     When the raw equation is already in standard form, it is shown only once.
     """
     out = []
-    label = f"({number})"
+    # LaTeX-style equation label, e.g. \dots (1)
+    label = f"\\\\quad \\\\dots ({number})"
     last_shown = None  # last equation string we emitted (without label)
     steps_list = list(steps)
 
@@ -217,18 +218,18 @@ def _standardization_steps_for_equation(steps, number: int):
                     std_result = steps_list[j].get("result")
                     break
             if std_result is not None and _normalize_eq_for_compare(eq) == _normalize_eq_for_compare(std_result):
-                out.append({"type": "equation", "content": f"{std_result} {label}"})
+                out.append({"type": "equation", "content": f"{std_result}{label}"})
                 last_shown = _normalize_eq_for_compare(std_result)
             else:
                 # Use std_result (LaTeX) when available so equation (1) renders properly below Given block
                 content_eq = std_result if std_result is not None else eq
-                out.append({"type": "equation", "content": f"{content_eq} {label}"})
+                out.append({"type": "equation", "content": f"{content_eq}{label}"})
                 last_shown = _normalize_eq_for_compare(content_eq)
 
         elif s_type == "rearrange_standard_form":
             result = step.get("result", "")
             if result and _normalize_eq_for_compare(result) != last_shown:
-                out.append({"type": "equation", "content": f"{result} {label}"})
+                out.append({"type": "equation", "content": f"{result}{label}"})
                 last_shown = _normalize_eq_for_compare(result)
 
         elif s_type == "make_leading_positive":
@@ -254,7 +255,7 @@ def _standardization_steps_for_equation(steps, number: int):
                             "content": f"Multiply equation {label} by {multiplier} to remove denominators.",
                         }
                     )
-                out.append({"type": "equation", "content": f"{result} {label}"})
+                out.append({"type": "equation", "content": f"{result}{label}"})
                 last_shown = result_norm
 
         elif s_type == "reduce_equation":
@@ -269,7 +270,7 @@ def _standardization_steps_for_equation(steps, number: int):
                             "content": f"Divide equation {label} by {divisor} to simplify coefficients.",
                         }
                     )
-                out.append({"type": "equation", "content": f"{result} {label}"})
+                out.append({"type": "equation", "content": f"{result}{label}"})
                 last_shown = result_norm
 
         elif s_type == "assign_equation_number":

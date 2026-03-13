@@ -79,9 +79,13 @@ class SolutionLatexRenderer:
                     # no horizontal scrolling in the aligned environment.
                     lines = self._wrap_text(content)
 
-                    # LCM strategy explanation appears only in detailed view;
-                    # other explanatory texts appear in both detailed and medium.
-                    lcm_expl = "Elimination strategy: LCM" in content
+                    # LCM strategy explanations (overall choice + 'Using LCM Elimination strategy')
+                    # appear only in detailed view; other explanatory texts appear in both
+                    # detailed and medium.
+                    lcm_expl = (
+                        "Elimination strategy: LCM" in content
+                        or "Using LCM Elimination strategy" in content
+                    )
                     for ln in lines:
                         text_line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(text_line)

@@ -75,8 +75,12 @@ class SolutionLatexRenderer:
                     medium.append(content)
                 else:
                     text_line = f"\\text{{{self._escape_text(content)}}}"
-                    detailed.append(text_line)
-                    medium.append(text_line)
+                    # Show the LCM strategy explanation only in detailed view; keep student view blank for that line.
+                    if "Elimination strategy: LCM" in content:
+                        detailed.append(text_line)
+                    else:
+                        detailed.append(text_line)
+                        medium.append(text_line)
 
         short.append("\\text{Elimination completed.}")
 

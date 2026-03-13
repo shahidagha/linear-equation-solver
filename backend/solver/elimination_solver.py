@@ -650,7 +650,26 @@ class EliminationSolver:
         c2 = self.eq2.c.to_sympy()
 
         strategy = self.detect_strategy()
-        self.recorder.add(f"Elimination strategy: {strategy}")
+
+        # Record a strategy explanation. For LCM we provide a teacher-style rationale
+        # only in the detailed view (renderer will hide it in other verbosities).
+        if strategy == "LCM":
+            self.recorder.add(
+                "Elimination strategy: LCM. We choose the LCM method because the coefficients of x and y do not "
+                "line up for direct or cross elimination; by multiplying each equation to make one variable share "
+                "the same coefficient (with opposite signs), that variable will cancel in a single addition or "
+                "subtraction step."
+            )
+        elif strategy == "DIRECT":
+            self.recorder.add(
+                "Elimination strategy: Direct. The coefficients of x or y already match in size, so we can add "
+                "or subtract the equations immediately to eliminate one variable."
+            )
+        else:  # CROSS
+            self.recorder.add(
+                "Elimination strategy: Cross. By combining the equations in a criss-cross way we create new "
+                "equations where adding and subtracting quickly isolates x and y."
+            )
 
         if strategy == "DIRECT":
             self._solve_direct(a1, b1, c1, a2, b2, c2)

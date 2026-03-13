@@ -397,7 +397,6 @@ class EliminationSolver:
         eq2_line = EquationFormatter.format_equation(a2, b2, c2)
         eq4_line = EquationFormatter.format_equation(a4, b4, c4)
         self.vertical_elimination(eq1_line, eq2_line, eq4_line, op="subtract")
-        self.recorder.add_equation(f"{eq4_line}\\; ...(4)")
 
         # Step (9): divide equation (4) — structured detailed/medium
         divisor = a4
@@ -436,16 +435,13 @@ class EliminationSolver:
         result_rhs = sp.simplify(m + n)
         result_line = f"{self._term(sp.Integer(2), var1)} = {sp.latex(result_rhs)}"
         self.vertical_elimination(eq3_norm, eq4_norm, result_line, op="add")
-        self.recorder.add_equation(result_line)
 
         x_value = sp.simplify(result_rhs / 2)
-        # Step (14): calculation x = result_rhs/2 (e.g. x = 6/2)
-        step14_line = f"{var1} = \\frac{{{sp.latex(result_rhs)}}}{{2}}"
-        self.recorder.add_equation(step14_line)
-        # Step (15): calculation ∴ x = value; suppress if no change from previous
-        step15_line = f"\\therefore {var1} = {sp.latex(x_value)}"
-        if sp.latex(x_value) != sp.latex(result_rhs / 2):
-            self.recorder.add_equation(step15_line)
+        # Step (16): calculation x = result_rhs/2 (e.g. x = 6/2)
+        step16_line = f"{var1} = \\frac{{{sp.latex(result_rhs)}}}{{2}}"
+        self.recorder.add_equation(step16_line)
+        # After (16): calculation x = value (e.g. x = 3)
+        self.recorder.add_equation(f"{var1} = {sp.latex(x_value)}")
 
         self._substitute_x(x_value)
 

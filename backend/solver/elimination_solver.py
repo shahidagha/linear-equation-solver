@@ -362,23 +362,29 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_lcm(self, a1, b1, c1, a2, b2, c2):
-        self.recorder.add(
-            "Using LCM Elimination strategy. In this method we first choose which variable to eliminate "
-            "by comparing the coefficients of x and y in both equations. We then multiply each equation "
-            "so that this chosen variable has the same numerical coefficient (but opposite signs), which "
-            "allows that variable to vanish when we add or subtract the equations, leaving a single-variable "
-            "equation that is easy to solve."
-        )
-
         # Step 1: |b1| = 1 or |b2| = 1 → eliminate y
         if abs(b1) == 1 or abs(b2) == 1:
             if abs(b1) == 1:
                 mult1 = abs(b2)
                 mult2 = 1
+                self.recorder.add(
+                    f"Using LCM Elimination strategy: in equation (1) the coefficient of y is "
+                    f"{sp.latex(b1)} and in equation (2) it is {sp.latex(b2)}. Because equation (1) "
+                    f"already has coefficient 1, we multiply equation (1) by {sp.latex(mult1)} so that "
+                    f"both y–coefficients become {sp.latex(abs(b2))} and will cancel when we combine "
+                    "the equations."
+                )
                 self.recorder.add_operation(f"Multiplying equation (1) by {mult1}")
             else:
                 mult1 = 1
                 mult2 = abs(b1)
+                self.recorder.add(
+                    f"Using LCM Elimination strategy: in equation (1) the coefficient of y is "
+                    f"{sp.latex(b1)} and in equation (2) it is {sp.latex(b2)}. Because equation (2) "
+                    f"already has coefficient 1, we multiply equation (2) by {sp.latex(mult2)} so that "
+                    f"both y–coefficients become {sp.latex(abs(b1))} and will cancel when we combine "
+                    "the equations."
+                )
                 self.recorder.add_operation(f"Multiplying equation (2) by {mult2}")
 
             A1 = a1 * mult1
@@ -431,10 +437,24 @@ class EliminationSolver:
             if abs(a1) == 1:
                 mult1 = abs(a2)
                 mult2 = 1
+                self.recorder.add(
+                    f"Using LCM Elimination strategy: in equation (1) the coefficient of x is "
+                    f"{sp.latex(a1)} and in equation (2) it is {sp.latex(a2)}. Because equation (1) "
+                    f"already has coefficient 1, we multiply equation (1) by {sp.latex(mult1)} so that "
+                    f"both x–coefficients become {sp.latex(abs(a2))} and will cancel when we combine "
+                    "the equations."
+                )
                 self.recorder.add_operation(f"Multiplying equation (1) by {mult1}")
             else:
                 mult1 = 1
                 mult2 = abs(a1)
+                self.recorder.add(
+                    f"Using LCM Elimination strategy: in equation (1) the coefficient of x is "
+                    f"{sp.latex(a1)} and in equation (2) it is {sp.latex(a2)}. Because equation (2) "
+                    f"already has coefficient 1, we multiply equation (2) by {sp.latex(mult2)} so that "
+                    f"both x–coefficients become {sp.latex(abs(a1))} and will cancel when we combine "
+                    "the equations."
+                )
                 self.recorder.add_operation(f"Multiplying equation (2) by {mult2}")
 
 
@@ -486,7 +506,13 @@ class EliminationSolver:
         # Step 3: any b negative → LCM on b to eliminate y
         if b1 < 0 or b2 < 0:
             lcm = sp.lcm(abs(b1), abs(b2))
-            self.recorder.add(f"LCM of {abs(b1)} and {abs(b2)} = {lcm}")
+            self.recorder.add(
+                f"Using LCM Elimination strategy: the y–coefficients are {sp.latex(b1)} in equation (1) "
+                f"and {sp.latex(b2)} in equation (2). Because one is negative, we take the LCM of their "
+                f"absolute values, LCM({sp.latex(abs(b1))}, {sp.latex(abs(b2))}) = {sp.latex(lcm)}, and "
+                "scale each equation so that the y–coefficients become equal in size but opposite in sign, "
+                "so y will cancel when we add the equations."
+            )
 
 
             mult1 = lcm / abs(b1)
@@ -547,10 +573,20 @@ class EliminationSolver:
 
         if lcm_b < lcm_a:
             eliminate = "y"
-            self.recorder.add(f"LCM({b1}, {b2}) = {lcm_b} is smaller, eliminate y.")
+            self.recorder.add(
+                f"Using LCM Elimination strategy: LCM of the y–coefficients is "
+                f"LCM({sp.latex(b1)}, {sp.latex(b2)}) = {sp.latex(lcm_b)}, while LCM of the x–coefficients "
+                f"is LCM({sp.latex(a1)}, {sp.latex(a2)}) = {sp.latex(lcm_a)}. Because the LCM for y is smaller, "
+                "it is more efficient to eliminate y by scaling each equation so their y–coefficients match."
+            )
         else:
             eliminate = "x"
-            self.recorder.add(f"LCM({a1}, {a2}) = {lcm_a} is smaller or equal, eliminate x.")
+            self.recorder.add(
+                f"Using LCM Elimination strategy: LCM of the x–coefficients is "
+                f"LCM({sp.latex(a1)}, {sp.latex(a2)}) = {sp.latex(lcm_a)}, while LCM of the y–coefficients "
+                f"is LCM({sp.latex(b1)}, {sp.latex(b2)}) = {sp.latex(lcm_b)}. Because the LCM for x is smaller "
+                "or equal, it is more efficient to eliminate x by scaling each equation so their x–coefficients match."
+            )
 
         if eliminate == "y":
             lcm = sp.lcm(abs(b1), abs(b2))

@@ -197,6 +197,442 @@ class EliminationSolver:
         return x_value
 
     # -----------------------------
+    # DIRECT strategy (SECTION 2)
+    # -----------------------------
+
+    def _solve_direct(self, a1, b1, c1, a2, b2, c2):
+        if abs(b1) == abs(b2):
+            eliminate = "y"
+        else:
+            eliminate = "x"
+
+        if eliminate == "y":
+            self.recorder.add("Using Direct Elimination on y (|b₁| = |b₂|)")
+
+            if sp.sign(b1) != sp.sign(b2):
+                self.recorder.add_operation("Adding equations (coefficients of y have opposite signs)")
+                if not (
+                    self._check_like_surd_pair(a1, a2)
+                    and self._check_like_surd_pair(b1, b2)
+                    and self._check_like_surd_pair(c1, c2)
+                ):
+                    return
+                A = a1 + a2
+                C = c1 + c2
+            else:
+                if a1 > a2:
+                    self.recorder.add_operation("Subtracting equations (1 − 2)")
+                    if not (
+                        self._check_like_surd_pair(a1, a2)
+                        and self._check_like_surd_pair(b1, b2)
+                        and self._check_like_surd_pair(c1, c2)
+                    ):
+                        return
+                    A = a1 - a2
+                    C = c1 - c2
+                else:
+                    self.recorder.add_operation("Subtracting equations (2 − 1)")
+                    if not (
+                        self._check_like_surd_pair(a1, a2)
+                        and self._check_like_surd_pair(b1, b2)
+                        and self._check_like_surd_pair(c1, c2)
+                    ):
+                        return
+                    A = a2 - a1
+                    C = c2 - c1
+
+            if A == 0:
+                return
+
+            eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
+            eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
+            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            x_value = sp.simplify(C / A)
+            self.recorder.add(f"x = {sp.latex(x_value)}")
+            self._substitute_x(x_value)
+        else:
+            self.recorder.add("Using Direct Elimination on x (|a₁| = |a₂|)")
+
+            if sp.sign(a1) != sp.sign(a2):
+                self.recorder.add_operation("Adding equations (coefficients of x have opposite signs)")
+                if not (
+                    self._check_like_surd_pair(a1, a2)
+                    and self._check_like_surd_pair(b1, b2)
+                    and self._check_like_surd_pair(c1, c2)
+                ):
+                    return
+                B = b1 + b2
+                C = c1 + c2
+            else:
+                if b1 > b2:
+                    self.recorder.add_operation("Subtracting equations (1 − 2)")
+                    if not (
+                        self._check_like_surd_pair(a1, a2)
+                        and self._check_like_surd_pair(b1, b2)
+                        and self._check_like_surd_pair(c1, c2)
+                    ):
+                        return
+                    B = b1 - b2
+                    C = c1 - c2
+                else:
+                    self.recorder.add_operation("Subtracting equations (2 − 1)")
+                    if not (
+                        self._check_like_surd_pair(a1, a2)
+                        and self._check_like_surd_pair(b1, b2)
+                        and self._check_like_surd_pair(c1, c2)
+                    ):
+                        return
+                    B = b2 - b1
+                    C = c2 - c1
+
+            if B == 0:
+                return
+
+            eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
+            eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
+            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            y_value = sp.simplify(C / B)
+            self.recorder.add(f"y = {sp.latex(y_value)}")
+            self._substitute_y(y_value)
+
+    # -----------------------------
+    # CROSS strategy (SECTION 3)
+    # -----------------------------
+
+    def _solve_cross(self, a1, b1, c1, a2, b2, c2):
+        self.recorder.add("Using Cross Elimination strategy")
+
+        # Step 1: add (1) and (2)
+        if not (
+            self._check_like_surd_pair(a1, a2)
+            and self._check_like_surd_pair(b1, b2)
+            and self._check_like_surd_pair(c1, c2)
+        ):
+            return
+
+        a3 = a1 + a2
+        b3 = b1 + b2
+        c3 = c1 + c2
+
+        self.recorder.add_operation("Adding equations (1) and (2)")
+        eq1_line = EquationFormatter.format_equation(a1, b1, c1)
+        eq2_line = EquationFormatter.format_equation(a2, b2, c2)
+        eq3_line = EquationFormatter.format_equation(a3, b3, c3)
+        self.vertical_elimination(eq1_line, eq2_line, eq3_line)
+        self.recorder.add_equation(eq3_line)  # (3)
+        self.recorder.add("Divide equation (3) so that coefficient of x or y becomes 1 (x ± y = m).")
+
+        # Step 3: subtract equations according to a1, a2
+        if a1 > a2:
+            self.recorder.add_operation("Subtracting equations (1 − 2)")
+            if not (
+                self._check_like_surd_pair(a1, a2)
+                and self._check_like_surd_pair(b1, b2)
+                and self._check_like_surd_pair(c1, c2)
+            ):
+                return
+            a4 = a1 - a2
+            b4 = b1 - b2
+            c4 = c1 - c2
+        else:
+            self.recorder.add_operation("Subtracting equations (2 − 1)")
+            if not (
+                self._check_like_surd_pair(a1, a2)
+                and self._check_like_surd_pair(b1, b2)
+                and self._check_like_surd_pair(c1, c2)
+            ):
+                return
+            a4 = a2 - a1
+            b4 = b2 - b1
+            c4 = c2 - c1
+
+        eq4_line = EquationFormatter.format_equation(a4, b4, c4)
+        self.recorder.add_equation(eq4_line)  # (4)
+        self.recorder.add("Divide equation (4) so that coefficient of x or y becomes 1 (x ∓ y = n).")
+        self.recorder.add("Add equations (3) and (4) to eliminate y and obtain 2x = m + n.")
+
+    # -----------------------------
+    # LCM strategy (SECTION 4)
+    # -----------------------------
+
+    def _solve_lcm(self, a1, b1, c1, a2, b2, c2):
+        self.recorder.add("Using LCM Elimination strategy")
+
+        # Step 1: |b1| = 1 or |b2| = 1 → eliminate y
+        if abs(b1) == 1 or abs(b2) == 1:
+            if abs(b1) == 1:
+                mult1 = abs(b2)
+                mult2 = 1
+                self.recorder.add_operation(f"Multiplying equation (1) by {mult1}")
+            else:
+                mult1 = 1
+                mult2 = abs(b1)
+                self.recorder.add_operation(f"Multiplying equation (2) by {mult2}")
+
+            A1 = a1 * mult1
+            B1 = b1 * mult1
+            C1 = c1 * mult1
+
+            A2 = a2 * mult2
+            B2 = b2 * mult2
+            C2 = c2 * mult2
+
+            eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
+            eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+
+            if sp.sign(B1) != sp.sign(B2):
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                A = A1 + A2
+                C = C1 + C2
+                self.recorder.add_operation("Adding equations")
+            else:
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                A = A1 - A2
+                C = C1 - C2
+                self.recorder.add_operation("Subtracting equations")
+
+            if A == 0:
+                return
+
+            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            x_value = sp.simplify(C / A)
+            self.recorder.add(f"x = {sp.latex(x_value)}")
+            self._substitute_x(x_value)
+            return
+
+        # Step 2: |a1| = 1 or |a2| = 1 → eliminate x
+        if abs(a1) == 1 or abs(a2) == 1:
+            if abs(a1) == 1:
+                mult1 = abs(a2)
+                mult2 = 1
+                self.recorder.add_operation(f"Multiplying equation (1) by {mult1}")
+            else:
+                mult1 = 1
+                mult2 = abs(a1)
+                self.recorder.add_operation(f"Multiplying equation (2) by {mult2}")
+
+            A1 = a1 * mult1
+            B1 = b1 * mult1
+            C1 = c1 * mult1
+
+            A2 = a2 * mult2
+            B2 = b2 * mult2
+            C2 = c2 * mult2
+
+            eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
+            eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+
+            if sp.sign(A1) != sp.sign(A2):
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                B = B1 + B2
+                C = C1 + C2
+                self.recorder.add_operation("Adding equations")
+            else:
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                B = B1 - B2
+                C = C1 - C2
+                self.recorder.add_operation("Subtracting equations")
+
+            if B == 0:
+                return
+
+            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            y_value = sp.simplify(C / B)
+            self.recorder.add(f"y = {sp.latex(y_value)}")
+            self._substitute_y(y_value)
+            return
+
+        # Step 3: any b negative → LCM on b to eliminate y
+        if b1 < 0 or b2 < 0:
+            lcm = sp.lcm(abs(b1), abs(b2))
+            self.recorder.add(f"LCM of {abs(b1)} and {abs(b2)} = {lcm}")
+
+            mult1 = lcm / abs(b1)
+            mult2 = lcm / abs(b2)
+
+            if mult1 != 1:
+                self.recorder.add_operation(f"Multiplying equation (1) by {mult1}")
+            if mult2 != 1:
+                self.recorder.add_operation(f"Multiplying equation (2) by {mult2}")
+
+            A1 = a1 * mult1
+            B1 = b1 * mult1
+            C1 = c1 * mult1
+
+            A2 = a2 * mult2
+            B2 = b2 * mult2
+            C2 = c2 * mult2
+
+            eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
+            eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+
+            if sp.sign(B1) != sp.sign(B2):
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                A = A1 + A2
+                C = C1 + C2
+                self.recorder.add_operation("Adding equations")
+            else:
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                A = A1 - A2
+                C = C1 - C2
+                self.recorder.add_operation("Subtracting equations")
+
+            if A == 0:
+                return
+
+            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            x_value = sp.simplify(C / A)
+            self.recorder.add(f"x = {sp.latex(x_value)}")
+            self._substitute_x(x_value)
+            return
+
+        # Step 4: both b1 and b2 positive → compare LCM(b) and LCM(a)
+        lcm_b = sp.lcm(b1, b2)
+        lcm_a = sp.lcm(a1, a2)
+
+        if lcm_b < lcm_a:
+            eliminate = "y"
+            self.recorder.add(f"LCM({b1}, {b2}) = {lcm_b} is smaller, eliminate y.")
+        else:
+            eliminate = "x"
+            self.recorder.add(f"LCM({a1}, {a2}) = {lcm_a} is smaller or equal, eliminate x.")
+
+        if eliminate == "y":
+            lcm = sp.lcm(abs(b1), abs(b2))
+            mult1 = lcm / abs(b1)
+            mult2 = lcm / abs(b2)
+        else:
+            lcm = sp.lcm(abs(a1), abs(a2))
+            mult1 = lcm / abs(a1)
+            mult2 = lcm / abs(a2)
+
+        if mult1 != 1:
+            self.recorder.add_operation(f"Multiplying equation (1) by {mult1}")
+        if mult2 != 1:
+            self.recorder.add_operation(f"Multiplying equation (2) by {mult2}")
+
+        A1 = a1 * mult1
+        B1 = b1 * mult1
+        C1 = c1 * mult1
+
+        A2 = a2 * mult2
+        B2 = b2 * mult2
+        C2 = c2 * mult2
+
+        eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
+        eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+
+        if eliminate == "y":
+            if sp.sign(B1) != sp.sign(B2):
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                A = A1 + A2
+                C = C1 + C2
+                self.recorder.add_operation("Adding equations")
+            else:
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                A = A1 - A2
+                C = C1 - C2
+                self.recorder.add_operation("Subtracting equations")
+
+            if A == 0:
+                return
+
+            result_line = f"{sp.latex(A)}x = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            x_value = sp.simplify(C / A)
+            self.recorder.add(f"x = {sp.latex(x_value)}")
+            self._substitute_x(x_value)
+        else:
+            if sp.sign(A1) != sp.sign(A2):
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                B = B1 + B2
+                C = C1 + C2
+                self.recorder.add_operation("Adding equations")
+            else:
+                if not (
+                    self._check_like_surd_pair(A1, A2)
+                    and self._check_like_surd_pair(B1, B2)
+                    and self._check_like_surd_pair(C1, C2)
+                ):
+                    return
+                B = B1 - B2
+                C = C1 - C2
+                self.recorder.add_operation("Subtracting equations")
+
+            if B == 0:
+                return
+
+            result_line = f"{sp.latex(B)}y = {sp.latex(C)}"
+            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.recorder.add_equation(result_line)
+
+            y_value = sp.simplify(C / B)
+            self.recorder.add(f"y = {sp.latex(y_value)}")
+            self._substitute_y(y_value)
+
+    # -----------------------------
     # main solver
     # -----------------------------
 
@@ -217,7 +653,6 @@ class EliminationSolver:
         elif strategy == "CROSS":
             self._solve_cross(a1, b1, c1, a2, b2, c2)
         else:
-            # Reuse the existing LCM‑based variable choice for the generic LCM strategy.
             self._solve_lcm(a1, b1, c1, a2, b2, c2)
 
         x = sp.Symbol(self.system.var1)

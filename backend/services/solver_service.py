@@ -199,11 +199,12 @@ def _standardization_steps_for_equation(steps, number: int):
     When the raw equation is already in standard form, it is shown only once.
     """
     out = []
-    # Plain label for use inside text sentences, and simple "...(n)" tail for equation lines
+    # Plain label for use inside text sentences (e.g. "Multiply equation (1) ...")
     label_plain = f"({number})"
-    # In LaTeX math mode, "..." renders as three dots; prefix with a small space
+    # LaTeX tail to append only to the final standardized equation when the number is officially assigned
     label_eq = f"\\; ...({number})"
     last_shown = None  # last equation string we emitted (without label)
+    last_equation_index = None  # index in `out` of the most recent equation step
     steps_list = list(steps)
 
     for i, step in enumerate(steps_list):
@@ -220,19 +221,22 @@ def _standardization_steps_for_equation(steps, number: int):
                     std_result = steps_list[j].get("result")
                     break
             if std_result is not None and _normalize_eq_for_compare(eq) == _normalize_eq_for_compare(std_result):
-                out.append({"type": "equation", "content": f"{std_result}{label_eq}"})
+                out.append({"type": "equation", "content": std_result})
                 last_shown = _normalize_eq_for_compare(std_result)
+                last_equation_index = len(out) - 1
             else:
-                # Use std_result (LaTeX) when available so equation (1) renders properly below Given block
+                # Use std_result (LaTeX) when available so equation renders properly below Given block
                 content_eq = std_result if std_result is not None else eq
-                out.append({"type": "equation", "content": f"{content_eq}{label_eq}"})
+                out.append({"type": "equation", "content": content_eq})
                 last_shown = _normalize_eq_for_compare(content_eq)
+                last_equation_index = len(out) - 1
 
         elif s_type == "rearrange_standard_form":
             result = step.get("result", "")
             if result and _normalize_eq_for_compare(result) != last_shown:
-                out.append({"type": "equation", "content": f"{result}{label_eq}"})
+                out.append({"type": "equation", "content": result})
                 last_shown = _normalize_eq_for_compare(result)
+                last_equation_index = len(out) - 1
 
         elif s_type == "make_leading_positive":
             # Only show when we actually applied (multiply by -1); skip "already positive"
@@ -257,8 +261,9 @@ def _standardization_steps_for_equation(steps, number: int):
                             "content": f"Multiply equation {label_plain} by {multiplier} to remove denominators.",
                         }
                     )
-                out.append({"type": "equation", "content": f"{result}{label_eq}"})
+                out.append({"type": "equation", "content": result})
                 last_shown = result_norm
+                last_equation_index = len(out) - 1
 
         elif s_type == "reduce_equation":
             divisor = step.get("divisor")
@@ -272,10 +277,17 @@ def _standardization_steps_for_equation(steps, number: int):
                             "content": f"Divide equation {label_plain} by {divisor} to simplify coefficients.",
                         }
                     )
-                out.append({"type": "equation", "content": f"{result}{label_eq}"})
+                out.append({"type": "equation", "content": result})
                 last_shown = result_norm
+                last_equation_index = len(out) - 1
 
         elif s_type == "assign_equation_number":
+            # Only at this point do we attach the equation number label, and only to
+            # the most recent equation we emitted.
+            if last_equation_index is not None:
+                eq_step = out[last_equation_index]
+                eq_content = eq_step.get("content", "")
+                eq_step["content"] = f"{eq_content}{label_eq}"
             continue
 
     return out

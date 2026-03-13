@@ -371,7 +371,7 @@ class EliminationSolver:
 
         # Step 3: subtract equations according to a1, a2
         if a1 > a2:
-            self.recorder.add_operation("Subtracting equations (1 − 2)")
+            self.recorder.add_operation("Subtracting equation (2) from (1)")
             if not (
                 self._check_like_surd_pair(a1, a2)
                 and self._check_like_surd_pair(b1, b2)
@@ -382,7 +382,7 @@ class EliminationSolver:
             b4 = b1 - b2
             c4 = c1 - c2
         else:
-            self.recorder.add_operation("Subtracting equations (2 − 1)")
+            self.recorder.add_operation("Subtracting equation (1) from (2)")
             if not (
                 self._check_like_surd_pair(a1, a2)
                 and self._check_like_surd_pair(b1, b2)
@@ -393,9 +393,20 @@ class EliminationSolver:
             b4 = b2 - b1
             c4 = c2 - c1
 
+        eq1_line = EquationFormatter.format_equation(a1, b1, c1)
+        eq2_line = EquationFormatter.format_equation(a2, b2, c2)
         eq4_line = EquationFormatter.format_equation(a4, b4, c4)
-        self.recorder.add_equation(eq4_line)  # (4)
-        self.recorder.add("Divide equation (4) so that coefficient of x or y becomes 1 (x ∓ y = n).")
+        self.vertical_elimination(eq1_line, eq2_line, eq4_line, op="subtract")
+        self.recorder.add_equation(f"{eq4_line}\\; ...(4)")
+
+        # Step (9): divide equation (4) — same style as after adding (structured detailed/medium)
+        divisor = a4
+        self.recorder.add({
+            "detailed": (
+                f"Divide this equation by {sp.latex(divisor)} so that coefficient of x and y becomes ±1 (x ∓ y = n)."
+            ),
+            "medium": f"Divide the equation by {sp.latex(divisor)}, we get,",
+        })
         self.recorder.add("Add equations (3) and (4) to eliminate y and obtain 2x = m + n.")
 
         # Normalize (3) and (4) to form x ± y = m and x ∓ y = n (divide by x-coefficient)

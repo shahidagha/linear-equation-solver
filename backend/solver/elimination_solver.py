@@ -328,7 +328,7 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_cross(self, a1, b1, c1, a2, b2, c2):
-        self.recorder.add("Using Cross Elimination strategy")
+        self.recorder.add("Using Six Step Method.")
 
         # Step 1: add (1) and (2)
         if not (
@@ -341,14 +341,31 @@ class EliminationSolver:
         a3 = a1 + a2
         b3 = b1 + b2
         c3 = c1 + c2
+        var1 = getattr(self.system, "var1", "x")
+        var2 = getattr(self.system, "var2", "y")
 
         self.recorder.add_operation("Adding equations (1) and (2)")
         eq1_line = EquationFormatter.format_equation(a1, b1, c1)
         eq2_line = EquationFormatter.format_equation(a2, b2, c2)
         eq3_line = EquationFormatter.format_equation(a3, b3, c3)
         self.vertical_elimination(eq1_line, eq2_line, eq3_line)
-        self.recorder.add_equation(eq3_line)  # (3)
-        self.recorder.add("Divide equation (3) so that coefficient of x or y becomes 1 (x ± y = m).")
+        # Step (4) suppressed: no separate equation (3) line, no old divide text
+
+        # Step (5): divide message (detailed / medium; short blank). Divisor for (3) is a3.
+        divisor = a3
+        self.recorder.add({
+            "detailed": (
+                f"Divide this equation by {sp.latex(divisor)} so that coefficient of x and y becomes ±1 (x ± y = m)."
+            ),
+            "medium": f"Divide the equation by {sp.latex(divisor)}, we get,",
+        })
+        # Step (6): reduced equation (3) with number
+        m = sp.simplify(c3 / a3)
+        coeff_y3 = sp.simplify(b3 / a3)
+        eq3_reduced = EquationFormatter.format_equation(
+            sp.Integer(1), coeff_y3, m, var1, var2
+        )
+        self.recorder.add_equation(f"{eq3_reduced}\\; ...(3)")
 
         # Step 3: subtract equations according to a1, a2
         if a1 > a2:
@@ -784,10 +801,10 @@ class EliminationSolver:
                 "Elimination strategy: Direct. The coefficients of x or y already match in size, so we can add "
                 "or subtract the equations immediately to eliminate one variable."
             )
-        else:  # CROSS
+        else:  # CROSS → Six step Method
             self.recorder.add(
-                "Elimination strategy: Cross. By combining the equations in a criss-cross way we create new "
-                "equations where adding and subtracting quickly isolates x and y."
+                "Elimination Strategy: Six step Method. Since |a₁|=|b₂| and |a₂|=|b₁| and both equations have "
+                "same middle sign we will implement six step method."
             )
 
         if strategy == "DIRECT":

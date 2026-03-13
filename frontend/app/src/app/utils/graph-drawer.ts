@@ -3,10 +3,11 @@
  * Math coordinates: x, y in [-8, 8]. Canvas is scaled to fit with margins.
  */
 
+/** Matches SolverResponse['graph'] from the API. */
 export interface GraphData {
-  equation1_points: Array<[number, number] | [string, string]>;
-  equation2_points: Array<[number, number] | [string, string]>;
-  intersection: Record<string, number | string>;
+  equation1_points: Array<[string | number, string | number]>;
+  equation2_points: Array<[string | number, string | number]>;
+  intersection: Record<string, string | number>;
 }
 
 const RANGE = 8; // -8 to 8

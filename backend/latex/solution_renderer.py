@@ -160,7 +160,9 @@ class SolutionLatexRenderer:
         m = re.match(r"(.+?)\s*([+-])\s*(.+)", lhs)
         if m:
             return m.group(1).strip(), m.group(2), m.group(3).strip(), rhs
-        return lhs, "+", "", rhs
+        # Single-term left-hand side (e.g. "x = 1"): no explicit + term.
+        # Use empty sign so the vertical layout does not show an extra "+".
+        return lhs, "", "", rhs
 
     def _same_sign(self, sign1: str, sign2: str) -> bool:
         return sign1 == sign2

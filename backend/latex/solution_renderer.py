@@ -13,10 +13,10 @@ class SolutionLatexRenderer:
         self,
         method_name: str,
         equations: List[str],
-        raw_equations: Optional[List[str]] = None,
         solution: Dict[str, Any],
         steps: Optional[List[Dict[str, Any]]] = None,
         graph_data: Optional[Dict[str, Any]] = None,
+        raw_equations: Optional[List[str]] = None,
     ) -> Dict[str, str]:
         steps = steps or []
         raw_equations = raw_equations or equations

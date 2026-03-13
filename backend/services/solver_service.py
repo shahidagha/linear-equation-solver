@@ -220,8 +220,10 @@ def _standardization_steps_for_equation(steps, number: int):
                 out.append({"type": "equation", "content": f"{std_result} {label}"})
                 last_shown = _normalize_eq_for_compare(std_result)
             else:
-                out.append({"type": "equation", "content": f"{eq} {label}"})
-                last_shown = _normalize_eq_for_compare(eq)
+                # Use std_result (LaTeX) when available so equation (1) renders properly below Given block
+                content_eq = std_result if std_result is not None else eq
+                out.append({"type": "equation", "content": f"{content_eq} {label}"})
+                last_shown = _normalize_eq_for_compare(content_eq)
 
         elif s_type == "rearrange_standard_form":
             result = step.get("result", "")

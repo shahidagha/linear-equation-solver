@@ -22,8 +22,8 @@ class SolutionLatexRenderer:
     ) -> Dict[str, str]:
         steps = steps or []
         raw_equations = raw_equations or equations
-        # Prefer LaTeX equations for Given block when available so it renders in aligned environment
-        given_equations = equations if equations else raw_equations
+        # Given block shows user-defined raw equations; fall back to standardized only if no raw provided
+        given_equations = raw_equations if raw_equations else equations
 
         detailed_lines = self._given_equations_block(given_equations)
         medium_lines = self._given_equations_block(given_equations)

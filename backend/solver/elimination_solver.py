@@ -253,7 +253,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
-            self.recorder.add(f"x = {sp.latex(x_value)}")
             self._substitute_x(x_value)
         else:
             self.recorder.add("Using Direct Elimination on x (|a₁| = |a₂|)")
@@ -301,7 +300,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             y_value = sp.simplify(C / B)
-            self.recorder.add(f"y = {sp.latex(y_value)}")
             self._substitute_y(y_value)
 
     # -----------------------------
@@ -454,7 +452,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
-            self.recorder.add(f"x = {sp.latex(x_value)}")
             self._substitute_x(x_value)
             return
 
@@ -529,7 +526,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             y_value = sp.simplify(C / B)
-            self.recorder.add(f"y = {sp.latex(y_value)}")
             self._substitute_y(y_value)
             return
 
@@ -598,7 +594,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
-            self.recorder.add(f"x = {sp.latex(x_value)}")
             self._substitute_x(x_value)
             return
 
@@ -682,7 +677,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
-            self.recorder.add(f"x = {sp.latex(x_value)}")
             self._substitute_x(x_value)
         else:
             if sp.sign(A1) != sp.sign(A2):
@@ -715,7 +709,6 @@ class EliminationSolver:
             self.recorder.add_equation(result_line)
 
             y_value = sp.simplify(C / B)
-            self.recorder.add(f"y = {sp.latex(y_value)}")
             self._substitute_y(y_value)
 
     # -----------------------------

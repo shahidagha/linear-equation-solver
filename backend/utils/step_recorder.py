@@ -22,17 +22,17 @@ class StepRecorder:
         self.steps.append(step)
 
 
-    def add_vertical(self, eq1, eq2, result):
-
+    def add_vertical(self, eq1, eq2, result, op=None):
+        """op: 'add' or 'subtract' so the renderer shows the correct sign and underset."""
         step = Step(
             "vertical_elimination",
             {
                 "eq1": eq1,
                 "eq2": eq2,
-                "result": result
+                "result": result,
+                "op": op,
             }
         )
-
         self.steps.append(step)
 
 

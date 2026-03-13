@@ -3,23 +3,27 @@ import { AsyncPipe, KeyValuePipe, NgFor, NgIf, TitleCasePipe } from '@angular/co
 import { combineLatest, take } from 'rxjs';
 import { MethodSelectorComponent } from '../method-selector/method-selector.component';
 import { SolutionStepsComponent } from '../solution-steps/solution-steps.component';
+import { ViewGraphModalComponent } from '../view-graph-modal/view-graph-modal.component';
 import { SolverStateService, VerbosityLevel } from '../../services/solver-state.service';
 import { equationToLatex } from '../../utils/latex-generator';
 import { MethodLatexPayload } from '../../models/solver-response.model';
+import { drawGraph } from '../../utils/graph-drawer';
 
 @Component({
   selector: 'app-solution-panel',
   standalone: true,
-  imports: [NgIf, NgFor, AsyncPipe, KeyValuePipe, TitleCasePipe, MethodSelectorComponent, SolutionStepsComponent],
+  imports: [NgIf, NgFor, AsyncPipe, KeyValuePipe, TitleCasePipe, MethodSelectorComponent, SolutionStepsComponent, ViewGraphModalComponent],
   templateUrl: './solution-panel.component.html',
   styleUrl: './solution-panel.component.css'
 })
 export class SolutionPanelComponent {
   readonly verbosities: VerbosityLevel[] = ['detailed', 'medium', 'short'];
 
-  /** Shown after Copy Solution: 'success' | 'failure' | null. Cleared after a short delay. */
+  /** Shown after Copy Solution or Copy graph: 'success' | 'failure' | null. Cleared after a short delay. */
   copySolutionMessage: 'success' | 'failure' | null = null;
   private copySolutionTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  graphModalOpen = false;
 
   constructor(public readonly state: SolverStateService) {}
 
@@ -73,5 +77,46 @@ export class SolutionPanelComponent {
       this.copySolutionTimeout = null;
     }
     this.copySolutionMessage = null;
+  }
+
+  openGraphModal(): void {
+    this.graphModalOpen = true;
+  }
+
+  closeGraphModal(): void {
+    this.graphModalOpen = false;
+  }
+
+  copyGraphAsPng(): void {
+    this.clearCopySolutionMessage();
+    this.state.graph$.pipe(take(1)).subscribe((graph) => {
+      if (!graph?.equation1_points?.length || !graph?.equation2_points?.length) {
+        this.showCopySolutionMessage('failure');
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      const size = 400;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        this.showCopySolutionMessage('failure');
+        return;
+      }
+      drawGraph(ctx, graph as any, size, size);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            this.showCopySolutionMessage('failure');
+            return;
+          }
+          navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+            .then(() => this.showCopySolutionMessage('success'))
+            .catch(() => this.showCopySolutionMessage('failure'));
+        },
+        'image/png',
+        1
+      );
+    });
   }
 }

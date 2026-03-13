@@ -178,6 +178,7 @@ def _serialize_steps(steps):
                     "eq1": step.content.get("eq1"),
                     "eq2": step.content.get("eq2"),
                     "result": step.content.get("result"),
+                    "op": step.content.get("op"),
                 }
             )
         elif step.type == "text" and isinstance(step.content, dict) and "short" in step.content and "detailed" in step.content:

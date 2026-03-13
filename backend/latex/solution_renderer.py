@@ -63,7 +63,9 @@ class SolutionLatexRenderer:
         for step in steps:
             s_type = step.get("type")
             if s_type == "vertical_elimination":
-                block = self._vertical_array(step["eq1"], step["eq2"], step["result"])
+                block = self._vertical_array(
+                    step["eq1"], step["eq2"], step["result"], op=step.get("op")
+                )
                 detailed.append(block)
                 medium.append(block)
             elif s_type == "substitution_intro":
@@ -156,12 +158,18 @@ class SolutionLatexRenderer:
         medium.append("\\text{Plotted both equations and read intersection.}")
         short.append("\\text{Graphical intersection determined.}")
 
-    def _vertical_array(self, eq1: str, eq2: str, result: str) -> str:
+    def _vertical_array(self, eq1: str, eq2: str, result: str, op: str = None) -> str:
         t1 = self._split_equation(eq1)
         t2 = self._split_equation(eq2)
         t3 = self._split_equation(result)
 
-        op = "-" if self._same_sign(t1[1], t2[1]) else "+"
+        # Use explicit op from solver when provided ("add" -> +, "subtract" -> -); else infer from signs
+        if op == "add":
+            op = "+"
+        elif op == "subtract":
+            op = "-"
+        else:
+            op = "-" if self._same_sign(t1[1], t2[1]) else "+"
         eq2_sign = "\\boldsymbol{-}" if op == "-" else "\\boldsymbol{+}"
         # For addition there is no sign change, so no underset labels; for subtraction show (op) under terms
         if op == "+":

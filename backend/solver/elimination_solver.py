@@ -21,9 +21,9 @@ class EliminationSolver:
     # vertical elimination display
     # -----------------------------
 
-    def vertical_elimination(self, eq1, eq2, result):
-
-        self.recorder.add_vertical(eq1, eq2, result)
+    def vertical_elimination(self, eq1, eq2, result, op=None):
+        """op: 'add' or 'subtract' so the layout shows + or − and underset only for subtract."""
+        self.recorder.add_vertical(eq1, eq2, result, op=op)
 
     @staticmethod
     def _term(coeff, var):
@@ -265,12 +265,13 @@ class EliminationSolver:
             if A == 0:
                 return
 
+            op = "add" if sp.sign(b1) != sp.sign(b2) else "subtract"
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
             # Use _term so coefficient 1 is hidden in the result line.
             x_term = self._term(A, "x")
             result_line = f"{x_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
@@ -313,11 +314,12 @@ class EliminationSolver:
             if B == 0:
                 return
 
+            op = "add" if sp.sign(a1) != sp.sign(a2) else "subtract"
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
             y_term = self._term(B, "y")
             result_line = f"{y_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             y_value = sp.simplify(C / B)
@@ -348,7 +350,7 @@ class EliminationSolver:
         eq1_line = EquationFormatter.format_equation(a1, b1, c1)
         eq2_line = EquationFormatter.format_equation(a2, b2, c2)
         eq3_line = EquationFormatter.format_equation(a3, b3, c3)
-        self.vertical_elimination(eq1_line, eq2_line, eq3_line)
+        self.vertical_elimination(eq1_line, eq2_line, eq3_line, op="add")
         # Step (4) suppressed: no separate equation (3) line, no old divide text
 
         # Step (5): divide message (detailed / medium; short blank). Divisor for (3) is a3.
@@ -413,7 +415,7 @@ class EliminationSolver:
         self.recorder.add_operation("Adding equations (3) and (4)")
         result_rhs = sp.simplify(m + n)
         result_line = f"{self._term(sp.Integer(2), var1)} = {sp.latex(result_rhs)}"
-        self.vertical_elimination(eq3_norm, eq4_norm, result_line)
+        self.vertical_elimination(eq3_norm, eq4_norm, result_line, op="add")
         self.recorder.add_equation(result_line)
 
         x_value = sp.simplify(result_rhs / 2)
@@ -507,9 +509,10 @@ class EliminationSolver:
             if A == 0:
                 return
 
+            op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
             x_term = self._term(A, "x")
             result_line = f"{x_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
@@ -581,9 +584,10 @@ class EliminationSolver:
             if B == 0:
                 return
 
+            op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
             y_term = self._term(B, "y")
             result_line = f"{y_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             y_value = sp.simplify(C / B)
@@ -649,9 +653,10 @@ class EliminationSolver:
             if A == 0:
                 return
 
+            op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
             x_term = self._term(A, "x")
             result_line = f"{x_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
@@ -732,9 +737,10 @@ class EliminationSolver:
             if A == 0:
                 return
 
+            op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
             x_term = self._term(A, "x")
             result_line = f"{x_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             x_value = sp.simplify(C / A)
@@ -764,9 +770,10 @@ class EliminationSolver:
             if B == 0:
                 return
 
+            op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
             y_term = self._term(B, "y")
             result_line = f"{y_term} = {sp.latex(C)}"
-            self.vertical_elimination(eq_line1, eq_line2, result_line)
+            self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
 
             y_value = sp.simplify(C / B)

@@ -366,16 +366,17 @@ def solve_system(db: Session, system_id: int, payload: dict):
 
     graphical_solver = GraphicalSolver(standardized_system)
     points1, points2 = graphical_solver.generate_tables()
+    equations = _equation_lines(standardized_system.eq1, standardized_system.eq2, var1, var2)
     graph_data = {
         "equation1_points": convert_points(points1),
         "equation2_points": convert_points(points2),
+        "equation1_label": equations[0] if equations else "",
+        "equation2_label": equations[1] if len(equations) > 1 else "",
         "intersection": {
             var1: to_python_number(elimination_solution[var1]),
             var2: to_python_number(elimination_solution[var2]),
         },
     }
-
-    equations = _equation_lines(standardized_system.eq1, standardized_system.eq2, var1, var2)
     renderer = SolutionLatexRenderer(var1=var1, var2=var2)
 
     elimination_latex = renderer.render(

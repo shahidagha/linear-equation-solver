@@ -25,6 +25,8 @@ export interface SolverResponse {
   graph: {
     equation1_points: Array<[string | number, string | number]>;
     equation2_points: Array<[string | number, string | number]>;
+    equation1_label?: string;
+    equation2_label?: string;
     intersection: Record<string, string | number>;
   };
 }

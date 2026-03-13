@@ -193,6 +193,11 @@ def _serialize_steps(steps):
                 "detailed": step.content["detailed"],
                 "medium": step.content["medium"],
             })
+        elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and step.content.get("medium") == "" and step.content.get("short") == "":
+            serialized.append({
+                "type": "detailed_only",
+                "content": step.content["detailed"],
+            })
         else:
             serialized.append({"type": step.type, "content": str(step.content)})
     return serialized

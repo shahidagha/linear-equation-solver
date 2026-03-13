@@ -6,10 +6,10 @@ import os
 # Load environment variables from .env
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or "sqlite:///./equations.db"
 
 # Create database engine
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 
 # Create session factory
 SessionLocal = sessionmaker(
@@ -24,18 +24,19 @@ Base = declarative_base()
 
 def ensure_solution_methods_schema():
     """Backfill required columns for deployments without migrations."""
-
     inspector = inspect(engine)
     if "solution_methods" not in inspector.get_table_names():
         return
 
     existing_columns = {column["name"] for column in inspector.get_columns("solution_methods")}
+    # Use TEXT for JSON columns on SQLite (no JSONB)
+    json_type = "TEXT" if "sqlite" in DATABASE_URL else "JSONB"
     required_columns = {
         "latex_detailed": "TEXT",
         "latex_medium": "TEXT",
         "latex_short": "TEXT",
-        "solution_json": "JSONB",
-        "graph_data": "JSONB",
+        "solution_json": json_type,
+        "graph_data": json_type,
     }
 
     with engine.begin() as connection:

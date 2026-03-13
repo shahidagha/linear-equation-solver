@@ -379,6 +379,29 @@ class EliminationSolver:
         self.recorder.add("Divide equation (4) so that coefficient of x or y becomes 1 (x ∓ y = n).")
         self.recorder.add("Add equations (3) and (4) to eliminate y and obtain 2x = m + n.")
 
+        # Normalize (3) and (4) to form x ± y = m and x ∓ y = n (divide by x-coefficient)
+        var1 = getattr(self.system, "var1", "x")
+        var2 = getattr(self.system, "var2", "y")
+        m = sp.simplify(c3 / a3)
+        n = sp.simplify(c4 / a4)
+        coeff_y3 = sp.simplify(b3 / a3)
+        coeff_y4 = sp.simplify(b4 / a4)
+        eq3_norm = EquationFormatter.format_equation(
+            sp.Integer(1), coeff_y3, m, var1, var2
+        )
+        eq4_norm = EquationFormatter.format_equation(
+            sp.Integer(1), coeff_y4, n, var1, var2
+        )
+
+        self.recorder.add_operation("Adding equations (3) and (4)")
+        result_rhs = sp.simplify(m + n)
+        result_line = f"{self._term(sp.Integer(2), var1)} = {sp.latex(result_rhs)}"
+        self.vertical_elimination(eq3_norm, eq4_norm, result_line)
+        self.recorder.add_equation(result_line)
+
+        x_value = sp.simplify(result_rhs / 2)
+        self._substitute_x(x_value)
+
     # -----------------------------
     # LCM strategy (SECTION 4)
     # -----------------------------

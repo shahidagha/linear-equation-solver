@@ -84,6 +84,11 @@ class SolutionLatexRenderer:
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if medium_content:
                     medium.append(f"\\text{{{self._escape_text(medium_content)}}}")
+            elif s_type == "detailed_only":
+                # Step (11): only in detailed; blank for medium and short
+                content = step.get("content", "")
+                for ln in self._wrap_text(content):
+                    detailed.append(f"\\text{{{self._escape_text(ln)}}}")
             elif s_type in {"operation", "text", "equation"}:
                 content = step.get("content", "")
                 if not content:

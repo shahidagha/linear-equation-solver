@@ -407,15 +407,24 @@ class EliminationSolver:
             ),
             "medium": f"Divide the equation by {sp.latex(divisor)}, we get,",
         })
-        self.recorder.add("Add equations (3) and (4) to eliminate y and obtain 2x = m + n.")
+        # Step (10): reduced equation (4) with label
+        n = sp.simplify(c4 / a4)
+        coeff_y4 = sp.simplify(b4 / a4)
+        eq4_reduced = EquationFormatter.format_equation(
+            sp.Integer(1), coeff_y4, n, var1, var2
+        )
+        self.recorder.add_equation(f"{eq4_reduced}\\; ...(4)")
+
+        # Step (11): blank for medium and short (detailed only)
+        self.recorder.add({
+            "detailed": "Add equations (3) and (4) to eliminate y and obtain 2x = m + n.",
+            "medium": "",
+            "short": "",
+        })
 
         # Normalize (3) and (4) to form x ± y = m and x ∓ y = n (divide by x-coefficient)
-        var1 = getattr(self.system, "var1", "x")
-        var2 = getattr(self.system, "var2", "y")
         m = sp.simplify(c3 / a3)
-        n = sp.simplify(c4 / a4)
         coeff_y3 = sp.simplify(b3 / a3)
-        coeff_y4 = sp.simplify(b4 / a4)
         eq3_norm = EquationFormatter.format_equation(
             sp.Integer(1), coeff_y3, m, var1, var2
         )
@@ -430,6 +439,14 @@ class EliminationSolver:
         self.recorder.add_equation(result_line)
 
         x_value = sp.simplify(result_rhs / 2)
+        # Step (14): calculation x = result_rhs/2 (e.g. x = 6/2)
+        step14_line = f"{var1} = \\frac{{{sp.latex(result_rhs)}}}{{2}}"
+        self.recorder.add_equation(step14_line)
+        # Step (15): calculation x = simplified value; suppress if no change from previous
+        step15_line = f"\\therefore {var1} = {sp.latex(x_value)}"
+        if sp.latex(x_value) != sp.latex(result_rhs / 2):
+            self.recorder.add_equation(step15_line)
+
         self._substitute_x(x_value)
 
     # -----------------------------

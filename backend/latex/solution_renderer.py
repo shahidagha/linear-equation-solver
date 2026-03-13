@@ -65,6 +65,14 @@ class SolutionLatexRenderer:
                 block = self._vertical_array(step["eq1"], step["eq2"], step["result"])
                 detailed.append(block)
                 medium.append(block)
+            elif s_type == "substitution_intro":
+                # Detailed: why we chose this equation; Medium: short substitution line only
+                detailed_content = step.get("detailed_content", "")
+                content = step.get("content", "")
+                for ln in self._wrap_text(detailed_content):
+                    detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+                if content:
+                    medium.append(f"\\text{{{self._escape_text(content)}}}")
             elif s_type in {"operation", "text", "equation"}:
                 content = step.get("content", "")
                 if not content:

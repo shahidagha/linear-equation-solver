@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON
 from sqlalchemy.sql import func
 
 from backend.database import Base
@@ -17,7 +16,7 @@ class SolutionMethod(Base):
     latex_medium = Column(String)
     latex_short = Column(String)
 
-    solution_json = Column(JSONB)
-    graph_data = Column(JSONB)
+    solution_json = Column(JSON)
+    graph_data = Column(JSON)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

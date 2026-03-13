@@ -60,9 +60,13 @@ class SolutionLatexRenderer:
                 content = step.get("content", "")
                 if not content:
                     continue
-                detailed.append(f"\\text{{{self._escape_text(content)}}}")
+                text_line = f"\\text{{{self._escape_text(content)}}}"
+                detailed.append(text_line)
+                # Show strategy/operation/equation steps in medium view so new elimination statements are visible
                 if s_type == "equation":
                     medium.append(content)
+                else:
+                    medium.append(text_line)
 
         short.append("\\text{Elimination completed.}")
 

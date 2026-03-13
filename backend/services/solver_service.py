@@ -180,6 +180,12 @@ def _serialize_steps(steps):
                     "result": step.content.get("result"),
                 }
             )
+        elif step.type == "text" and isinstance(step.content, dict) and "short" in step.content and "detailed" in step.content:
+            serialized.append({
+                "type": "substitution_intro",
+                "content": step.content["short"],
+                "detailed_content": step.content["detailed"],
+            })
         else:
             serialized.append({"type": step.type, "content": str(step.content)})
     return serialized

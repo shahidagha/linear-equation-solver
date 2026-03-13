@@ -159,9 +159,22 @@ class EliminationSolver:
     def _substitute_x(self, x_value):
         a, b, c, idx = self._choose_substitution_equation()
 
-        self.recorder.add(f"Substitute x = {sp.latex(x_value)} in equation ({idx})")
+        short = f"Substitute x = {sp.latex(x_value)} in equation ({idx})"
+        detailed = (
+            f"We substitute x = {sp.latex(x_value)} into equation ({idx}) because equation ({idx}) "
+            "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding y is easier."
+        )
+        self.recorder.add({"short": short, "detailed": detailed})
+
         b_term = self._term(b, "y")
-        self.recorder.add(f"{sp.latex(a)}({sp.latex(x_value)}) + {b_term} = {sp.latex(c)}")
+        # When coefficient of x is 1 or -1, don't show "1(1)" or "-1(1)"; show "1 + ..." or "-1 + ..."
+        if a == 1:
+            subst_line = f"{sp.latex(x_value)} + {b_term} = {sp.latex(c)}"
+        elif a == -1:
+            subst_line = f"-{sp.latex(x_value)} + {b_term} = {sp.latex(c)}"
+        else:
+            subst_line = f"{sp.latex(a)}({sp.latex(x_value)}) + {b_term} = {sp.latex(c)}"
+        self.recorder.add(subst_line)
 
         lhs = sp.simplify(a * x_value)
         self.recorder.add(f"{sp.latex(lhs)} + {b_term} = {sp.latex(c)}")
@@ -181,7 +194,12 @@ class EliminationSolver:
     def _substitute_y(self, y_value):
         a, b, c, idx = self._choose_substitution_equation()
 
-        self.recorder.add(f"Substitute y = {sp.latex(y_value)} in equation ({idx})")
+        short = f"Substitute y = {sp.latex(y_value)} in equation ({idx})"
+        detailed = (
+            f"We substitute y = {sp.latex(y_value)} into equation ({idx}) because equation ({idx}) "
+            "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier."
+        )
+        self.recorder.add({"short": short, "detailed": detailed})
         a_term = self._term(a, "x")
         substituted = sp.simplify(b * y_value)
         self.recorder.add(f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}")

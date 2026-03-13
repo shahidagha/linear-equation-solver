@@ -74,13 +74,19 @@ class SolutionLatexRenderer:
                     detailed.append(content)
                     medium.append(content)
                 else:
-                    text_line = f"\\text{{{self._escape_text(content)}}}"
-                    # Show the LCM strategy explanation only in detailed view; keep student view blank for that line.
-                    if "Elimination strategy: LCM" in content:
+                    # Strategy explanations and other prose are rendered as wrapped text.
+                    # We soft-wrap long sentences into multiple shorter lines so there is
+                    # no horizontal scrolling in the aligned environment.
+                    lines = self._wrap_text(content)
+
+                    # LCM strategy explanation appears only in detailed view;
+                    # other explanatory texts appear in both detailed and medium.
+                    lcm_expl = "Elimination strategy: LCM" in content
+                    for ln in lines:
+                        text_line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(text_line)
-                    else:
-                        detailed.append(text_line)
-                        medium.append(text_line)
+                        if not lcm_expl:
+                            medium.append(text_line)
 
         short.append("\\text{Elimination completed.}")
 
@@ -191,3 +197,28 @@ class SolutionLatexRenderer:
 
     def _escape_text(self, value: str) -> str:
         return value.replace("\\", "\\\\").replace("_", "\\_")
+
+    def _wrap_text(self, value: str, max_len: int = 70) -> List[str]:
+        """Soft-wrap a plain text string into multiple lines of at most max_len chars."""
+        words = value.split()
+        if not words:
+            return [value]
+
+        lines: List[str] = []
+        current: List[str] = []
+        current_len = 0
+
+        for w in words:
+            extra = len(w) + (1 if current else 0)
+            if current and current_len + extra > max_len:
+                lines.append(" ".join(current))
+                current = [w]
+                current_len = len(w)
+            else:
+                current.append(w)
+                current_len += extra
+
+        if current:
+            lines.append(" ".join(current))
+
+        return lines

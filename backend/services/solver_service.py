@@ -416,6 +416,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
             var2: to_python_number(elimination_solution[var2]),
         },
         graph_data=graph_data,
+        standardization_steps=standardization_steps,
     )
 
     elimination_record = _upsert_method_record(

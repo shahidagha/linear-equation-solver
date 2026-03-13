@@ -48,7 +48,7 @@ class SolutionLatexRenderer:
         elif method_name == "cramer":
             self._append_cramer(equations, solution, detailed_lines, medium_lines, short_lines)
         elif method_name == "graphical":
-            self._append_graphical(graph_data or {}, detailed_lines, medium_lines, short_lines)
+            self._append_graphical(graph_data or {}, equations, detailed_lines, medium_lines, short_lines)
 
         final_answer = self._final_answer(solution)
         detailed_lines.append(final_answer)
@@ -215,13 +215,53 @@ class SolutionLatexRenderer:
         medium.extend([f"D = {d}", f"D_x = {dx}", f"D_y = {dy}"])
         short.append("\\text{Cramer's determinants evaluated.}")
 
-    def _append_graphical(self, graph_data, detailed, medium, short):
+    def _format_coord(self, value: Any) -> str:
+        """Format a numeric coordinate for LaTeX (integer or fraction)."""
+        try:
+            n = float(value)
+            if n == int(n):
+                return str(int(n))
+            return sp.latex(sp.simplify(sp.S(str(value))))
+        except (TypeError, ValueError):
+            return str(value)
+
+    def _points_table_latex(self, points: List[List[Any]]) -> str:
+        """Build LaTeX array: x row, y row, (x,y) row. Uses up to 3 points."""
+        points = points[:3]
+        if not points:
+            return "\\varnothing"
+        x_vals = [self._format_coord(p[0]) for p in points]
+        y_vals = [self._format_coord(p[1]) for p in points]
+        pair_vals = [f"({self._format_coord(p[0])}, {self._format_coord(p[1])})" for p in points]
+        n = len(points)
+        cols = "|c|" + "c|" * n
+        row_x = "x & " + " & ".join(x_vals) + " \\\\"
+        row_y = "y & " + " & ".join(y_vals) + " \\\\"
+        row_xy = "(x, y) & " + " & ".join(pair_vals) + " \\\\"
+        return (
+            f"\\begin{{array}}{{{cols}}}\n"
+            "\\hline\n"
+            f"{row_x}\n"
+            "\\hline\n"
+            f"{row_y}\n"
+            "\\hline\n"
+            f"{row_xy}\n"
+            "\\hline\n"
+            "\\end{array}"
+        )
+
+    def _append_graphical(self, graph_data, equations: List[str], detailed, medium, short):
         p1 = graph_data.get("equation1_points", [])
         p2 = graph_data.get("equation2_points", [])
-        detailed.append(f"\\text{{Equation 1 points: }} {self._points_to_latex(p1)}")
-        detailed.append(f"\\text{{Equation 2 points: }} {self._points_to_latex(p2)}")
-        medium.append("\\text{Plotted both equations and read intersection.}")
-        short.append("\\text{Graphical intersection determined.}")
+        eq1_line = (equations[0] if equations else "") + " \\; ...(1)"
+        eq2_line = (equations[1] if len(equations) > 1 else "") + " \\; ...(2)"
+        table1 = self._points_table_latex(p1)
+        table2 = self._points_table_latex(p2)
+        for lines in (detailed, medium, short):
+            lines.append(eq1_line + ":")
+            lines.append(table1)
+            lines.append(eq2_line + ":")
+            lines.append(table2)
 
     def _vertical_array(self, eq1: str, eq2: str, result: str, op: str = None) -> str:
         t1 = self._split_equation(eq1)

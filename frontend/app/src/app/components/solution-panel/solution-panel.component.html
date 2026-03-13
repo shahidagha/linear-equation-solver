@@ -23,12 +23,22 @@
     <div class="controls-row">
       <button type="button" [disabled]="!(state.methods$ | async)" (click)="copyQuestion()">Copy Question</button>
       <button type="button" [disabled]="!(state.methods$ | async)" (click)="copySolution()">Copy Solution</button>
+      <ng-container *ngIf="(state.selectedMethod$ | async) === 'graphical'">
+        <button type="button" [disabled]="!(state.graph$ | async)" (click)="copyGraphAsPng()">Copy graph as PNG</button>
+        <button type="button" [disabled]="!(state.graph$ | async)" (click)="openGraphModal()">View graph</button>
+      </ng-container>
       <button type="button" (click)="exitSolution()">Exit Solution</button>
       <span *ngIf="copySolutionMessage" class="copy-message" [class.copy-success]="copySolutionMessage === 'success'" [class.copy-failure]="copySolutionMessage === 'failure'">
         {{ copySolutionMessage === 'success' ? 'Copied to clipboard.' : 'Copy failed.' }}
       </span>
     </div>
   </div>
+
+  <app-view-graph-modal
+    [isOpen]="graphModalOpen"
+    [graphData]="state.graph$ | async"
+    (close)="closeGraphModal()">
+  </app-view-graph-modal>
 
   <ng-container *ngIf="state.methods$ | async as methods; else noSolution">
     <div class="solution-value" *ngIf="state.solution$ | async as solution">

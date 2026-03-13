@@ -363,21 +363,24 @@ class EliminationSolver:
 
     def _solve_lcm(self, a1, b1, c1, a2, b2, c2):
         # Equation (1) and (2) come from the standardization phase.
-        # New equations created inside the LCM method start from (3).
+        # Track the current equation numbers for each row and auto‑increment
+        # when we create new scaled equations.
         next_eq_number = 3
+        current_eq_no1 = 1
+        current_eq_no2 = 2
 
-        def _record_scaled_equation(eq_idx: int, A, B, C, mult, current_no: int) -> int:
+        def _record_scaled_equation(current_no: int, A, B, C, mult, next_no: int):
             """
             Record the scaled equation with a new equation number when a non‑trivial
-            multiplier has been applied.
+            multiplier has been applied, and return updated (current_no, next_no).
             """
             if mult == 1:
-                return current_no
+                return current_no, next_no
 
             eq_line = EquationFormatter.format_equation(A, B, C)
-            numbered = f"{eq_line}\\; ...({current_no})"
+            numbered = f"{eq_line}\\; ...({next_no})"
             self.recorder.add_equation(numbered)
-            return current_no + 1
+            return next_no, next_no + 1
         # Step 1: |b1| = 1 or |b2| = 1 → eliminate y
         if abs(b1) == 1 or abs(b2) == 1:
             if abs(b1) == 1:
@@ -410,10 +413,10 @@ class EliminationSolver:
             A2 = a2 * mult2
             B2 = b2 * mult2
             C2 = c2 * mult2
-
-            # Record any new scaled equations with fresh equation numbers.
-            next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
-            next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
+            # Record any new scaled equations with fresh equation numbers and keep
+            # track of which equation numbers we are now combining.
+            current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
+            current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
             eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
@@ -427,7 +430,7 @@ class EliminationSolver:
                     return
                 A = A1 + A2
                 C = C1 + C2
-                self.recorder.add_operation("Adding equations")
+                self.recorder.add_operation(f"Adding equations ({current_eq_no1}) and ({current_eq_no2})")
             else:
                 if not (
                     self._check_like_surd_pair(A1, A2)
@@ -437,7 +440,7 @@ class EliminationSolver:
                     return
                 A = A1 - A2
                 C = C1 - C2
-                self.recorder.add_operation("Subtracting equations")
+                self.recorder.add_operation(f"Subtracting equation ({current_eq_no2}) from ({current_eq_no1})")
 
             if A == 0:
                 return
@@ -485,10 +488,9 @@ class EliminationSolver:
             A2 = a2 * mult2
             B2 = b2 * mult2
             C2 = c2 * mult2
-
             # Record any new scaled equations with fresh equation numbers.
-            next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
-            next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
+            current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
+            current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
             eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
@@ -554,10 +556,9 @@ class EliminationSolver:
             A2 = a2 * mult2
             B2 = b2 * mult2
             C2 = c2 * mult2
-
             # Record any new scaled equations with fresh equation numbers.
-            next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
-            next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
+            current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
+            current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
             eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
@@ -637,10 +638,9 @@ class EliminationSolver:
         A2 = a2 * mult2
         B2 = b2 * mult2
         C2 = c2 * mult2
-
         # Record any new scaled equations with fresh equation numbers.
-        next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
-        next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
+        current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
+        current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
         eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
         eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
@@ -655,7 +655,7 @@ class EliminationSolver:
                     return
                 A = A1 + A2
                 C = C1 + C2
-                self.recorder.add_operation("Adding equations")
+                self.recorder.add_operation(f"Adding equations ({current_eq_no1}) and ({current_eq_no2})")
             else:
                 if not (
                     self._check_like_surd_pair(A1, A2)
@@ -665,7 +665,7 @@ class EliminationSolver:
                     return
                 A = A1 - A2
                 C = C1 - C2
-                self.recorder.add_operation("Subtracting equations")
+                self.recorder.add_operation(f"Subtracting equation ({current_eq_no2}) from ({current_eq_no1})")
 
             if A == 0:
                 return
@@ -687,7 +687,7 @@ class EliminationSolver:
                     return
                 B = B1 + B2
                 C = C1 + C2
-                self.recorder.add_operation("Adding equations")
+                self.recorder.add_operation(f"Adding equations ({current_eq_no1}) and ({current_eq_no2})")
             else:
                 if not (
                     self._check_like_surd_pair(A1, A2)
@@ -697,7 +697,7 @@ class EliminationSolver:
                     return
                 B = B1 - B2
                 C = C1 - C2
-                self.recorder.add_operation("Subtracting equations")
+                self.recorder.add_operation(f"Subtracting equation ({current_eq_no2}) from ({current_eq_no1})")
 
             if B == 0:
                 return

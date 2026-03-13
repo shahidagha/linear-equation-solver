@@ -173,7 +173,7 @@ class EliminationSolver:
             x_value = sp.simplify(C / A)
             self.recorder.add(f"x = {sp.latex(x_value)}")
 
-            self.recorder.add(f"Substitute x = {sp.latex(x_value)} in equation ({n1})")
+            self.recorder.add(f"Substitute x = {sp.latex(x_value)} into the first equation.")
             b1_term = self._term(b1, "y")
             self.recorder.add(f"{sp.latex(a1)}({sp.latex(x_value)}) + {b1_term} = {sp.latex(c1)}")
 
@@ -209,7 +209,7 @@ class EliminationSolver:
             y_value = sp.simplify(C / B)
             self.recorder.add(f"y = {sp.latex(y_value)}")
 
-            self.recorder.add(f"Substitute y = {sp.latex(y_value)} in equation ({n1})")
+            self.recorder.add(f"Substitute y = {sp.latex(y_value)} into the first equation.")
             a1_term = self._term(a1, "x")
             substituted = sp.simplify(b1 * y_value)
             self.recorder.add(f"{a1_term} + ({sp.latex(substituted)}) = {sp.latex(c1)}")

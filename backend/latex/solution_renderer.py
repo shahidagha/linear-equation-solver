@@ -70,6 +70,15 @@ class SolutionLatexRenderer:
         block = f"\\left.\\begin{{aligned}} {body} \\end{{aligned}}\\right\\}}\\;\\text{{Given equations}}"
         return [block]
 
+    def _standardization_text_for_medium(self, content: str) -> str:
+        """Shorten standardization text for medium only; detailed and short unchanged."""
+        if not content:
+            return content
+        out = content.replace(" to make the leading coefficient positive.", "")
+        out = out.replace(" to remove denominators.", "")
+        out = out.replace(" to simplify coefficients.", "")
+        return out
+
     def _append_standardization(self, steps: List[Dict[str, Any]], detailed: List[str], medium: List[str]) -> None:
         """Append standardization step content to detailed and medium only (short uses Given + eq1 + eq2)."""
         for step in steps:
@@ -84,7 +93,9 @@ class SolutionLatexRenderer:
                 for ln in self._wrap_text(content):
                     line = f"\\text{{{self._escape_text(ln)}}}"
                     detailed.append(line)
-                    medium.append(line)
+                medium_content = self._standardization_text_for_medium(content)
+                for ln in self._wrap_text(medium_content):
+                    medium.append(f"\\text{{{self._escape_text(ln)}}}")
 
     def _append_elimination(self, steps, detailed, medium, short):
         last_content = None

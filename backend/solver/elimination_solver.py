@@ -362,6 +362,22 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_lcm(self, a1, b1, c1, a2, b2, c2):
+        # Equation (1) and (2) come from the standardization phase.
+        # New equations created inside the LCM method start from (3).
+        next_eq_number = 3
+
+        def _record_scaled_equation(eq_idx: int, A, B, C, mult, current_no: int) -> int:
+            """
+            Record the scaled equation with a new equation number when a non‑trivial
+            multiplier has been applied.
+            """
+            if mult == 1:
+                return current_no
+
+            eq_line = EquationFormatter.format_equation(A, B, C)
+            numbered = f"{eq_line}\\; ...({current_no})"
+            self.recorder.add_equation(numbered)
+            return current_no + 1
         # Step 1: |b1| = 1 or |b2| = 1 → eliminate y
         if abs(b1) == 1 or abs(b2) == 1:
             if abs(b1) == 1:
@@ -394,6 +410,10 @@ class EliminationSolver:
             A2 = a2 * mult2
             B2 = b2 * mult2
             C2 = c2 * mult2
+
+            # Record any new scaled equations with fresh equation numbers.
+            next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
+            next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
 
             eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
@@ -466,6 +486,10 @@ class EliminationSolver:
             B2 = b2 * mult2
             C2 = c2 * mult2
 
+            # Record any new scaled equations with fresh equation numbers.
+            next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
+            next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
+
             eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
 
@@ -530,6 +554,10 @@ class EliminationSolver:
             A2 = a2 * mult2
             B2 = b2 * mult2
             C2 = c2 * mult2
+
+            # Record any new scaled equations with fresh equation numbers.
+            next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
+            next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
 
             eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
@@ -609,6 +637,10 @@ class EliminationSolver:
         A2 = a2 * mult2
         B2 = b2 * mult2
         C2 = c2 * mult2
+
+        # Record any new scaled equations with fresh equation numbers.
+        next_eq_number = _record_scaled_equation(1, A1, B1, C1, mult1, next_eq_number)
+        next_eq_number = _record_scaled_equation(2, A2, B2, C2, mult2, next_eq_number)
 
         eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
         eq_line2 = EquationFormatter.format_equation(A2, B2, C2)

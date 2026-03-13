@@ -1,6 +1,8 @@
 import re
 from typing import Any, Dict, List, Optional
 
+import sympy as sp
+
 
 class SolutionLatexRenderer:
     """Render solver output into MathJax/KaTeX-friendly LaTeX blocks."""
@@ -20,10 +22,12 @@ class SolutionLatexRenderer:
     ) -> Dict[str, str]:
         steps = steps or []
         raw_equations = raw_equations or equations
+        # Prefer LaTeX equations for Given block when available so it renders in aligned environment
+        given_equations = equations if equations else raw_equations
 
-        detailed_lines = self._given_equations_block(raw_equations)
-        medium_lines = self._given_equations_block(raw_equations)
-        short_lines = self._given_equations_block(raw_equations)
+        detailed_lines = self._given_equations_block(given_equations)
+        medium_lines = self._given_equations_block(given_equations)
+        short_lines = self._given_equations_block(given_equations)
 
         if method_name == "elimination":
             self._append_elimination(steps, detailed_lines, medium_lines, short_lines)
@@ -65,12 +69,13 @@ class SolutionLatexRenderer:
                 content = step.get("content", "")
                 if not content:
                     continue
-                text_line = f"\\text{{{self._escape_text(content)}}}"
-                detailed.append(text_line)
-                # Show strategy/operation/equation steps in medium view so new elimination statements are visible
                 if s_type == "equation":
+                    # Equation content is LaTeX; append as-is so it renders in the aligned environment
+                    detailed.append(content)
                     medium.append(content)
                 else:
+                    text_line = f"\\text{{{self._escape_text(content)}}}"
+                    detailed.append(text_line)
                     medium.append(text_line)
 
         short.append("\\text{Elimination completed.}")
@@ -167,7 +172,9 @@ class SolutionLatexRenderer:
     def _final_answer(self, solution: Dict[str, Any]) -> str:
         a = solution.get(self.var1, "")
         b = solution.get(self.var2, "")
-        return f"({self.var1},{self.var2}) = ({a},{b})"
+        a_latex = sp.latex(sp.simplify(sp.S(str(a)))) if a != "" and a is not None else ""
+        b_latex = sp.latex(sp.simplify(sp.S(str(b)))) if b != "" and b is not None else ""
+        return f"({self.var1},{self.var2}) = ({a_latex},{b_latex})"
 
     def _aligned(self, lines: List[str]) -> str:
         body = " \\\\\n".join(f"& {line}" for line in lines)

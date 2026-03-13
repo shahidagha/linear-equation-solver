@@ -154,11 +154,16 @@ class SolutionLatexRenderer:
 
         op = "-" if self._same_sign(t1[1], t2[1]) else "+"
         eq2_sign = "\\boldsymbol{-}" if op == "-" else "\\boldsymbol{+}"
+        # For addition there is no sign change, so no underset labels; for subtraction show (op) under terms
+        if op == "+":
+            row2 = f"&\\kern{{-5pt}}{eq2_sign} &\\kern{{-5pt}} &\\kern{{-5pt}}{{{t2[0]}}} &\\kern{{-5pt}} {t2[1]} &\\kern{{-5pt}} {t2[2]} &\\kern{{-5pt}} = &\\kern{{-5pt}} &\\kern{{-5pt}}{{{t2[3]}}} \\\\"
+        else:
+            row2 = f"&\\kern{{-5pt}}{eq2_sign} &\\kern{{-5pt}} \\underset{{({op})}}{{}}&\\kern{{-5pt}}{{{t2[0]}}} &\\kern{{-5pt}} \\underset{{({op})}}{{{t2[1]}}} &\\kern{{-5pt}} {t2[2]} &\\kern{{-5pt}} = &\\kern{{-5pt}} \\underset{{({op})}}{{}}&\\kern{{-5pt}}{{{t2[3]}}} \\\\"
 
         return (
             "\\begin{array}{cccccccc}"
             f" &\\kern{{-5pt}} &\\kern{{-5pt}} &\\kern{{-5pt}}{t1[0]} &\\kern{{-5pt}} {t1[1]} &\\kern{{-5pt}} {t1[2]} &\\kern{{-5pt}} = &\\kern{{-5pt}} &\\kern{{-5pt}} {t1[3]} \\\\"
-            f"&\\kern{{-5pt}}{eq2_sign} &\\kern{{-5pt}} \\underset{{({op})}}{{}}&\\kern{{-5pt}}{{{t2[0]}}} &\\kern{{-5pt}} \\underset{{({op})}}{{{t2[1]}}} &\\kern{{-5pt}} {t2[2]} &\\kern{{-5pt}} = &\\kern{{-5pt}} \\underset{{({op})}}{{}}&\\kern{{-5pt}}{{{t2[3]}}} \\\\"
+            f"{row2}"
             "\\hline"
             f" &\\kern{{-5pt}} &\\kern{{-5pt}} &\\kern{{-5pt}}{t3[0]} &\\kern{{-5pt}} {t3[1]} &\\kern{{-5pt}} {t3[2]} &\\kern{{-5pt}} = &\\kern{{-5pt}} &\\kern{{-5pt}} {t3[3]}"
             "\\end{array}"

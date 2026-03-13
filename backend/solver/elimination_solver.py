@@ -174,12 +174,12 @@ class EliminationSolver:
             subst_line = f"-{sp.latex(x_value)} + {b_term} = {sp.latex(c)}"
         else:
             subst_line = f"{sp.latex(a)}({sp.latex(x_value)}) + {b_term} = {sp.latex(c)}"
-        self.recorder.add(subst_line)
+        self.recorder.add_equation(subst_line)
 
         lhs = sp.simplify(a * x_value)
         next_line = f"{sp.latex(lhs)} + {b_term} = {sp.latex(c)}"
         if next_line != subst_line:
-            self.recorder.add(next_line)
+            self.recorder.add_equation(next_line)
 
         rhs = sp.simplify(c - lhs)
         y_value = sp.simplify(rhs / b)
@@ -201,13 +201,13 @@ class EliminationSolver:
         self.recorder.add({"short": short, "detailed": detailed})
         a_term = self._term(a, "x")
         substituted = sp.simplify(b * y_value)
-        self.recorder.add(f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}")
+        self.recorder.add_equation(f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}")
 
         lhs = substituted
         next_line = f"{a_term} + {sp.latex(lhs)} = {sp.latex(c)}"
         prev_line = f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}"
         if next_line != prev_line:
-            self.recorder.add(next_line)
+            self.recorder.add_equation(next_line)
 
         rhs = sp.simplify(c - lhs)
         x_value = sp.simplify(rhs / a)

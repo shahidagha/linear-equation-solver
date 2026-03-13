@@ -95,7 +95,7 @@ export class SolutionPanelComponent {
         return;
       }
       const canvas = document.createElement('canvas');
-      const size = 400;
+      const size = 560;
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');

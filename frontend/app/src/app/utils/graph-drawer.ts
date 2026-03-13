@@ -13,7 +13,7 @@ export interface GraphData {
 }
 
 const RANGE = 8; // -8 to 8
-const MARGIN = 40;
+const MARGIN = 28;
 const BLACK = '#000000';
 
 /** Convert LaTeX-like label to plain text for canvas (e.g. \frac{1}{2} -> 1/2). */
@@ -64,6 +64,36 @@ function drawArrowedSegment(
   drawArrow(ctx, x2, y2, Math.atan2(uy, ux));
 }
 
+/** Draw text along a line near the visible end (arrow): t near 1 = near end, side = ±1 for opposite sides. */
+function drawLabelAlongLine(
+  ctx: CanvasRenderingContext2D,
+  startCx: number, startCy: number, endCx: number, endCy: number,
+  label: string,
+  t = 0.82,
+  side: 1 | -1 = 1
+): void {
+  const dx = endCx - startCx;
+  const dy = endCy - startCy;
+  const len = Math.hypot(dx, dy) || 1;
+  const px = startCx + t * dx;
+  const py = startCy + t * dy;
+  const offset = 12;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const tx = px + side * offset * nx;
+  const ty = py + side * offset * ny;
+  const angle = Math.atan2(dy, dx);
+  ctx.save();
+  ctx.translate(tx, ty);
+  ctx.rotate(angle);
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = BLACK;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 0, 0);
+  ctx.restore();
+}
+
 function toNum(v: number | string): number {
   const n = typeof v === 'number' ? v : parseFloat(String(v));
   return Number.isFinite(n) ? n : 0;
@@ -86,6 +116,49 @@ function lineThroughPoints(
   const slope = (y2 - y1) / dx;
   const getY = (x: number) => y1 + slope * (x - x1);
   return { minX: -RANGE, maxX: RANGE, getY };
+}
+
+/** Clip line to box [-RANGE,RANGE] x [-RANGE,RANGE]; return the two boundary points. */
+function clipLineToBox(
+  p1: [number, number],
+  p2: [number, number]
+): [[number, number], [number, number]] {
+  const [x1, y1] = p1;
+  const [x2, y2] = p2;
+  const dx = x2 - x1;
+  const pts: [number, number][] = [];
+
+  if (Math.abs(dx) < 1e-9) {
+    const x = Math.max(-RANGE, Math.min(RANGE, x1));
+    return [[x, -RANGE], [x, RANGE]];
+  }
+
+  const slope = (y2 - y1) / dx;
+  const getY = (x: number) => y1 + slope * (x - x1);
+  const getX = (y: number) => x1 + (y - y1) / slope;
+
+  const yAtLeft = getY(-RANGE);
+  if (yAtLeft >= -RANGE && yAtLeft <= RANGE) pts.push([-RANGE, yAtLeft]);
+  const yAtRight = getY(RANGE);
+  if (yAtRight >= -RANGE && yAtRight <= RANGE) pts.push([RANGE, yAtRight]);
+  const xAtBottom = getX(-RANGE);
+  if (xAtBottom >= -RANGE && xAtBottom <= RANGE) pts.push([xAtBottom, -RANGE]);
+  const xAtTop = getX(RANGE);
+  if (xAtTop >= -RANGE && xAtTop <= RANGE) pts.push([xAtTop, RANGE]);
+
+  const uniq = (arr: [number, number][]) => {
+    const seen = new Set<string>();
+    return arr.filter((p) => {
+      const k = `${p[0].toFixed(4)}_${p[1].toFixed(4)}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+  const two = uniq(pts);
+  if (two.length < 2) return [[p1[0], p1[1]], [p2[0], p2[1]]];
+  two.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return [two[0], two[two.length - 1]];
 }
 
 function toCanvas(
@@ -122,16 +195,17 @@ export function drawGraph(
   const graphWidth = width - 2 * MARGIN;
   const graphHeight = height - 2 * MARGIN;
 
-  // Grid: darker (black/dark gray)
-  ctx.strokeStyle = '#333333';
+  // Grid: black – vertical and horizontal lines
+  ctx.strokeStyle = BLACK;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   for (let i = -RANGE; i <= RANGE; i++) {
-    const v = toCanvas(i, 0, width, height);
-    ctx.moveTo(v.cx, MARGIN);
-    ctx.lineTo(v.cx, height - MARGIN);
-    ctx.moveTo(MARGIN, v.cy);
-    ctx.lineTo(width - MARGIN, v.cy);
+    const vert = toCanvas(i, 0, width, height);
+    ctx.moveTo(vert.cx, MARGIN);
+    ctx.lineTo(vert.cx, height - MARGIN);
+    const horz = toCanvas(0, i, width, height);
+    ctx.moveTo(MARGIN, horz.cy);
+    ctx.lineTo(width - MARGIN, horz.cy);
   }
   ctx.stroke();
 
@@ -150,8 +224,8 @@ export function drawGraph(
   ctx.moveTo(bottom.cx, bottom.cy);
   ctx.lineTo(top.cx, top.cy);
   ctx.stroke();
-  drawArrow(ctx, left.cx, left.cy, 0);
-  drawArrow(ctx, right.cx, right.cy, Math.PI);
+  drawArrow(ctx, left.cx, left.cy, Math.PI);
+  drawArrow(ctx, right.cx, right.cy, 0);
   drawArrow(ctx, bottom.cx, bottom.cy, Math.PI / 2);
   drawArrow(ctx, top.cx, top.cy, -Math.PI / 2);
 
@@ -161,37 +235,38 @@ export function drawGraph(
   ctx.fillText('X', right.cx + 18, right.cy + 4);
   ctx.fillText('Y', top.cx - 4, top.cy - 12);
 
-  // Equation line 1: black, arrows at both ends, label near end
+  // Axis tick labels: -8 to 8 on X and Y
+  const origin = toCanvas(0, 0, width, height);
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = BLACK;
+  for (let i = -RANGE; i <= RANGE; i++) {
+    const v = toCanvas(i, 0, width, height);
+    ctx.textAlign = 'center';
+    ctx.fillText(String(i), v.cx, origin.cy + 16);
+    const h = toCanvas(0, i, width, height);
+    ctx.textAlign = 'right';
+    ctx.fillText(String(i), origin.cx - 6, h.cy + 4);
+  }
+
+  // Equation line 1: clip to graph box so both end arrows are visible
   if (p1.length >= 2) {
-    const line = lineThroughPoints(p1[0], p1[1]);
-    const xStart = Math.max(-RANGE, line.minX);
-    const xEnd = Math.min(RANGE, line.maxX);
-    const yEnd = line.getY(xEnd);
-    const start = toCanvas(xStart, line.getY(xStart), width, height);
-    const end = toCanvas(xEnd, yEnd, width, height);
+    const [b1, b2] = clipLineToBox(p1[0], p1[1]);
+    const start = toCanvas(b1[0], b1[1], width, height);
+    const end = toCanvas(b2[0], b2[1], width, height);
     drawArrowedSegment(ctx, start.cx, start.cy, end.cx, end.cy);
     if (label1) {
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillStyle = BLACK;
-      ctx.fillText(label1, end.cx + 12, end.cy + (yEnd >= 0 ? -10 : 14));
+      drawLabelAlongLine(ctx, start.cx, start.cy, end.cx, end.cy, label1, 0.82, 1);
     }
   }
 
-  // Equation line 2: black, arrows at both ends, label near end
+  // Equation line 2: clip to graph box so both end arrows are visible
   if (p2.length >= 2) {
-    const line = lineThroughPoints(p2[0], p2[1]);
-    const xStart = Math.max(-RANGE, line.minX);
-    const xEnd = Math.min(RANGE, line.maxX);
-    const yEnd = line.getY(xEnd);
-    const start = toCanvas(xStart, line.getY(xStart), width, height);
-    const end = toCanvas(xEnd, yEnd, width, height);
+    const [b1, b2] = clipLineToBox(p2[0], p2[1]);
+    const start = toCanvas(b1[0], b1[1], width, height);
+    const end = toCanvas(b2[0], b2[1], width, height);
     drawArrowedSegment(ctx, start.cx, start.cy, end.cx, end.cy);
     if (label2) {
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillStyle = BLACK;
-      ctx.fillText(label2, end.cx + 12, end.cy + (yEnd >= 0 ? -10 : 14));
+      drawLabelAlongLine(ctx, start.cx, start.cy, end.cx, end.cy, label2, 0.82, -1);
     }
   }
 

@@ -60,6 +60,10 @@ class SolutionLatexRenderer:
 
     def _append_elimination(self, steps, detailed, medium, short):
         last_content = None
+        # Short = medium minus steps (1), (3), (5), (7), (9), (11) by append order
+        medium_step = 0
+        _skip_short = (1, 3, 5, 7, 9, 11)
+
         for step in steps:
             s_type = step.get("type")
             if s_type == "vertical_elimination":
@@ -68,6 +72,9 @@ class SolutionLatexRenderer:
                 )
                 detailed.append(block)
                 medium.append(block)
+                medium_step += 1
+                if medium_step not in _skip_short:
+                    short.append(block)
             elif s_type == "substitution_intro":
                 # Detailed: why we chose this equation; Medium: short substitution line only
                 detailed_content = step.get("detailed_content", "")
@@ -76,6 +83,9 @@ class SolutionLatexRenderer:
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if content:
                     medium.append(f"\\text{{{self._escape_text(content)}}}")
+                    medium_step += 1
+                    if medium_step not in _skip_short:
+                        short.append(f"\\text{{{self._escape_text(content)}}}")
             elif s_type == "divide_step":
                 # Step (5): detailed and medium text; short blank
                 detailed_content = step.get("detailed", "")
@@ -83,7 +93,11 @@ class SolutionLatexRenderer:
                 for ln in self._wrap_text(detailed_content):
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if medium_content:
-                    medium.append(f"\\text{{{self._escape_text(medium_content)}}}")
+                    line = f"\\text{{{self._escape_text(medium_content)}}}"
+                    medium.append(line)
+                    medium_step += 1
+                    if medium_step not in _skip_short:
+                        short.append(line)
             elif s_type == "detailed_only":
                 # Step (11): only in detailed; blank for medium and short
                 content = step.get("content", "")
@@ -100,6 +114,9 @@ class SolutionLatexRenderer:
                     # Equation content is LaTeX; append as-is so it renders in the aligned environment
                     detailed.append(content)
                     medium.append(content)
+                    medium_step += 1
+                    if medium_step not in _skip_short:
+                        short.append(content)
                 else:
                     # Strategy explanations and other prose are rendered as wrapped text.
                     # We soft-wrap long sentences into multiple shorter lines so there is
@@ -119,8 +136,12 @@ class SolutionLatexRenderer:
                         detailed.append(text_line)
                         if not lcm_expl:
                             medium.append(text_line)
+                            medium_step += 1
+                            if medium_step not in _skip_short:
+                                short.append(text_line)
 
-        short.append("\\text{Elimination completed.}")
+        if medium_step == 0:
+            short.append("\\text{Elimination completed.}")
 
     def _append_substitution(self, equations, solution, detailed, medium, short):
         eq1 = equations[0]

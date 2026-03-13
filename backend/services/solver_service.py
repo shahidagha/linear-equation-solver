@@ -199,10 +199,10 @@ def _standardization_steps_for_equation(steps, number: int):
     When the raw equation is already in standard form, it is shown only once.
     """
     out = []
-    # Plain label for use inside text sentences, and simple \"...(n)\" tail for equation lines
-    label_plain = f\"({number})\"
-    # In LaTeX math mode, \"...\" renders as three dots; prefix with a small space
-    label_eq = f\"\\\\; ...(\" f\"{number})\"
+    # Plain label for use inside text sentences, and simple "...(n)" tail for equation lines
+    label_plain = f"({number})"
+    # In LaTeX math mode, "..." renders as three dots; prefix with a small space
+    label_eq = f"\\; ...({number})"
     last_shown = None  # last equation string we emitted (without label)
     steps_list = list(steps)
 

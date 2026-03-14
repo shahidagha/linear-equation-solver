@@ -32,11 +32,18 @@ export class SolutionPanelComponent {
   exitSolution(): void { this.state.resetSolutionState(); }
 
   copyQuestion(): void {
+    this.clearCopySolutionMessage();
     combineLatest([this.state.equations$, this.state.variables$]).pipe(take(1)).subscribe(([eqs, vars]) => {
+      if (!eqs?.equation1 || !eqs?.equation2) {
+        this.showCopySolutionMessage('failure');
+        return;
+      }
       const latex1 = equationToLatex(eqs.equation1 as any, vars as any);
       const latex2 = equationToLatex(eqs.equation2 as any, vars as any);
       const rawLatex = `${latex1} ; ${latex2}`;
-      navigator.clipboard.writeText(rawLatex).catch(() => {});
+      navigator.clipboard.writeText(rawLatex)
+        .then(() => this.showCopySolutionMessage('success'))
+        .catch(() => this.showCopySolutionMessage('failure'));
     });
   }
 

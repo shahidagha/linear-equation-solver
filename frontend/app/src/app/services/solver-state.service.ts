@@ -105,6 +105,7 @@ export class SolverStateService {
     this.verbositySubject.next('detailed');
     this.canSolveSubject.next(true);
     this.panelModeSubject.next('solution');
+    this.savedSystemsRefreshSubject.next();
   }
 
   setSelectedMethod(method: string): void {

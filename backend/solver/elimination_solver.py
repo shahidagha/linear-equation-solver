@@ -166,7 +166,8 @@ class EliminationSolver:
         )
         self.recorder.add({"short": short, "detailed": detailed})
 
-        b_term = self._term(b, "y")
+        var2 = getattr(self.system, "var2", "y")
+        b_term = self._term(b, var2)
         # When coefficient of x is 1 or -1, don't show "1(1)" or "-1(1)"; show "1 + ..." or "-1 + ..."
         if a == 1:
             subst_line = f"{sp.latex(x_value)} + {b_term} = {sp.latex(c)}"
@@ -199,7 +200,8 @@ class EliminationSolver:
             "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier."
         )
         self.recorder.add({"short": short, "detailed": detailed})
-        a_term = self._term(a, "x")
+        var1 = getattr(self.system, "var1", "x")
+        a_term = self._term(a, var1)
         substituted = sp.simplify(b * y_value)
         self.recorder.add_equation(f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}")
 
@@ -222,6 +224,8 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_direct(self, a1, b1, c1, a2, b2, c2):
+        var1 = getattr(self.system, "var1", "x")
+        var2 = getattr(self.system, "var2", "y")
         if abs(b1) == abs(b2):
             eliminate = "y"
         else:
@@ -266,10 +270,10 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(b1) != sp.sign(b2) else "subtract"
-            eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
-            eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
+            eq_line1 = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
+            eq_line2 = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
             # Use _term so coefficient 1 is hidden in the result line.
-            x_term = self._term(A, "x")
+            x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
@@ -315,9 +319,9 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(a1) != sp.sign(a2) else "subtract"
-            eq_line1 = EquationFormatter.format_equation(a1, b1, c1)
-            eq_line2 = EquationFormatter.format_equation(a2, b2, c2)
-            y_term = self._term(B, "y")
+            eq_line1 = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
+            eq_line2 = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+            y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
@@ -347,9 +351,9 @@ class EliminationSolver:
         var2 = getattr(self.system, "var2", "y")
 
         self.recorder.add_operation("Adding equations (1) and (2)")
-        eq1_line = EquationFormatter.format_equation(a1, b1, c1)
-        eq2_line = EquationFormatter.format_equation(a2, b2, c2)
-        eq3_line = EquationFormatter.format_equation(a3, b3, c3)
+        eq1_line = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
+        eq2_line = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+        eq3_line = EquationFormatter.format_equation(a3, b3, c3, var1, var2)
         self.vertical_elimination(eq1_line, eq2_line, eq3_line, op="add")
         # Step (4) suppressed: no separate equation (3) line, no old divide text
 
@@ -393,9 +397,9 @@ class EliminationSolver:
             b4 = b2 - b1
             c4 = c2 - c1
 
-        eq1_line = EquationFormatter.format_equation(a1, b1, c1)
-        eq2_line = EquationFormatter.format_equation(a2, b2, c2)
-        eq4_line = EquationFormatter.format_equation(a4, b4, c4)
+        eq1_line = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
+        eq2_line = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+        eq4_line = EquationFormatter.format_equation(a4, b4, c4, var1, var2)
         self.vertical_elimination(eq1_line, eq2_line, eq4_line, op="subtract")
 
         # Step (9): divide equation (4) — structured detailed/medium
@@ -450,6 +454,8 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_lcm(self, a1, b1, c1, a2, b2, c2):
+        var1 = getattr(self.system, "var1", "x")
+        var2 = getattr(self.system, "var2", "y")
         # Equation (1) and (2) come from the standardization phase.
         # Track the current equation numbers for each row and auto‑increment
         # when we create new scaled equations.
@@ -465,7 +471,7 @@ class EliminationSolver:
             if mult == 1:
                 return current_no, next_no
 
-            eq_line = EquationFormatter.format_equation(A, B, C)
+            eq_line = EquationFormatter.format_equation(A, B, C, var1, var2)
             numbered = f"{eq_line}\\; ...({next_no})"
             self.recorder.add_equation(numbered)
             return next_no, next_no + 1
@@ -506,8 +512,8 @@ class EliminationSolver:
             current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
             current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
-            eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
-            eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+            eq_line1 = EquationFormatter.format_equation(A1, B1, C1, var1, var2)
+            eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
             if sp.sign(B1) != sp.sign(B2):
                 if not (
@@ -534,7 +540,7 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
-            x_term = self._term(A, "x")
+            x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
@@ -581,8 +587,8 @@ class EliminationSolver:
             current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
             current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
-            eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
-            eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+            eq_line1 = EquationFormatter.format_equation(A1, B1, C1, var1, var2)
+            eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
             if sp.sign(A1) != sp.sign(A2):
                 if not (
@@ -609,7 +615,7 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
-            y_term = self._term(B, "y")
+            y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
@@ -650,8 +656,8 @@ class EliminationSolver:
             current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
             current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
-            eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
-            eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+            eq_line1 = EquationFormatter.format_equation(A1, B1, C1, var1, var2)
+            eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
             if sp.sign(B1) != sp.sign(B2):
                 if not (
@@ -678,7 +684,7 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
-            x_term = self._term(A, "x")
+            x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
@@ -733,8 +739,8 @@ class EliminationSolver:
         current_eq_no1, next_eq_number = _record_scaled_equation(current_eq_no1, A1, B1, C1, mult1, next_eq_number)
         current_eq_no2, next_eq_number = _record_scaled_equation(current_eq_no2, A2, B2, C2, mult2, next_eq_number)
 
-        eq_line1 = EquationFormatter.format_equation(A1, B1, C1)
-        eq_line2 = EquationFormatter.format_equation(A2, B2, C2)
+        eq_line1 = EquationFormatter.format_equation(A1, B1, C1, var1, var2)
+        eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
         if eliminate == "y":
             if sp.sign(B1) != sp.sign(B2):
@@ -762,7 +768,7 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
-            x_term = self._term(A, "x")
+            x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
@@ -795,7 +801,7 @@ class EliminationSolver:
                 return
 
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
-            y_term = self._term(B, "y")
+            y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)

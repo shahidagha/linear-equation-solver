@@ -87,8 +87,9 @@ class SolutionLatexRenderer:
             if not content:
                 continue
             if s_type == "equation":
-                detailed.append(content)
-                medium.append(content)
+                for ln in self._wrap_latex(content):
+                    detailed.append(ln)
+                    medium.append(ln)
             elif s_type == "text":
                 for ln in self._wrap_text(content):
                     line = f"\\text{{{self._escape_text(ln)}}}"
@@ -122,10 +123,11 @@ class SolutionLatexRenderer:
                 for ln in self._wrap_text(detailed_content):
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if content_latex:
-                    medium.append(content_latex)
-                    medium_step += 1
-                    if medium_step not in _skip_short:
-                        short.append(content_latex)
+                    for ln in self._wrap_latex(content_latex):
+                        medium.append(ln)
+                        medium_step += 1
+                        if medium_step not in _skip_short:
+                            short.append(ln)
                 elif content:
                     medium.append(f"\\text{{{self._escape_text(content)}}}")
                     medium_step += 1
@@ -138,15 +140,17 @@ class SolutionLatexRenderer:
                 detailed_content = step.get("detailed", "")
                 medium_content = step.get("medium", "")
                 if detailed_latex:
-                    detailed.append(detailed_latex)
+                    for ln in self._wrap_latex(detailed_latex):
+                        detailed.append(ln)
                 else:
                     for ln in self._wrap_text(detailed_content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if medium_latex:
-                    medium.append(medium_latex)
-                    medium_step += 1
-                    if medium_step not in _skip_short:
-                        short.append(medium_latex)
+                    for ln in self._wrap_latex(medium_latex):
+                        medium.append(ln)
+                        medium_step += 1
+                        if medium_step not in _skip_short:
+                            short.append(ln)
                 elif medium_content:
                     line = f"\\text{{{self._escape_text(medium_content)}}}"
                     medium.append(line)
@@ -166,12 +170,13 @@ class SolutionLatexRenderer:
                     continue
                 last_content = content
                 if s_type == "equation":
-                    # Equation content is LaTeX; append as-is so it renders in the aligned environment
-                    detailed.append(content)
-                    medium.append(content)
-                    medium_step += 1
-                    if medium_step not in _skip_short:
-                        short.append(content)
+                    # Equation content is LaTeX; wrap long lines for consistent line length
+                    for ln in self._wrap_latex(content):
+                        detailed.append(ln)
+                        medium.append(ln)
+                        medium_step += 1
+                        if medium_step not in _skip_short:
+                            short.append(ln)
                 else:
                     # Strategy explanations and other prose are rendered as wrapped text.
                     # We soft-wrap long sentences into multiple shorter lines so there is
@@ -221,21 +226,24 @@ class SolutionLatexRenderer:
                 det_latex = step.get("detailed_latex")
                 eq_latex = step.get("equation", "")
                 if det_latex:
-                    detailed.append(det_latex)
-                    medium.append(det_latex)
-                    short.append(det_latex)
+                    for ln in self._wrap_latex(det_latex):
+                        detailed.append(ln)
+                        medium.append(ln)
+                        short.append(ln)
                 elif det:
                     for ln in self._wrap_text(det):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if eq_latex:
-                    detailed.append(eq_latex)
-                    medium.append(eq_latex)
-                    short.append(eq_latex)
+                    for ln in self._wrap_latex(eq_latex):
+                        detailed.append(ln)
+                        medium.append(ln)
+                        short.append(ln)
             elif s_type == "equation":
                 if content:
-                    detailed.append(content)
-                    medium.append(content)
-                    short.append(content)
+                    for ln in self._wrap_latex(content):
+                        detailed.append(ln)
+                        medium.append(ln)
+                        short.append(ln)
             elif s_type == "text":
                 if content:
                     for ln in self._wrap_text(content):
@@ -266,9 +274,10 @@ class SolutionLatexRenderer:
             content = step.get("content", "")
             if s_type == "equation":
                 if content:
-                    detailed.append(content)
-                    medium.append(content)
-                    short.append(content)
+                    for ln in self._wrap_latex(content):
+                        detailed.append(ln)
+                        medium.append(ln)
+                        short.append(ln)
             elif s_type == "text":
                 if content:
                     for ln in self._wrap_text(content):
@@ -412,6 +421,27 @@ class SolutionLatexRenderer:
 
     def _escape_text(self, value: str) -> str:
         return value.replace("\\", "\\\\").replace("_", "\\_")
+
+    def _wrap_latex(self, line: str, max_len: int = 70) -> List[str]:
+        """Wrap long LaTeX lines at natural break points (after \\text{...}, \\;, or space) so each line is at most max_len chars."""
+        if not line or len(line) <= max_len:
+            return [line] if line else []
+        # Prefer breaking after "} " (before \\text{), " \\; ", or "} " so next line can start cleanly
+        search_region = line[: max_len + 1]
+        break_after = -1
+        for sep, skip in (("} \\text{", 2), (" \\; ", 4), ("} ", 2)):
+            idx = search_region.rfind(sep)
+            if idx != -1:
+                break_after = idx + skip  # break after "} " or " \\; " so rest keeps "\\text{" or next segment
+                break
+        if break_after <= 0:
+            idx = search_region.rfind(" ")
+            break_after = idx + 1 if idx != -1 else max_len
+        first = line[:break_after].rstrip()
+        rest = line[break_after:].lstrip()
+        if not first:
+            return [line]
+        return [first] + self._wrap_latex(rest, max_len)
 
     def _wrap_text(self, value: str, max_len: int = 70) -> List[str]:
         """Soft-wrap a plain text string into multiple lines of at most max_len chars."""

@@ -19,7 +19,7 @@ linear-equation-solver/
 │   │   ├── equation_service.py    # dedupe, hashing, persistence, retrieval assembly
 │   │   └── solver_service.py      # normalization + solver orchestration + latex + DB writes
 │   ├── normalization/
-│   │   └── normalizer.py          # canonical algebraic normalization with SymPy
+│   │   └── equation_standardizer.py  # canonical algebraic standardization
 │   ├── math_engine/
 │   │   ├── fraction_surd.py       # symbolic fraction/surd representation
 │   │   ├── equation.py            # symbolic equation model
@@ -87,7 +87,7 @@ linear-equation-solver/
 2. Route first calls `save_equation_system` (dedupe/validation/persist system row).
 3. Route then calls `solve_system` with resolved `system_id`.
 4. `solve_system` converts incoming JSON terms into `FractionSurd` and `Equation` objects.
-5. `Normalizer.normalize` standardizes equations (LCM denominator clearing, optional GCD reduction, sign normalization).
+5. `EquationStandardizer.standardize` standardizes equations (LCM denominator clearing, GCD reduction, sign normalization); returns system and steps.
 6. Solver methods execute:
    - elimination (step-based)
    - substitution
@@ -121,7 +121,7 @@ The route/service payload contract currently appears inconsistent with frontend 
 
 ### Capability ownership
 - **Equation parsing (JSON → symbolic)**: `backend/services/solver_service.py` (`build_fraction_surd`, Equation construction).
-- **Normalization**: `backend/normalization/normalizer.py`.
+- **Normalization**: `backend/normalization/equation_standardizer.py`.
 - **Solving algorithms**: `backend/solver/*.py`.
 - **LaTeX generation**: primarily `backend/latex/solution_renderer.py`; older generators remain.
 - **Graph generation data**: `backend/solver/graphical_solver.py` (point generation), optional plotting helper in `backend/graph/graph_plotter.py`.
@@ -228,7 +228,7 @@ The repository still contains multiple legacy or redundant pieces:
 ## 8) Normalization System Analysis
 
 ### Implemented transformations
-`Normalizer._normalize_equation` currently performs:
+`EquationStandardizer` (per-equation steps) currently performs:
 1. Convert symbolic values via `.to_sympy()`.
 2. Apply `sp.together` to coefficients.
 3. Collect integer denominators and multiply all coefficients by LCM.
@@ -315,7 +315,7 @@ flowchart LR
     API --> ES[Equation Service]
     API --> SS[Solver Service]
 
-    SS --> N[Normalizer]
+    SS --> N[EquationStandardizer]
     SS --> ME[Math Engine]
     SS --> SOL[Solvers]
     SOL --> EL[Elimination]
@@ -340,7 +340,7 @@ sequenceDiagram
     participant R as equation_routes
     participant E as equation_service
     participant S as solver_service
-    participant N as normalizer
+    participant N as equation_standardizer
     participant V as solver modules
     participant L as solution_renderer
     participant D as PostgreSQL
@@ -375,7 +375,7 @@ flowchart TD
     Hash --> Canon[utils/canonical_encoder.py]
 
     SolSvc --> ME[math_engine/*]
-    SolSvc --> Norm[normalization/normalizer.py]
+    SolSvc --> Norm[normalization/equation_standardizer.py]
     SolSvc --> Solvers[solver/*]
     SolSvc --> Render[latex/solution_renderer.py]
     SolSvc --> Models

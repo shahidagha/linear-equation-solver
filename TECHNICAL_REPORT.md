@@ -43,7 +43,7 @@ linear-equation-solver/
 │   │   ├── solution_methods.py
 │   │   └── step.py
 │   ├── normalization/
-│   │   └── normalizer.py
+│   │   └── equation_standardizer.py
 │   ├── routes/
 │   │   └── equation_routes.py
 │   ├── services/
@@ -144,7 +144,7 @@ linear-equation-solver/
 - `backend/math_engine/fraction_surd.py`: symbolic fraction-surd structure and operations via SymPy.
 - `backend/math_engine/equation.py`: variable-aware symbolic equation wrapper.
 - `backend/math_engine/system.py`: equation pair container.
-- `backend/normalization/normalizer.py`: normalization helper (positive leading coefficient + simplification); currently not integrated into route flow.
+- `backend/normalization/equation_standardizer.py`: standardization (leading positive, LCM denominator clearing, GCD reduction); used in solve flow.
 
 ### Utilities and step tracking
 - `backend/utils/step.py`: `Step(type, content)` DTO.
@@ -263,7 +263,7 @@ Purpose: one row per solving method per system, including presentation-ready var
 - Core abstraction is symbolic, SymPy-backed `FractionSurd` with exact expression construction (`num*sqrt(rad) / den*sqrt(rad)`).
 - `Equation` converts domain coefficients into symbolic `Eq(lhs, rhs)` with variable names from payload.
 - `EquationSystem` wraps two equations passed to each solver.
-- `Normalizer` exists but is not currently part of HTTP solve pipeline.
+- `EquationStandardizer` is used in the solve pipeline (solver_service).
 
 ### Representation notes
 - Frontend term schema: `{sign, numCoeff, numRad, denCoeff, denRad}`.
@@ -347,7 +347,7 @@ Verbosity in active UI is currently applied on frontend (`SolutionStepsComponent
 ### Partially implemented / inconsistent
 - ⚠️ Backend has legacy duplicate modules (`solver/`, `main.py`, older latex/step utilities) alongside active stack.
 - ⚠️ Substitution/Cramer pedagogical step recording is not equivalent to elimination detail.
-- ⚠️ `normalization/normalizer.py` not integrated into solve flow.
+- Normalization: `equation_standardizer.py` is integrated into solve flow.
 - ⚠️ `step_engine/*` duplicate filtering/verbosity system not integrated with API pipeline.
 - ⚠️ Solution panel actions `copyQuestion/copySolution` are stubs.
 
@@ -444,7 +444,7 @@ Interaction summary:
 - `backend/math_engine/fraction_surd.py`: class `FractionSurd` (+ arithmetic helpers)
 - `backend/math_engine/equation.py`: class `Equation` (`sympy_equation`)
 - `backend/math_engine/system.py`: class `EquationSystem`
-- `backend/normalization/normalizer.py`: class `Normalizer.normalize`
+- `backend/normalization/equation_standardizer.py`: class `EquationStandardizer.standardize`
 - `backend/solver/elimination_solver.py`: class `EliminationSolver` (`detect_strategy`, `choose_variable`, `solve`, etc.)
 - `backend/solver/graphical_solver.py`: class `GraphicalSolver` (`generate_points`, `generate_tables`)
 - `backend/solver/substitution_solver.py`: class `SubstitutionSolver.solve`

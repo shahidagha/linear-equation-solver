@@ -126,17 +126,19 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 
 ## 6. Codebase and maintainability
 
-### Drawbacks
+**Status: Addressed.** Module audit done; docs aligned; payload deprecation documented.
 
-- **Dead or underused code:** `backend/graph/graph_plotter.py` and `backend/latex/math_to_latex.py` may not be in the main request path; unclear whether they are legacy or for future use.
+### Drawbacks (original)
+
+- **Dead or underused code:** `backend/graph/graph_plotter.py` and `backend/latex/math_to_latex.py` were not in the main request path.
 - **Naming and layout:** Some references still say “Normalizer” while the actual module is `equation_standardizer`; docs and comments can get out of sync.
-- **Mixed legacy formats:** Support for both `term1`/`term2` and `terms[]` increases branching and maintenance cost.
+- **Mixed legacy formats:** Support for both `term1`/`term2` and `terms[]` adds branching.
 
-### Suggestions
+### Suggestions (implemented)
 
-- **Audit modules:** Confirm whether `graph_plotter.py` and `math_to_latex.py` are used. If not, remove or document as “optional/future” and avoid importing in the main flow until needed.
-- **Documentation:** Keep `README.md`, `AGENTS.md`, and `TECHNICAL_ARCHITECTURE_REPORT.md` aligned with actual module names (e.g. `EquationStandardizer`, not “Normalizer”) and entry points.
-- **Payload format:** Migrate to a single payload shape (`terms[]` + variables) and deprecate legacy keys; simplify `_normalize_payload` once frontend is updated.
+- **Audit modules:** Confirmed `graph_plotter.py` and `math_to_latex.py` are not imported in the request path. Added module-level docstrings in both files stating they are optional/future; do not import in the main flow.
+- **Documentation:** TECHNICAL_ARCHITECTURE_REPORT, TECHNICAL_REPORT, and TECHNICAL_REPORT_V2 now reference EquationStandardizer and equation_standardizer.py; AGENTS.md and README include normalization and mark graph_plotter and math_to_latex as optional.
+- **Payload format:** Canonical shape is `terms[]` + variables; `term1`/`term2` are documented as deprecated and still accepted for backward compatibility.
 
 ---
 

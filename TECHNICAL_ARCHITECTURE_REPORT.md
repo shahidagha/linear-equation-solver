@@ -20,7 +20,7 @@ linear-equation-solver/
 │   │   ├── equation_models.py
 │   │   └── solution_methods.py
 │   ├── normalization/
-│   │   └── normalizer.py
+│   │   └── equation_standardizer.py
 │   ├── math_engine/
 │   │   ├── fraction_surd.py
 │   │   ├── equation.py
@@ -77,7 +77,7 @@ linear-equation-solver/
 2. **System persistence gate**: calls `save_equation_system` to validate non-identical equations, compute hashes, and either save or detect duplicate.
 3. **Cache check**: route calls `get_cached_solution_response`; if all four method rows exist (`elimination`, `substitution`, `cramer`, `graphical`), it returns cached payload directly.
 4. **Solver service orchestration**: `solver_service.solve_system` builds `FractionSurd` terms → `Equation` objects → `EquationSystem`.
-5. **Normalization**: `Normalizer.normalize` removes integer denominators via LCM, reduces by GCD when integer-only, and normalizes sign orientation.
+5. **Normalization**: `EquationStandardizer.standardize` removes denominators via LCM, reduces by GCD, and normalizes sign orientation; returns standardized system and steps.
 6. **Method execution**:
    - `EliminationSolver.solve()` (with step recorder).
    - `SubstitutionSolver.solve()`.
@@ -98,7 +98,7 @@ linear-equation-solver/
 
 - **Equation parsing/input adaptation**: `backend/routes/equation_routes.py` (`_normalize_payload`), `backend/schemas/equation_schema.py` (supports both `terms[]` and `term1/term2`).
 - **Symbolic algebra primitives**: `backend/math_engine/fraction_surd.py`, `backend/math_engine/equation.py`, `backend/math_engine/system.py`.
-- **Normalization**: `backend/normalization/normalizer.py`.
+- **Normalization**: `backend/normalization/equation_standardizer.py`.
 - **Solving algorithms**: `backend/solver/*.py`.
 - **Step recording**: `backend/utils/step_recorder.py`, consumed primarily by elimination solver.
 - **LaTeX generation**: `backend/latex/equation_formatter.py`, `backend/latex/solution_renderer.py`.
@@ -186,7 +186,7 @@ linear-equation-solver/
 
 ## 8. Normalization System
 
-`Normalizer` applies equation-level transforms:
+`EquationStandardizer` applies equation-level transforms:
 1. Convert each coefficient to SymPy expression.
 2. Run `sp.together` to combine rational terms.
 3. Collect **integer denominators** and multiply all coefficients by LCM to clear them.
@@ -241,7 +241,7 @@ flowchart LR
   API --> ES[Equation Service]
   API --> SS[Solver Service]
   ES --> DB[(PostgreSQL)]
-  SS --> N[Normalizer]
+  SS --> N[EquationStandardizer]
   SS --> ME[Math Engine]
   SS --> SOLV[Solver Modules]
   SOLV --> REC[Step Recorder]
@@ -293,7 +293,7 @@ graph TD
   services_solver --> math_eq[equation]
   services_solver --> math_fs[fraction_surd]
   services_solver --> math_sys[system]
-  services_solver --> norm[normalizer]
+  services_solver --> norm[equation_standardizer]
   services_solver --> solver_elim[elimination_solver]
   services_solver --> solver_sub[substitution_solver]
   services_solver --> solver_cr[cramer_solver]

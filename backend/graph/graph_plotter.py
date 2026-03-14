@@ -1,4 +1,10 @@
+"""
+Optional matplotlib-based plotter for equation lines. Not used in the main API or
+frontend (the app uses canvas/graph-drawer). Kept for local debugging or future
+use. Do not import in the request path.
+"""
 import matplotlib.pyplot as plt
+
 
 class GraphPlotter:
 

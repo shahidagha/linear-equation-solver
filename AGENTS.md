@@ -58,8 +58,13 @@ math_engine/
     equation.py
     system.py
 
+normalization/
+    equation_standardizer.py
+
 solver/
     elimination_solver.py
+    substitution_solver.py
+    cramer_solver.py
     graphical_solver.py
 
 utils/

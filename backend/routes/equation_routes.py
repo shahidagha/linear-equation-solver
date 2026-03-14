@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 def _normalize_payload(payload: SolveRequestSchema | dict) -> dict:
-    """Normalize request payload to the service contract."""
+    """Normalize to canonical shape: variables as [var1, var2], each equation as { terms, constant }. Legacy term1/term2 are folded into terms[]."""
 
     if isinstance(payload, SolveRequestSchema):
         data = payload.model_dump()

@@ -110,10 +110,12 @@ linear-equation-solver/
 │   │   └── graphical_solver.py
 │   ├── latex/
 │   │   ├── equation_formatter.py
-│   │   ├── math_to_latex.py
+│   │   ├── math_to_latex.py       # optional; not in request path
 │   │   └── solution_renderer.py  # Verbosity tiers, standardization, wrap, graphical tables
+│   ├── normalization/
+│   │   └── equation_standardizer.py
 │   ├── graph/
-│   │   └── graph_plotter.py
+│   │   └── graph_plotter.py       # optional; not in request path
 │   ├── utils/
 │   │   ├── step_recorder.py
 │   │   ├── step.py

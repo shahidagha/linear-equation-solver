@@ -371,6 +371,18 @@ class SubstitutionSolver:
         target_lhs = a_t * self._x + b_t * self._y
         target_eq = sp.Eq(target_lhs, c_t)
         raw_substituted = target_eq.subs(sym_var, expr)
+        # SymPy may return True/False when the substituted form simplifies to an identity or contradiction
+        if not isinstance(raw_substituted, sp.Eq):
+            if raw_substituted == sp.true or raw_substituted is True:
+                self.recorder.add_equation(
+                    "\\text{After substitution the equation simplifies to an identity (always true). "
+                    "The system has infinitely many solutions.}"
+                )
+                return degenerate_infinite()
+            self.recorder.add_equation(
+                "\\text{After substitution the equation simplifies to a contradiction. The system has no solution.}"
+            )
+            return degenerate_none()
         # Build raw substitution line without simplifying (so we show e.g. 3p + 5(7 - 5p/3) = 19)
         other_sym_t = self._y if sym_var == self._x else self._x
         term1 = sp.Mul(a_t, other_sym_t, evaluate=False)

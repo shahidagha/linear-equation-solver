@@ -115,23 +115,39 @@ class SolutionLatexRenderer:
                 if medium_step not in _skip_short:
                     short.append(block)
             elif s_type == "substitution_intro":
-                # Detailed: why we chose this equation; Medium: short substitution line only
+                # Detailed: why we chose this equation; Medium/Short: intro line (mixed LaTeX or text)
                 detailed_content = step.get("detailed_content", "")
                 content = step.get("content", "")
+                content_latex = step.get("content_latex")
                 for ln in self._wrap_text(detailed_content):
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
-                if content:
+                if content_latex:
+                    medium.append(content_latex)
+                    medium_step += 1
+                    if medium_step not in _skip_short:
+                        short.append(content_latex)
+                elif content:
                     medium.append(f"\\text{{{self._escape_text(content)}}}")
                     medium_step += 1
                     if medium_step not in _skip_short:
                         short.append(f"\\text{{{self._escape_text(content)}}}")
             elif s_type == "divide_step":
-                # Step (5): detailed and medium text; short blank
+                # Step (5): detailed and medium text or mixed LaTeX; short blank
+                detailed_latex = step.get("detailed_latex")
+                medium_latex = step.get("medium_latex")
                 detailed_content = step.get("detailed", "")
                 medium_content = step.get("medium", "")
-                for ln in self._wrap_text(detailed_content):
-                    detailed.append(f"\\text{{{self._escape_text(ln)}}}")
-                if medium_content:
+                if detailed_latex:
+                    detailed.append(detailed_latex)
+                else:
+                    for ln in self._wrap_text(detailed_content):
+                        detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+                if medium_latex:
+                    medium.append(medium_latex)
+                    medium_step += 1
+                    if medium_step not in _skip_short:
+                        short.append(medium_latex)
+                elif medium_content:
                     line = f"\\text{{{self._escape_text(medium_content)}}}"
                     medium.append(line)
                     medium_step += 1
@@ -202,8 +218,13 @@ class SolutionLatexRenderer:
                     short.append(f"\\text{{{self._escape_text(intro_content)}}}")
             elif s_type == "subst_solve_step":
                 det = step.get("detailed", "")
+                det_latex = step.get("detailed_latex")
                 eq_latex = step.get("equation", "")
-                if det:
+                if det_latex:
+                    detailed.append(det_latex)
+                    medium.append(det_latex)
+                    short.append(det_latex)
+                elif det:
                     for ln in self._wrap_text(det):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if eq_latex:

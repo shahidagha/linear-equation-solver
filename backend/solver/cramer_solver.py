@@ -35,22 +35,24 @@ class CramerSolver:
         a1, b1, c1 = self._a1, self._b1, self._c1
         a2, b2, c2 = self._a2, self._b2, self._c2
 
-        # Step 2: Compare Equation (1) and (2) with a1*var1 + b1*var2 = c1 (plain text + equation for values)
-        self.recorder.add(
-            f"Comparing Equation (1) with a1 {self.var1} + b1 {self.var2} = c1 we get:"
+        # Step 2: Compare Equation (1) and (2) — mixed \text and math so subscripts render
+        self.recorder.add_equation(
+            f"\\text{{Comparing Equation (1) with }} \\; a_1 {self.var1} + b_1 {self.var2} = c_1 \\; \\text{{ we get:}}"
         )
         self.recorder.add_equation(
             f"a_1 = {_expr_latex(a1)}, \\quad b_1 = {_expr_latex(b1)}, \\quad c_1 = {_expr_latex(c1)}"
         )
-        self.recorder.add(
-            f"Comparing Equation (2) with a2 {self.var1} + b2 {self.var2} = c2 we get:"
+        self.recorder.add_equation(
+            f"\\text{{Comparing Equation (2) with }} \\; a_2 {self.var1} + b_2 {self.var2} = c_2 \\; \\text{{ we get:}}"
         )
         self.recorder.add_equation(
             f"a_2 = {_expr_latex(a2)}, \\quad b_2 = {_expr_latex(b2)}, \\quad c_2 = {_expr_latex(c2)}"
         )
 
-        # Step 3: D = matrix, fill values, compute (plain text for \\text{} — no underscores)
-        self.recorder.add("Compute D (determinant of coefficient matrix):")
+        # Step 3: D = matrix, fill values, compute (mixed text+math)
+        self.recorder.add_equation(
+            "\\text{Compute } D \\text{ (determinant of coefficient matrix):}"
+        )
         self.recorder.add_equation(r"D = \begin{vmatrix} a_1 & b_1 \\ a_2 & b_2 \end{vmatrix}")
         self.recorder.add_equation(
             f"D = \\begin{{vmatrix}} {_expr_latex(a1)} & {_expr_latex(b1)} \\\\ {_expr_latex(a2)} & {_expr_latex(b2)} \\end{{vmatrix}}"
@@ -59,12 +61,14 @@ class CramerSolver:
         self._record_det_computation("D", a1 * b2, a2 * b1, D, "a_1 b_2 - a_2 b_1", a1, b2, a2, b1)
 
         if D == 0:
-            self.recorder.add("Since D = 0, the system has no unique solution.")
+            self.recorder.add_equation(
+                "\\text{Since } D = 0 \\text{, the system has no unique solution.}"
+            )
             return "No unique solution"
 
-        # Step 4: D_x — strike out first column, replace with c1, c2; fill and compute (plain text for \\text{} — no underscores)
-        self.recorder.add(
-            f"To find D for {self.var1}, in D strike out the first column (a1, a2); replace with c1, c2:"
+        # Step 4: D_x — strike out first column, replace with c1, c2 (mixed text+math)
+        self.recorder.add_equation(
+            f"\\text{{To find }} D_{{{self.var1}}} \\text{{, in }} D \\text{{ strike out the first column }} (a_1, a_2) \\text{{; replace with }} (c_1, c_2) \\text{{:}}"
         )
         self.recorder.add_equation(
             f"D_{{{self.var1}}} = \\begin{{vmatrix}} c_1 & b_1 \\\\ c_2 & b_2 \\end{{vmatrix}}"
@@ -89,7 +93,7 @@ class CramerSolver:
         self._record_det_computation(f"D_{{{self.var2}}}", a1 * c2, a2 * c1, Dy, "a_1 c_2 - a_2 c_1", a1, c2, a2, c1)
 
         # Step 6: Apply rule — var1 = Dx/D, var2 = Dy/D with all calculation steps
-        self.recorder.add("Apply Cramer's rule:")
+        self.recorder.add_equation("\\text{Apply Cramer's rule:}")
         self._record_division_steps(self.var1, Dx, D)
         self._record_division_steps(self.var2, Dy, D)
 

@@ -1,15 +1,48 @@
 <div class="input-panel-stack">
-  <app-variable-selector
-    [variable1]="variable1"
-    [variable2]="variable2"
-    (variable1Change)="onVariable1Change($event)"
-    (variable2Change)="onVariable2Change($event)">
-  </app-variable-selector>
+  <div class="top-bar">
+    <app-variable-selector
+      [variable1]="variable1"
+      [variable2]="variable2"
+      (variable1Change)="onVariable1Change($event)"
+      (variable2Change)="onVariable2Change($event)">
+    </app-variable-selector>
+    <div class="mode-buttons">
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="layoutMode === 'rational'"
+        (click)="onModeClick('rational')">
+        Rational
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="layoutMode === 'irrational'"
+        (click)="onModeClick('irrational')">
+        Irrational
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="layoutMode === 'fraction'"
+        (click)="onModeClick('fraction')">
+        Fraction
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        [class.active]="layoutMode === 'fraction_surd'"
+        (click)="onModeClick('fraction_surd')">
+        Fraction surd
+      </button>
+    </div>
+  </div>
 
   <app-equation-builder
     title="Equation 1"
     [variable1]="variable1"
     [variable2]="variable2"
+    [layoutMode]="layoutMode"
     [initialEquation]="initialEquation1"
     (equationChange)="onEquation1Change($event)">
   </app-equation-builder>
@@ -18,12 +51,25 @@
     title="Equation 2"
     [variable1]="variable1"
     [variable2]="variable2"
+    [layoutMode]="layoutMode"
     [initialEquation]="initialEquation2"
     (equationChange)="onEquation2Change($event)">
   </app-equation-builder>
 
-  <button type="button" class="solve-btn" [disabled]="isSubmitting || !canSolve" (click)="saveSystem()">
+  <button type="button" class="solve-btn" [disabled]="isSubmitting || !canSolve || !validationResult.valid" (click)="saveSystem()">
     {{ isSubmitting ? 'Solving...' : 'Solve System' }}
   </button>
   <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+  <p class="error" *ngIf="!validationResult.valid && !errorMessage && validationResult.message">{{ validationResult.message }}</p>
+
+  <div class="modal-backdrop" *ngIf="showModeSwitchConfirm" (click)="onModeConfirmBackdropClick($event)">
+    <section class="modal mode-modal" role="dialog" aria-modal="true">
+      <h3>Change term layout</h3>
+      <p>All fields will be reset; original values will be replaced by 1. Do you want to proceed?</p>
+      <div class="actions">
+        <button type="button" (click)="cancelModeSwitch()">No</button>
+        <button type="button" class="primary" (click)="confirmModeSwitch()">Yes</button>
+      </div>
+    </section>
+  </div>
 </div>

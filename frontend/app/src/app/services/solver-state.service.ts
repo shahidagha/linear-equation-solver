@@ -14,6 +14,8 @@ export interface BuilderState {
 export type PanelMode = 'saved' | 'solution';
 export type VerbosityLevel = 'detailed' | 'medium' | 'short';
 
+export type LayoutMode = 'rational' | 'irrational' | 'fraction' | 'fraction_surd';
+
 @Injectable({ providedIn: 'root' })
 export class SolverStateService {
   private readonly defaultVariables: BuilderState['variables'] = { var1: 'x', var2: 'y' };
@@ -31,6 +33,7 @@ export class SolverStateService {
   private readonly panelModeSubject = new BehaviorSubject<PanelMode>('saved');
   private readonly canSolveSubject = new BehaviorSubject<boolean>(true);
   private readonly savedSystemsRefreshSubject = new Subject<void>();
+  private readonly layoutModeSubject = new BehaviorSubject<LayoutMode>('rational');
 
   readonly currentSystemId$ = this.currentSystemIdSubject.asObservable();
   readonly variables$ = this.variablesSubject.asObservable();
@@ -43,6 +46,7 @@ export class SolverStateService {
   readonly panelMode$ = this.panelModeSubject.asObservable();
   readonly canSolve$ = this.canSolveSubject.asObservable();
   readonly savedSystemsRefresh$ = this.savedSystemsRefreshSubject.asObservable();
+  readonly layoutMode$ = this.layoutModeSubject.asObservable();
 
   getCurrentSystemId(): number | null {
     return this.currentSystemIdSubject.value;
@@ -94,6 +98,7 @@ export class SolverStateService {
     this.verbositySubject.next('detailed');
     this.canSolveSubject.next(true);
     this.panelModeSubject.next('saved');
+    this.layoutModeSubject.next('fraction_surd');
   }
 
   setResponse(systemId: number | null, response: SolverResponse): void {
@@ -118,6 +123,14 @@ export class SolverStateService {
 
   setPanelMode(mode: PanelMode): void {
     this.panelModeSubject.next(mode);
+  }
+
+  getLayoutMode(): LayoutMode {
+    return this.layoutModeSubject.value;
+  }
+
+  setLayoutMode(mode: LayoutMode): void {
+    this.layoutModeSubject.next(mode);
   }
 
   resetSolutionState(): void {

@@ -32,3 +32,14 @@
   (cancel)="cancelDelete()"
   (confirmDelete)="confirmDelete()">
 </app-confirm-delete-modal>
+
+<div class="modal-backdrop" *ngIf="showEditModeSuggestModal" (click)="onEditModeSuggestBackdropClick($event)">
+  <section class="modal mode-suggest-modal" role="dialog" aria-modal="true">
+    <h3>View in simpler mode</h3>
+    <p>This system can be viewed in {{ suggestedModeLabel }}. Do you want to change mode to {{ suggestedModeLabel }}?</p>
+    <div class="actions">
+      <button type="button" (click)="cancelEditModeSuggest()">No</button>
+      <button type="button" class="primary" (click)="confirmEditModeSuggest()">Yes</button>
+    </div>
+  </section>
+</div>

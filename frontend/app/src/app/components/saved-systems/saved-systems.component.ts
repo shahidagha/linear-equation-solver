@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { EquationApiService } from '../../services/equation-api.service';
-import { SolverStateService } from '../../services/solver-state.service';
+import { SolverStateService, LayoutMode } from '../../services/solver-state.service';
 import { SolverResponse } from '../../models/solver-response.model';
 import { ConfirmDeleteModalComponent } from '../confirm-delete-modal/confirm-delete-modal.component';
 import katex from 'katex';
 import { equationToLatex } from '../../utils/latex-generator';
+import { Term } from '../../models/term.model';
 
 @Component({
   selector: 'app-saved-systems',
@@ -24,6 +25,8 @@ export class SavedSystemsComponent implements OnInit, OnDestroy, AfterViewChecke
   editingSystemId: number | null = null;
   pendingDeleteSystem: any | null = null;
   isDeleting = false;
+  showEditModeSuggestModal = false;
+  suggestedLayoutMode: LayoutMode | null = null;
 
   private readonly subscriptions: Subscription[] = [];
   @ViewChildren('systemEquation')
@@ -125,6 +128,62 @@ export class SavedSystemsComponent implements OnInit, OnDestroy, AfterViewChecke
       equation1: system.equation1,
       equation2: system.equation2
     });
+    const inferred = this.inferLayoutMode(system.equation1, system.equation2);
+    if (inferred !== 'fraction_surd') {
+      this.suggestedLayoutMode = inferred;
+      this.showEditModeSuggestModal = true;
+    } else {
+      this.suggestedLayoutMode = null;
+      this.showEditModeSuggestModal = false;
+    }
+  }
+
+  /** Infer smallest mode that can represent this system (Rule 6). */
+  private inferLayoutMode(eq1: any, eq2: any): LayoutMode {
+    const terms: Term[] = [];
+    for (const eq of [eq1, eq2]) {
+      if (eq?.term1) terms.push(eq.term1);
+      if (eq?.term2) terms.push(eq.term2);
+      if (eq?.constant) terms.push(eq.constant);
+    }
+    if (terms.length === 0) return 'fraction_surd';
+    const allRational = terms.every((t) => t.numRad === 1 && t.denCoeff === 1 && t.denRad === 1);
+    if (allRational) return 'rational';
+    const allIrrational = terms.every((t) => t.denCoeff === 1 && t.denRad === 1);
+    if (allIrrational) return 'irrational';
+    const allFraction = terms.every((t) => t.numRad === 1 && t.denRad === 1);
+    if (allFraction) return 'fraction';
+    return 'fraction_surd';
+  }
+
+  get suggestedModeLabel(): string {
+    if (!this.suggestedLayoutMode) return '';
+    const labels: Record<LayoutMode, string> = {
+      rational: 'Rational',
+      irrational: 'Irrational',
+      fraction: 'Fraction',
+      fraction_surd: 'Fraction surd'
+    };
+    return labels[this.suggestedLayoutMode];
+  }
+
+  cancelEditModeSuggest(): void {
+    this.showEditModeSuggestModal = false;
+    this.suggestedLayoutMode = null;
+  }
+
+  confirmEditModeSuggest(): void {
+    if (this.suggestedLayoutMode) {
+      this.state.setLayoutMode(this.suggestedLayoutMode);
+    }
+    this.showEditModeSuggestModal = false;
+    this.suggestedLayoutMode = null;
+  }
+
+  onEditModeSuggestBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.cancelEditModeSuggest();
+    }
   }
 
   openDeleteModal(system: any): void {

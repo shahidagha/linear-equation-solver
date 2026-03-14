@@ -107,13 +107,23 @@ Implemented:
 
 • elimination method
 • graphical method
-
-Planned:
-
 • substitution method
 • Cramer's rule
 
 New solvers must follow the same step-recording architecture.
+
+---
+
+DEGENERATE SYSTEMS (NO SOLUTION / INFINITELY MANY)
+
+Each solver decides degeneracy at the natural point in its own steps (no central pre-check).
+
+• Elimination: After combining equations, if the result is 0·var = K with K ≠ 0 → no solution; if 0 = 0 → infinitely many. Record the degenerate conclusion and return via backend.utils.degenerate (degenerate_none() or degenerate_infinite()).
+• Substitution: After substituting, if the one-variable equation simplifies to 0 = k (k ≠ 0) → no solution; if 0 = 0 → infinitely many. Record and return degenerate.
+• Cramer: If D = 0, compute D_x and D_y. If either ≠ 0 → inconsistent (no solution); if both 0 → dependent (infinitely many). Record and return degenerate.
+• Graphical: classify() returns "unique" | "none" | "infinite" from slopes/intercepts; used for graph caption and intersection display.
+
+API: Response includes solution_type ("unique" | "none" | "infinite"), message (when degenerate), and solution (null when degenerate). Graph intersection is null when degenerate. LaTeX final line shows the message instead of (var1, var2) = (x, y).
 
 ---
 
@@ -187,6 +197,15 @@ Prefer:
 If insufficient points exist:
 
 generate intercepts.
+
+---
+
+API AND CANONICAL CONTRACT
+
+• Preferred base path: /v1 (e.g. POST /v1/solve-system). Unversioned routes are deprecated.
+• Request: The API accepts variables as either [var1, var2] or { var1, var2 }; and each equation as either terms[] or term1/term2 plus constant. All are normalized before use.
+• Canonical storage and hashing: Equations are stored and hashed in a single canonical shape only: { "terms": [ term, term ], "constant": term }. Each term has: sign, numCoeff, numRad, denCoeff, denRad (normalized integers). Implemented in backend.utils.canonical_encoder (to_canonical_equation_dict, canonicalize_equation). Duplicate detection and DB storage use this form only.
+• Response: GET /v1/systems returns equations in frontend shape (term1, term2, constant) for edit; backend expands from canonical when needed (to_frontend_equation_dict). Response schemas: SolveResponseSchema, SaveResponseSchema in backend.schemas.equation_schema. Keep frontend SolverResponse in sync with SolveResponseSchema.
 
 ---
 

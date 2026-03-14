@@ -1,5 +1,6 @@
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.degenerate import degenerate_none, degenerate_infinite
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -24,6 +25,25 @@ class EliminationSolver:
     def vertical_elimination(self, eq1, eq2, result, op=None):
         """op: 'add' or 'subtract' so the layout shows + or − and underset only for subtract."""
         self.recorder.add_vertical(eq1, eq2, result, op=op)
+
+    def _record_and_return_degenerate(self, eq_line1, eq_line2, C, op):
+        """Record 0 = C or 0 = 0, add conclusion step, return degenerate_none() or degenerate_infinite()."""
+        C = sp.simplify(C)
+        if C == 0:
+            result_line = "0 = 0"
+        else:
+            result_line = f"0 = {sp.latex(C)}"
+        self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
+        self.recorder.add_equation(result_line)
+        if C == 0:
+            self.recorder.add_equation(
+                "\\text{We get } 0 = 0 \\text{; the equations are dependent — infinitely many solutions.}"
+            )
+            return degenerate_infinite()
+        self.recorder.add_equation(
+            "\\text{We get } 0 = k \\text{ with } k \\neq 0 \\text{ — the system has no solution (inconsistent).}"
+        )
+        return degenerate_none()
 
     @staticmethod
     def _term(coeff, var):
@@ -269,12 +289,12 @@ class EliminationSolver:
                     A = a2 - a1
                     C = c2 - c1
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(b1) != sp.sign(b2) else "subtract"
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             # Use _term so coefficient 1 is hidden in the result line.
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
@@ -321,12 +341,12 @@ class EliminationSolver:
                     B = b2 - b1
                     C = c2 - c1
 
-            if B == 0:
-                return
-
             op = "add" if sp.sign(a1) != sp.sign(a2) else "subtract"
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+            if B == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -554,10 +574,10 @@ class EliminationSolver:
                 C = C1 - C2
                 self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -629,10 +649,10 @@ class EliminationSolver:
                 C = C1 - C2
                 self.recorder.add_equation("\\text{Subtracting equations}")
 
-            if B == 0:
-                return
-
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
+            if B == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -698,10 +718,10 @@ class EliminationSolver:
                 C = C1 - C2
                 self.recorder.add_equation("\\text{Subtracting equations}")
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -782,10 +802,10 @@ class EliminationSolver:
                 C = C1 - C2
                 self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -815,10 +835,10 @@ class EliminationSolver:
                 C = C1 - C2
                 self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
-            if B == 0:
-                return
-
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
+            if B == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -862,12 +882,16 @@ class EliminationSolver:
                 "\\text{ and both equations have same middle sign we will implement six step method.}"
             )
 
+        result = None
         if strategy == "DIRECT":
-            self._solve_direct(a1, b1, c1, a2, b2, c2)
+            result = self._solve_direct(a1, b1, c1, a2, b2, c2)
         elif strategy == "CROSS":
-            self._solve_cross(a1, b1, c1, a2, b2, c2)
+            result = self._solve_cross(a1, b1, c1, a2, b2, c2)
         else:
-            self._solve_lcm(a1, b1, c1, a2, b2, c2)
+            result = self._solve_lcm(a1, b1, c1, a2, b2, c2)
+
+        if result is not None:
+            return result
 
         x = sp.Symbol(self.system.var1)
         y = sp.Symbol(self.system.var2)

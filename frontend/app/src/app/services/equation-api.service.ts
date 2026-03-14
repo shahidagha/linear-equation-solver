@@ -3,11 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SolverResponse } from '../models/solver-response.model';
 
+const API_BASE = 'http://127.0.0.1:8000';
+const API_V1 = `${API_BASE}/v1`;
+
 @Injectable({
   providedIn: 'root'
 })
 export class EquationApiService {
-  private apiUrl = 'http://127.0.0.1:8000';
+  private apiUrl = API_V1;
 
   constructor(private http: HttpClient) {}
 
@@ -22,6 +25,7 @@ export class EquationApiService {
   getSystems(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/systems`);
   }
+
   deleteSystem(systemId: number): Observable<{ status: string }> {
     return this.http.delete<{ status: string }>(`${this.apiUrl}/system/${systemId}`);
   }

@@ -2,9 +2,11 @@
 Cramer's rule for 2×2 linear systems.
 Step 1 (standardization) is done upstream.
 Steps 2–7: identify coefficients, compute D, D_x, D_y, apply rule, state answer.
+When D = 0: compute D_x and D_y to distinguish no solution (inconsistent) vs infinitely many (dependent).
 """
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.degenerate import degenerate_none, degenerate_infinite
 
 
 def _to_sympy(value):
@@ -64,7 +66,24 @@ class CramerSolver:
             self.recorder.add_equation(
                 "\\text{Since } D = 0 \\text{, the system has no unique solution.}"
             )
-            return "No unique solution"
+            # Compute D_x and D_y to distinguish inconsistent (no solution) vs dependent (infinitely many)
+            Dx = sp.simplify(c1 * b2 - c2 * b1)
+            Dy = sp.simplify(a1 * c2 - a2 * c1)
+            self.recorder.add_equation(
+                f"\\text{{Compute }} D_{{{self.var1}}} = c_1 b_2 - c_2 b_1 = {_expr_latex(Dx)} \\text{{, }} "
+                f"D_{{{self.var2}}} = a_1 c_2 - a_2 c_1 = {_expr_latex(Dy)}."
+            )
+            if Dx != 0 or Dy != 0:
+                self.recorder.add_equation(
+                    "\\text{Since } D = 0 \\text{ but at least one of } D_x, D_y \\text{ is not zero, "
+                    "the system is inconsistent and has no solution.}"
+                )
+                return degenerate_none()
+            self.recorder.add_equation(
+                "\\text{Since } D = D_x = D_y = 0 \\text{, the equations are dependent; "
+                "the system has infinitely many solutions (the same line).}"
+            )
+            return degenerate_infinite()
 
         # Step 4: D_x — strike out first column, replace with c1, c2 (mixed text+math)
         self.recorder.add_equation(

@@ -44,6 +44,9 @@
     <div class="solution-value" *ngIf="state.solution$ | async as solution">
       <span *ngFor="let entry of solution | keyvalue">{{ entry.key }} = {{ entry.value }}</span>
     </div>
+    <div class="solution-degenerate" *ngIf="(state.solutionType$ | async) === 'none' || (state.solutionType$ | async) === 'infinite'">
+      <span class="degenerate-message">{{ state.message$ | async }}</span>
+    </div>
 
     <app-solution-steps
       [methods]="methods"

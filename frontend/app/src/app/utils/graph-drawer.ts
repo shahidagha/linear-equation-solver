@@ -9,7 +9,7 @@ export interface GraphData {
   equation2_points: Array<[string | number, string | number]>;
   equation1_label?: string;
   equation2_label?: string;
-  intersection: Record<string, string | number>;
+  intersection: Record<string, string | number> | null;
 }
 
 const RANGE = 9; // graph axes and grid: -9 to 9 (point selection stays -8 to 8 in backend)
@@ -182,8 +182,9 @@ export function drawGraph(
 ): void {
   const p1 = (graphData.equation1_points || []).map((p) => [toNum(p[0]), toNum(p[1])] as [number, number]);
   const p2 = (graphData.equation2_points || []).map((p) => [toNum(p[0]), toNum(p[1])] as [number, number]);
-  const inter = graphData.intersection || {};
-  const vals = Object.values(inter).map(toNum);
+  const inter = graphData.intersection ?? {};
+  const hasIntersection = inter && typeof inter === 'object' && Object.keys(inter).length >= 2;
+  const vals = hasIntersection ? Object.values(inter).map(toNum) : [];
   const ix = vals[0] ?? 0;
   const iy = vals[1] ?? 0;
   const label1 = latexLabelToPlain(graphData.equation1_label || '');
@@ -293,14 +294,16 @@ export function drawGraph(
     ctx.stroke();
   });
 
-  // Intersection – black
-  const intPt = toCanvas(ix, iy, width, height);
-  ctx.beginPath();
-  ctx.arc(intPt.cx, intPt.cy, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.font = 'bold 15px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(`(${ix}, ${iy})`, intPt.cx + 12, intPt.cy - 5);
+  // Intersection – black (only when we have a unique intersection)
+  if (hasIntersection) {
+    const intPt = toCanvas(ix, iy, width, height);
+    ctx.beginPath();
+    ctx.arc(intPt.cx, intPt.cy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`(${ix}, ${iy})`, intPt.cx + 12, intPt.cy - 5);
+  }
 }

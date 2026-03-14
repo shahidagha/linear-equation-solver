@@ -2,13 +2,24 @@
 
 **Author:** Shahid Agha
 
-A symbolic mathematics engine and web application for solving **systems of two linear equations in two variables** with **step-by-step textbook-style solutions**. The system preserves exact expressions (integers, fractions, surds), produces LaTeX output, and supports multiple solving methods including a full graphical view with plot and point tables.
+A symbolic mathematics engine and web application for solving **systems of two linear equations in two variables** with **step-by-step textbook-style solutions**. The system preserves exact expressions (integers, fractions, surds), produces LaTeX output, and supports four solving methods—including a graphical view with plot and point tables.
 
 ---
 
 ## Overview
 
-The project is an educational algebra engine that behaves like a mathematics teacher: it explains each step, avoids decimal approximations, and outputs solutions in a form suitable for teaching and learning. The backend is a **Python/FastAPI** service with a **SymPy**-based math engine; the frontend is an **Angular** single-page application. Solutions (and per-method LaTeX) are persisted in a database and can be cached for duplicate systems.
+The project is an educational algebra engine that behaves like a mathematics teacher: it explains each step, avoids decimal approximations, and outputs solutions in a form suitable for teaching and learning. The backend is a **Python/FastAPI** service with a **SymPy**-based math engine; the frontend is an **Angular** single-page application. Solutions and per-method LaTeX are persisted in a database and cached for duplicate systems.
+
+---
+
+## Features
+
+- **Four solving methods:** Elimination, Substitution, Cramer's rule, Graphical
+- **Step-by-step LaTeX** at three verbosity levels (Detailed, Medium, Short) for all methods
+- **Term input modes:** Rational, Irrational (\(a\sqrt{b}\)), Fraction, Fraction surd (full term format)
+- **Graph:** Canvas plot with axes [-9, 9], grid, equation lines, intersection label; copy graph as PNG
+- **Copy:** Question (equations) and solution (LaTeX) to clipboard
+- **Saved systems:** List, load for edit/solve, delete; duplicate and variable-conflict handling
 
 ---
 
@@ -16,115 +27,116 @@ The project is an educational algebra engine that behaves like a mathematics tea
 
 ### Backend (Python / FastAPI)
 
-- **API**
-  - `POST /solve-system`: Accepts two equations (symbolic coefficients), normalizes them, runs all four solvers, renders LaTeX at three verbosity levels per method, persists system and method results, returns solution plus LaTeX and graph data.
-  - `GET /systems`: Returns saved equation systems with stored solution/method data.
-  - Save/delete and duplicate detection via equation and system hashes; cached results reused when the same system is solved again.
+- **API** (preferred base path: `/v1`)
+  - `POST /v1/save-system`: Save equation system (variables, two equations).
+  - `POST /v1/solve-system`: Normalize equations, run all four solvers, render LaTeX, persist results; returns solution, method LaTeX, and graph data. Supports update when `system_id` is provided.
+  - `GET /v1/systems`: Return saved equation systems with stored solution/method data.
+  - Delete and duplicate detection via equation and system hashes; cached results reused when the same system is solved again.
+  - **Canonical contract:** Request can send variables as `[var1, var2]` or `{ var1, var2 }`, and each equation as `terms[]` or `term1`/`term2`; storage and hashing use a single canonical shape `{ terms, constant }` only. See AGENTS.md.
 
-- **Normalization / standardization**
-  - Equations are standardized before solving: standard form, leading coefficient positive, denominators cleared (integer LCM), and coefficients reduced (GCD). Each standardization step is recorded for pedagogical LaTeX (given equations block, equation (1), equation (2)).
-  - Shared standardization steps are prepended to method-specific steps (e.g. elimination) for all methods.
+- **Normalization**
+  - `EquationStandardizer`: standard form, leading coefficient positive, denominators cleared (LCM), coefficients reduced (GCD). Standardization steps are recorded for LaTeX (given equations, equation (1), equation (2)) and shared across all methods.
 
-- **Solving methods (all four implemented and wired)**
+- **Solving methods (all four implemented with full step recording)**
   1. **Elimination**
-     - Strategy detection: **DIRECT** (same coefficient magnitude), **CROSS** (six-step method when |a₁|=|b₂|, |a₂|=|b₁| and middle signs match), **LCM** (scale to match coefficients).
-     - Variable chosen for elimination by minimizing multiplication steps (LCM for x vs y).
-     - Conditional multiplication (no step when multiplier is ±1).
-     - Full step recording: text, operations, scaled equations, vertical addition/subtraction, divide steps, reduced equations, substitution (with optional detailed explanation), and final answer.
-     - Verbosity: **Detailed**, **Medium**, **Short** (short drops selected steps from medium for elimination; standardization short shows only given block + final eq (1) and eq (2)).
+     - Strategy: **DIRECT** (same coefficient magnitude), **CROSS** (six-step when |a₁|=|b₂|, |a₂|=|b₁| and signs match), **LCM** (scale to match).
+     - Variable chosen to minimize multiplication steps; no step when multiplier is ±1.
+     - Steps: strategy text, operations, scaled equations, vertical add/subtract, divide steps, back-substitution, final answer. Rendered at Detailed / Medium / Short.
   2. **Substitution**
-     - Solves one equation for one variable, substitutes into the other, returns solution. LaTeX is rendered at three verbosity levels; no fine-grained step recorder like elimination.
-  3. **Cramer’s rule**
-     - Determinants D, Dx, Dy; returns numeric solution or “No unique solution” when D = 0. LaTeX at three verbosity levels; no step-by-step trace.
+     - Solve one equation for one variable, substitute into the other, solve, back-substitute with explicit intermediate steps (e.g. \(q = 7 - 15/3\), then \(q = 7 - 5\), then \(q = 2\)). Full step recording and LaTeX at three verbosity levels.
+  3. **Cramer's rule**
+     - Coefficients identified, D / Dₓ / Dᵧ with symbolic and numeric matrices, full computation and division steps, final solution. Step-by-step LaTeX at three verbosity levels.
   4. **Graphical**
-     - Generates up to three points per equation (integer coordinates preferred in **[-8, 8]**; intercepts used if needed). Point tables and solution line are rendered in LaTeX. Graph data (points, intersection, equation labels) is returned for the frontend plot.
+     - Up to three points per equation (integer coordinates preferred in [-8, 8]; intercepts if needed). Point tables and solution line in LaTeX; graph data (points, intersection, labels) for frontend plot.
 
 - **LaTeX rendering**
   - `SolutionLatexRenderer` builds `latex_detailed`, `latex_medium`, `latex_short` per method.
-  - Supports: given-equations block (raw user input), equation numbering, vertical elimination arrays (with optional operation label), substitution intro (short/detailed), divide-step messages, standardization pipeline, graphical tables and solution line. Fraction lines get extra vertical space; coefficient 1 is hidden in output; deduplication of consecutive identical steps.
+  - Mixed text/math style (`\text{...} \; math \; \text{...}`) for consistency. LaTeX-aware line wrapping: if line > 70 chars, break at safe points (`} \text{`, ` \; `) or after the last math block in the first 70 characters; for text-only lines, break at a space with `} \ & \text{`.
 
 - **Persistence**
-  - SQLAlchemy models: `EquationSystem` (equations, hashes, variables), `SolutionMethod` (per-method LaTeX and solution/graph JSON). PostgreSQL or SQLite (e.g. via `DATABASE_URL` or fallback). Schema ensured at startup for `solution_methods`.
+  - SQLAlchemy: `EquationSystem` (equations, hashes, variables), `SolutionMethod` (per-method LaTeX and solution/graph JSON). PostgreSQL or SQLite via `DATABASE_URL` or fallback. Schema ensured at startup for `solution_methods`.
 
 ### Frontend (Angular)
 
 - **Solver page**
-  - Header: “Linear Equation Solver” and “- Shahid Agha. Build two equations…” in one line.
-  - Two equation input panels (equation builder with terms, variable selector).
-  - Solution panel: method selector (Elimination, Substitution, Cramer’s rule, Graphical), verbosity (Detailed / Medium / Short), and rendered solution (KaTeX for LaTeX).
+  - Header: “Linear Equation Solver” and “- Shahid Agha. Build two equations…”.
+  - **Input panel:** Variable selector (two symbols); **Term Format** with four modes: Rational, Irrational, Fraction, Fraction surd. Equation builders with term inputs; live equation preview; Solve button.
+  - **Right panel:** Method selector (Elimination, Substitution, Cramer’s rule, Graphical), verbosity (Detailed / Medium / Short), rendered solution (KaTeX).
 
 - **Actions**
-  - **Copy Question:** Copies the two user-defined equations as raw LaTeX with ` ; ` between them.
-  - **Copy Solution:** Copies the LaTeX of the selected method and verbosity (already in an aligned environment) to the clipboard, with success/failure message.
-  - **Graphical method only:** “Copy graph as PNG” (draws graph offscreen, copies image to clipboard) and “View graph” (modal with canvas).
+  - **Copy Question:** Equations as LaTeX to clipboard.
+  - **Copy Solution:** LaTeX of selected method and verbosity to clipboard.
+  - **Graphical:** “Copy graph as PNG” and “View graph” (modal with canvas).
 
 - **Graph (canvas)**
-  - Axes from **-9 to 9** with arrows at both ends, labeled **X** and **Y**.
-  - Grid: black, full horizontal and vertical lines.
-  - Axis tick labels **-9 … 9**; single “0” at origin, offset 3 px from Y-axis; other labels offset 3 px (x: right, y: vertical).
-  - Both equation lines drawn in black, clipped to the [-9, 9] box so end arrows are visible; arrows at both ends of each line; equation labels (from backend) drawn along the line near the arrow, on opposite sides, bold 13 px, rotated with slope.
-  - Points on lines and intersection point in black; intersection labeled with coordinates (e.g. “(3, 2)”) in bold 15 px.
-  - All elements black (no other colors). Canvas 560×560; copy-PNG uses same size.
+  - Axes -9 to 9, arrows, grid; axis labels; equation lines with end arrows; equation labels along lines; intersection point and coordinate label; 560×560 canvas.
 
 - **Saved systems**
-  - List of saved systems; optional load/delete; duplicate and variable-conflict handling via API.
+  - List with load (edit/solve) and delete; edit opens in Fraction surd with optional mode suggestion (Rational / Irrational / Fraction) when applicable.
 
 ### Mathematical rules (enforced)
 
 - No decimal arithmetic; symbolic math only (SymPy).
-- Fractions and surds preserved; no conversion to floats for display.
+- Fractions and surds preserved; no float conversion for display.
 - Denominators removed during normalization; final answers rationalized.
 - Coefficient 1 hidden in output (e.g. `y` not `1y`).
 - Duplicate consecutive steps suppressed in rendering.
 
 ---
 
-## Architecture (high level)
+## Architecture
 
 ```
 linear-equation-solver/
 ├── backend/
 │   ├── api_main.py              # FastAPI app, CORS, DB init
 │   ├── database.py              # Engine, Base, session
+│   ├── runserver.py              # Uvicorn entry
 │   ├── routes/
-│   │   └── equation_routes.py   # POST /solve-system, GET /systems, save/delete
+│   │   └── equation_routes.py   # save-system, solve-system, systems, delete
 │   ├── services/
-│   │   ├── equation_service.py  # Persist systems, list, delete, cache lookup
-│   │   └── solver_service.py    # Build system, normalize, run solvers, render LaTeX, upsert methods
+│   │   ├── equation_service.py   # Persist systems, list, delete, cache lookup
+│   │   └── solver_service.py    # Build system, standardize, run solvers, render LaTeX, upsert methods
 │   ├── math_engine/
-│   │   ├── fraction_surd.py     # Symbolic number representation
+│   │   ├── fraction_surd.py     # Symbolic number (rational, surd, fraction)
 │   │   ├── equation.py          # Equation ax + by = c
 │   │   └── system.py            # EquationSystem (eq1, eq2)
 │   ├── normalization/
 │   │   └── equation_standardizer.py  # Standard form, leading positive, clear denominators, reduce
 │   ├── solver/
-│   │   ├── elimination_solver.py     # DIRECT/CROSS/LCM, step recorder
+│   │   ├── elimination_solver.py
 │   │   ├── substitution_solver.py
 │   │   ├── cramer_solver.py
-│   │   └── graphical_solver.py        # Point generation [-8, 8]
+│   │   └── graphical_solver.py
 │   ├── latex/
 │   │   ├── equation_formatter.py
-│   │   └── solution_renderer.py       # Verbosity tiers, standardization, graphical tables
+│   │   ├── math_to_latex.py
+│   │   └── solution_renderer.py  # Verbosity tiers, standardization, wrap, graphical tables
+│   ├── graph/
+│   │   └── graph_plotter.py
 │   ├── utils/
 │   │   ├── step_recorder.py
 │   │   ├── step.py
-│   │   └── equation_numbering.py
+│   │   ├── equation_numbering.py
+│   │   ├── canonical_encoder.py
+│   │   └── hash_utils.py
 │   ├── models/
-│   │   ├── equation_models.py
-│   │   └── solution_methods.py
-│   └── schemas/
-│       └── equation_schema.py
+│   ├── schemas/
+│   └── init_db.py
 ├── frontend/app/
 │   └── src/app/
 │       ├── pages/solver-page/
-│       ├── components/          # input-panel, solution-panel, equation-builder, method-selector,
-│       │                       # solution-steps, view-graph-modal, saved-systems, etc.
+│       ├── components/          # input-panel, right-panel, solution-panel, equation-builder,
+│       │                       # term-input, variable-selector, equation-preview, method-selector,
+│       │                       # solution-steps, solution-viewer, view-graph-modal, saved-systems,
+│       │                       # confirm-delete-modal, position-controls
 │       ├── services/            # equation-api, solver-state
-│       ├── utils/              # latex-generator, graph-drawer
-│       └── models/
+│       ├── models/
+│       └── utils/
 ├── docs/
-├── runserver.py                # uvicorn 127.0.0.1:8000
+├── runserver.py                 # uvicorn 127.0.0.1:8000
 ├── requirements.txt
+├── AGENTS.md                    # AI agent instructions
 └── README.md
 ```
 
@@ -133,7 +145,7 @@ linear-equation-solver/
 ## Technology stack
 
 - **Backend:** Python 3, FastAPI, SymPy, SQLAlchemy (PostgreSQL or SQLite), Uvicorn.
-- **Frontend:** Angular, KaTeX for LaTeX, Canvas API for graph.
+- **Frontend:** Angular 19, KaTeX, Canvas API for graph.
 - **Dev:** Node/npm for Angular; optional `.env` for `DATABASE_URL`.
 
 ---
@@ -141,46 +153,42 @@ linear-equation-solver/
 ## How to run
 
 1. **Backend**
-   - From project root: `pip install -r requirements.txt` (and any FastAPI/SQLAlchemy/uvicorn deps if not in file).
-   - Set `DATABASE_URL` in `.env` if using PostgreSQL; otherwise backend may fall back to SQLite.
+   - From project root: `pip install -r requirements.txt`.
+   - Set `DATABASE_URL` in `.env` for PostgreSQL; otherwise SQLite is used.
+   - **Apply database schema:** run `python -m alembic upgrade head` (or `python -m backend.init_db`). Do this once for a fresh install, and after pulling new migrations.
    - Run: `python runserver.py` (API at `http://127.0.0.1:8000`).
 
 2. **Frontend**
-   - `cd frontend/app` then `npm install` and `ng serve` (or equivalent). Open the URL shown (e.g. `http://localhost:4200`).
+   - `cd frontend/app`, then `npm install` and `ng serve` (or `npm start`). Open the URL shown (e.g. `http://localhost:4200`).
 
-3. Use the UI to enter two equations, click Solve, choose method and verbosity, and use Copy Question / Copy Solution / View graph / Copy graph as PNG as needed.
+3. Use the UI to enter two equations (choose variable names and term format), click Solve, select method and verbosity, and use Copy Question / Copy Solution / View graph / Copy graph as PNG as needed.
 
 ---
 
-## Future implementations
+## Database migrations
 
-- **Step-by-step for Substitution and Cramer**
-  - Record and serialize substitution steps (isolate variable, substitute, solve, back-substitute) and Cramer steps (determinants, formulas) so they can be rendered in the same way as elimination (with verbosity levels).
+Schema is managed by **Alembic**. No tables are created at application startup.
 
-- **Tests**
-  - Backend: unit tests for normalization, each solver, and LaTeX renderer; integration tests for `/solve-system` and persistence.
-  - Frontend: unit tests for services and components; e2e for solve flow and copy actions.
+- **New install or after pull:** from project root run `python -m alembic upgrade head`.
+- **Existing DB that already has the tables** (e.g. you used the app before Alembic, or you see `DuplicateTable: relation "equation_systems" already exists`): run **`python -m alembic stamp head`** once. That marks the DB as up-to-date without running the initial migration; then `upgrade head` is safe to use for future migrations.
+- **Add a new migration:** `python -m alembic revision --autogenerate -m "description"`, then review and run `python -m alembic upgrade head`.
 
-- **Database**
-  - Formal migrations (e.g. Alembic) instead of runtime schema changes; versioned schema for `equation_systems` and `solution_methods`.
+---
 
-- **API and contracts**
-  - Strict request/response schemas and optional API versioning; shared types or OpenAPI-driven frontend types to avoid drift.
+## Future work
 
-- **Production hardening**
-  - Authentication and authorization for save/delete if needed; rate limiting; structured logging and observability; restrict CORS to known origins.
+- Automated tests (backend: normalization, solvers, renderer; frontend: components and e2e).
+- Stricter API contracts and optional versioning; shared types to avoid frontend/backend drift.
+- Production hardening: auth, rate limiting, structured logging, restrict CORS.
+- Graph: configurable range, SVG export, accessibility.
 
-- **Graph**
-  - Optional: configurable range or zoom; export graph as SVG; accessibility (e.g. text alternative for the plot).
-
-- **Documentation**
-  - Keep `AGENTS.md` and `docs/` in sync with behavior (e.g. standardization steps, verbosity rules, graph behavior). Update this README when new methods or features are added.
+See **IMPROVEMENT_SUGGESTIONS.md** for a detailed list of improvements and drawbacks to address.
 
 ---
 
 ## Project goal
 
-The long-term goal is a **symbolic algebra engine for educational mathematics** that produces complete, step-by-step solutions similar to textbooks, with exact arithmetic, multiple methods, and a clear, reproducible presentation (including LaTeX and graphs).
+The long-term goal is a **symbolic algebra engine for educational mathematics** that produces complete, step-by-step solutions similar to textbooks, with exact arithmetic, multiple methods, and clear, reproducible presentation (LaTeX and graphs).
 
 ---
 

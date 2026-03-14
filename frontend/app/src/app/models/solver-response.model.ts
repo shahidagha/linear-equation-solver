@@ -12,9 +12,16 @@ export interface MethodLatexPayload {
   latex_short: string;
 }
 
+export type SolutionType = 'unique' | 'none' | 'infinite';
+
 export interface SolverResponse {
   system_id?: number;
-  solution: Record<string, string | number>;
+  /** Unique solution: { var1: value, var2: value }. Degenerate: null. */
+  solution: Record<string, string | number> | null;
+  /** Present when degenerate (no solution or infinitely many). */
+  solution_type?: SolutionType;
+  /** Human-readable conclusion when solution_type is 'none' or 'infinite'. */
+  message?: string | null;
   methods: {
     elimination_latex?: MethodLatexPayload;
     substitution_latex?: MethodLatexPayload;
@@ -27,6 +34,8 @@ export interface SolverResponse {
     equation2_points: Array<[string | number, string | number]>;
     equation1_label?: string;
     equation2_label?: string;
-    intersection: Record<string, string | number>;
+    intersection: Record<string, string | number> | null;
+    solution_type?: SolutionType;
+    message?: string | null;
   };
 }

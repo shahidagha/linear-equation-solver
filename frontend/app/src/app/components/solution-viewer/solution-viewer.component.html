@@ -7,9 +7,12 @@
   <section class="panel-card">
     <h3>Solution</h3>
     <div *ngIf="response as resp; else emptySolution">
-      <div class="solution-line" *ngFor="let entry of resp.solution | keyvalue: keepOriginalOrder">
-        <strong>{{ entry.key }}</strong> = {{ entry.value }}
+      <div class="solution-line" *ngIf="resp.solution">
+        <div *ngFor="let entry of resp.solution | keyvalue: keepOriginalOrder">
+          <strong>{{ entry.key }}</strong> = {{ entry.value }}
+        </div>
       </div>
+      <p *ngIf="!resp.solution && resp.message" class="degenerate-message">{{ resp.message }}</p>
     </div>
     <ng-template #emptySolution>
       <p class="hint">No solution yet. Build equations and click Solve System.</p>

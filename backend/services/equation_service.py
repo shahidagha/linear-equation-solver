@@ -2,7 +2,12 @@ from sqlalchemy.orm import Session
 from backend.models.equation_models import EquationSystem
 from backend.models.solution_methods import SolutionMethod
 from backend.utils.hash_utils import generate_equation_hash, generate_system_hash
-from backend.utils.canonical_encoder import canonicalize_equation
+from backend.utils.canonical_encoder import (
+    canonicalize_equation,
+    to_canonical_equation_dict,
+    to_frontend_equation_dict,
+)
+from backend.utils.degenerate import is_degenerate
 
 
 REQUIRED_SOLUTION_METHODS = {"elimination", "substitution", "cramer", "graphical"}
@@ -23,15 +28,14 @@ def _system_signature(variables: list[str], eq1: dict, eq2: dict) -> tuple:
 
 
 def _prepare_payload(payload: dict) -> dict:
+    """Normalize payload and produce canonical equation dicts for storage and hashing."""
     var1 = _normalize_variable_name(payload["variables"][0])
     var2 = _normalize_variable_name(payload["variables"][1])
     variables = [var1, var2]
 
-    eq1 = payload["equation1"]
-    eq2 = payload["equation2"]
-
-    eq1_canonical = canonicalize_equation(eq1)
-    eq2_canonical = canonicalize_equation(eq2)
+    # Single canonical shape for storage and hashing: { terms, constant } only
+    eq1 = to_canonical_equation_dict(payload["equation1"])
+    eq2 = to_canonical_equation_dict(payload["equation2"])
 
     equation_hash = generate_equation_hash(eq1, eq2)
     system_hash = generate_system_hash(var1, var2, eq1, eq2)
@@ -42,8 +46,8 @@ def _prepare_payload(payload: dict) -> dict:
         "variables": variables,
         "eq1": eq1,
         "eq2": eq2,
-        "eq1_canonical": eq1_canonical,
-        "eq2_canonical": eq2_canonical,
+        "eq1_canonical": canonicalize_equation(eq1),
+        "eq2_canonical": canonicalize_equation(eq2),
         "equation_hash": equation_hash,
         "system_hash": system_hash,
     }
@@ -219,8 +223,19 @@ def get_saved_systems(db: Session):
 
         stored_response = None
         if elimination and graphical:
+            sol_json = elimination.solution_json or {}
+            if is_degenerate(sol_json):
+                solution_payload = None
+                solution_type = sol_json.get("solution_type")
+                message = sol_json.get("message")
+            else:
+                solution_payload = sol_json
+                solution_type = "unique"
+                message = None
             stored_response = {
-                "solution": elimination.solution_json,
+                "solution": solution_payload,
+                "solution_type": solution_type,
+                "message": message,
                 "methods": {
                     "elimination_latex": {
                         "latex_detailed": elimination.latex_detailed,
@@ -246,12 +261,20 @@ def get_saved_systems(db: Session):
                 "graph": graphical.graph_data,
             }
 
+        # Return equation in frontend shape (term1/term2) for edit; stored shape is canonical (terms + constant)
+        eq1 = s.equation1 or {}
+        eq2 = s.equation2 or {}
+        if "terms" in eq1 and "term1" not in eq1:
+            eq1 = to_frontend_equation_dict(eq1)
+        if "terms" in eq2 and "term2" not in eq2:
+            eq2 = to_frontend_equation_dict(eq2)
+
         result.append(
             {
                 "id": s.id,
                 "variables": s.variables,
-                "equation1": s.equation1,
-                "equation2": s.equation2,
+                "equation1": eq1,
+                "equation2": eq2,
                 "has_solution": stored_response is not None,
                 "stored_response": stored_response,
             }

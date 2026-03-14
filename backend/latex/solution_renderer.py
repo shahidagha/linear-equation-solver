@@ -396,6 +396,9 @@ class SolutionLatexRenderer:
         return a, b, c
 
     def _final_answer(self, solution: Dict[str, Any]) -> str:
+        if solution.get("solution_type"):
+            msg = solution.get("message", "")
+            return f"\\therefore \\text{{{msg}}}"
         a = solution.get(self.var1, "")
         b = solution.get(self.var2, "")
         a_latex = sp.latex(sp.simplify(sp.S(str(a)))) if a != "" and a is not None else ""

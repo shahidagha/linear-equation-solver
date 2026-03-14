@@ -5,6 +5,7 @@ Steps 1 (standardization) are done upstream. Steps 2-6 and verification (detaile
 """
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.degenerate import degenerate_none, degenerate_infinite
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -379,6 +380,23 @@ class SubstitutionSolver:
         raw_subst_latex = f"{sp.latex(raw_lhs)} = {sp.latex(c_t)}"
         substituted = sp.Eq(sp.simplify(raw_substituted.lhs), sp.simplify(raw_substituted.rhs))
         self._record_substitute_into(target_eq_num, solve_for_var, expr, raw_subst_latex)
+
+        # Detect degenerate: after substitution we get one equation in one variable; if it simplifies to 0 = k (k != 0) or 0 = 0
+        diff = sp.simplify(substituted.lhs - substituted.rhs)
+        if not diff.has(other_sym):
+            # No variable left: constant. 0 = 0 -> infinite; 0 = k (k != 0) -> no solution
+            if sp.simplify(diff) == 0:
+                self.recorder.add_equation(
+                    f"\\text{{Simplifying: }} {sp.latex(substituted.lhs)} = {sp.latex(substituted.rhs)} "
+                    "\\text{ gives } 0 = 0 \\text{ (always true). So the two equations represent the same line; "
+                    "the system has infinitely many solutions.}"
+                )
+                return degenerate_infinite()
+            self.recorder.add_equation(
+                f"\\text{{Simplifying: }} {sp.latex(substituted.lhs)} = {sp.latex(substituted.rhs)} "
+                f"\\text{{ gives }} 0 = {sp.latex(diff)} \\text{{ (a contradiction). So the system has no solution.}}"
+            )
+            return degenerate_none()
 
         # Step 4: solve for other_sym with full intermediate steps (expand, multiply by denom, arrange, simplify, sign, divide)
         calc_steps = self._expand_solve_steps_from_raw(raw_lhs, c_t, other_sym, a_t, b_t, other_sym_t, expr)

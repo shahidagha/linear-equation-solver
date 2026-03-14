@@ -1,7 +1,42 @@
+import sympy as sp
+
+
 class GraphicalSolver:
+    """Generate points for plotting; can classify system as unique, no solution, or infinitely many."""
+
     def __init__(self, system):
         self.eq1 = system.eq1
         self.eq2 = system.eq2
+        self._system = system
+
+    def classify(self):
+        """
+        Classify the system from the two lines: unique intersection, parallel (no solution), or same line (infinite).
+        Returns "unique" | "none" | "infinite".
+        """
+        a1 = self.eq1.a.to_sympy()
+        b1 = self.eq1.b.to_sympy()
+        c1 = self.eq1.c.to_sympy()
+        a2 = self.eq2.a.to_sympy()
+        b2 = self.eq2.b.to_sympy()
+        c2 = self.eq2.c.to_sympy()
+        # Same line: (a1,b1,c1) proportional to (a2,b2,c2). Parallel: same slope -a/b, different line.
+        if b1 == 0 and b2 == 0:
+            if a1 == 0 and a2 == 0:
+                return "infinite" if sp.simplify(c1 - c2) == 0 else "none"
+            if a2 == 0:
+                return "none"
+            if sp.simplify(a1 * c2 - a2 * c1) == 0:
+                return "infinite"
+            return "none"
+        if b1 == 0 or b2 == 0:
+            return "unique"
+        D = sp.simplify(a1 * b2 - a2 * b1)
+        if D != 0:
+            return "unique"
+        if sp.simplify(a1 * c2 - a2 * c1) == 0 and sp.simplify(b1 * c2 - b2 * c1) == 0:
+            return "infinite"
+        return "none"
 
     def generate_points(self, equation):
         a = equation.a.to_sympy()

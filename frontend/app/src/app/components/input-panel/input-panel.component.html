@@ -6,7 +6,9 @@
       (variable1Change)="onVariable1Change($event)"
       (variable2Change)="onVariable2Change($event)">
     </app-variable-selector>
-    <div class="mode-buttons">
+    <section class="term-format-card">
+      <span class="mode-buttons-label">Term format</span>
+      <div class="mode-buttons">
       <button
         type="button"
         class="mode-btn"
@@ -35,7 +37,8 @@
         (click)="onModeClick('fraction_surd')">
         Fraction surd
       </button>
-    </div>
+      </div>
+    </section>
   </div>
 
   <app-equation-builder

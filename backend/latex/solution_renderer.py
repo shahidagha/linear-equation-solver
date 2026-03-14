@@ -423,20 +423,20 @@ class SolutionLatexRenderer:
         return value.replace("\\", "\\\\").replace("_", "\\_")
 
     def _wrap_latex(self, line: str, max_len: int = 70) -> List[str]:
-        """Wrap long LaTeX lines at natural break points (after \\text{...}, \\;, or space) so each line is at most max_len chars."""
+        """Wrap long LaTeX lines only at safe break points so we never split inside \\text{...}."""
         if not line or len(line) <= max_len:
             return [line] if line else []
-        # Prefer breaking after "} " (before \\text{), " \\; ", or "} " so next line can start cleanly
+        # Only break after "} \\text{" or " \\; " so both sides stay valid (no break inside \text{...})
         search_region = line[: max_len + 1]
         break_after = -1
-        for sep, skip in (("} \\text{", 2), (" \\; ", 4), ("} ", 2)):
+        for sep, skip in (("} \\text{", 2), (" \\; ", 4)):
             idx = search_region.rfind(sep)
             if idx != -1:
-                break_after = idx + skip  # break after "} " or " \\; " so rest keeps "\\text{" or next segment
+                break_after = idx + skip
                 break
         if break_after <= 0:
-            idx = search_region.rfind(" ")
-            break_after = idx + 1 if idx != -1 else max_len
+            # Do not break at arbitrary space — can split inside \text{...} and break LaTeX
+            return [line]
         first = line[:break_after].rstrip()
         rest = line[break_after:].lstrip()
         if not first:

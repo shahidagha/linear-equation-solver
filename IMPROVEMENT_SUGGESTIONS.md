@@ -6,21 +6,23 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 
 ## 1. Testing
 
-### Drawbacks
+**Status: Partially addressed.** Backend test suite added; frontend e2e and CI remain optional.
 
-- **Sparse automated tests:** Backend has no visible test suite for normalization, solvers, or LaTeX rendering. Frontend has some `.spec.ts` files but coverage is unclear.
+### Drawbacks (original)
+
+- **Sparse automated tests:** Backend had no visible test suite for normalization, solvers, or LaTeX rendering. Frontend has some `.spec.ts` files but coverage is unclear.
 - **Regression risk:** Changes to step recording, LaTeX wrapping, or solver logic can break output without being caught.
-- **No integration tests:** The full flow (POST payload → DB → LaTeX response) is not asserted end-to-end.
+- **No integration tests:** The full flow (POST payload → DB → LaTeX response) was not asserted end-to-end.
 
-### Suggestions
+### Suggestions (implemented)
 
-- **Backend:** Add unit tests for:
-  - `EquationStandardizer` (standard form, LCM/GCD, sign normalization).
-  - Each solver (elimination, substitution, Cramer, graphical) with fixed inputs and expected solution + step structure.
-  - `SolutionLatexRenderer` (wrap logic, verbosity levels, no invalid LaTeX fragments).
-- **Backend:** Add integration tests for `POST /solve-system` and `GET /systems` (e.g. with a test DB or SQLite in-memory).
-- **Frontend:** Run and extend component/service tests; add e2e tests for the solve flow, method/verbosity switch, and copy actions.
-- **CI:** Run backend and frontend tests on every commit/PR.
+- **Backend unit tests** (run with `PYTHONPATH=. python -m pytest tests/ -v`; install deps: `pip install -r requirements-dev.txt`):
+  - `tests/test_equation_standardizer.py`: EquationStandardizer (standard form, steps, leading positive, solution preserved).
+  - `tests/test_solvers.py`: Elimination, substitution, Cramer (unique solution and degenerate cases); GraphicalSolver (generate_tables, classify).
+  - `tests/test_solution_renderer.py`: SolutionLatexRenderer (three verbosity levels, _final_answer, _wrap_latex, _given_equations_block, _aligned).
+  - `tests/test_request_validator.py`: Validation Rules 1–4 (valid payload, missing equation, variables, terms, legacy term1/term2).
+- **Integration tests:** `tests/test_integration.py` uses FastAPI TestClient; asserts 422 for invalid payloads (missing equation2, duplicate variables, invalid save payload).
+- **Not yet done:** Full POST → DB → solve → LaTeX response e2e; frontend e2e; CI pipeline to run tests on commit/PR.
 
 ---
 

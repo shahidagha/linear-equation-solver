@@ -175,9 +175,20 @@ Schema is managed by **Alembic**. No tables are created at application startup.
 
 ---
 
+## Running tests
+
+Backend tests live in **`tests/`**. Install dev dependencies and run:
+
+- `pip install -r requirements-dev.txt`
+- From project root: `PYTHONPATH=. python -m pytest tests/ -v`
+
+Tests cover: EquationStandardizer, all four solvers (elimination, substitution, Cramer, graphical), SolutionLatexRenderer, request validation (Rules 1–4), and API 422 responses for invalid payloads. See **IMPROVEMENT_SUGGESTIONS.md** §1 for details.
+
+---
+
 ## Future work
 
-- Automated tests (backend: normalization, solvers, renderer; frontend: components and e2e).
+- Extend automated tests (frontend e2e, CI on commit/PR); backend unit and integration tests are in place.
 - Stricter API contracts and optional versioning; shared types to avoid frontend/backend drift.
 - Production hardening: auth, rate limiting, structured logging, restrict CORS.
 - Graph: configurable range, SVG export, accessibility.

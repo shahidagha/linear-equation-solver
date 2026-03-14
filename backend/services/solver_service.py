@@ -367,8 +367,9 @@ def solve_system(db: Session, system_id: int, payload: dict):
     substitution_solution = _normalize_method_solution(substitution_raw, var1, var2)
     substitution_method_steps = _serialize_steps(substitution_solver.recorder.get_steps())
 
-    cramer_solver = CramerSolver()
-    cramer_raw = _normalize_cramer_solution(cramer_solver.solve(standardized_system), var1, var2)
+    cramer_solver = CramerSolver(standardized_system)
+    cramer_raw = cramer_solver.solve()
+    cramer_method_steps = _serialize_steps(cramer_solver.recorder.get_steps())
     cramer_solution = _normalize_method_solution(cramer_raw, var1, var2)
 
     graphical_solver = GraphicalSolver(standardized_system)
@@ -416,6 +417,8 @@ def solve_system(db: Session, system_id: int, payload: dict):
             var1: to_python_number(cramer_solution[var1]),
             var2: to_python_number(cramer_solution[var2]),
         },
+        steps=cramer_method_steps,
+        standardization_steps=standardization_steps,
     )
     graphical_latex = renderer.render(
         method_name="graphical",

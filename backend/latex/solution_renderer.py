@@ -46,7 +46,7 @@ class SolutionLatexRenderer:
         elif method_name == "substitution":
             self._append_substitution(equations, solution, steps, detailed_lines, medium_lines, short_lines)
         elif method_name == "cramer":
-            self._append_cramer(equations, solution, detailed_lines, medium_lines, short_lines)
+            self._append_cramer(equations, solution, steps or [], detailed_lines, medium_lines, short_lines)
         elif method_name == "graphical":
             self._append_graphical(graph_data or {}, equations, detailed_lines, medium_lines, short_lines)
 
@@ -234,31 +234,27 @@ class SolutionLatexRenderer:
                     for ln in self._wrap_text(content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
 
-    def _append_cramer(self, equations, solution, detailed, medium, short):
-        # Equations are expected in form ax + by = c
-        coeffs = [self._parse_coeffs(eq) for eq in equations]
-        if any(c is None for c in coeffs):
+    def _append_cramer(self, equations, solution, steps, detailed, medium, short):
+        if not steps:
             detailed.append("\\text{Cramer's rule applied.}")
             medium.append("\\text{Cramer's rule applied.}")
             short.append("\\text{Cramer.}")
             return
-
-        (a1, b1, c1), (a2, b2, c2) = coeffs
-
-        d = f"\\begin{{vmatrix}} {a1} & {b1} \\\\ {a2} & {b2} \\end{{vmatrix}}"
-        dx = f"\\begin{{vmatrix}} {c1} & {b1} \\\\ {c2} & {b2} \\end{{vmatrix}}"
-        dy = f"\\begin{{vmatrix}} {a1} & {c1} \\\\ {a2} & {c2} \\end{{vmatrix}}"
-
-        detailed.extend([
-            "\\text{Compute determinants:}",
-            f"D = {d}",
-            f"D_x = {dx}",
-            f"D_y = {dy}",
-            f"{self.var1} = \\frac{{D_x}}{{D}}",
-            f"{self.var2} = \\frac{{D_y}}{{D}}",
-        ])
-        medium.extend([f"D = {d}", f"D_x = {dx}", f"D_y = {dy}"])
-        short.append("\\text{Cramer's determinants evaluated.}")
+        for step in steps:
+            s_type = step.get("type")
+            content = step.get("content", "")
+            if s_type == "equation":
+                if content:
+                    detailed.append(content)
+                    medium.append(content)
+                    short.append(content)
+            elif s_type == "text":
+                if content:
+                    for ln in self._wrap_text(content):
+                        line = f"\\text{{{self._escape_text(ln)}}}"
+                        detailed.append(line)
+                        medium.append(line)
+                        short.append(line)
 
     def _format_coord(self, value: Any) -> str:
         """Format a numeric coordinate for LaTeX (integer or fraction)."""

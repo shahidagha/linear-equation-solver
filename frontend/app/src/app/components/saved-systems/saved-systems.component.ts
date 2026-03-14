@@ -82,7 +82,8 @@ export class SavedSystemsComponent implements OnInit, OnDestroy, AfterViewChecke
   }
 
   buildSystemText(system: any): string {
-    return `${this.buildEquationLatex(system.equation1, system.variables)} ; ${this.buildEquationLatex(system.equation2, system.variables)}`;
+    const vars = this.normalizeVariables(system.variables);
+    return `${this.buildEquationLatex(system.equation1, vars)} ; ${this.buildEquationLatex(system.equation2, vars)}`;
   }
 
   buildEquationLatex(eq: any, vars: any): string {
@@ -93,12 +94,23 @@ export class SavedSystemsComponent implements OnInit, OnDestroy, AfterViewChecke
     return system.id;
   }
 
+  /** API returns variables as array [var1, var2]; state expects { var1, var2 }. */
+  private normalizeVariables(variables: any): { var1: string; var2: string } {
+    if (Array.isArray(variables)) {
+      return { var1: String(variables[0] ?? 'x'), var2: String(variables[1] ?? 'y') };
+    }
+    if (variables && typeof variables === 'object' && 'var1' in variables && 'var2' in variables) {
+      return { var1: String(variables.var1 ?? 'x'), var2: String(variables.var2 ?? 'y') };
+    }
+    return { var1: 'x', var2: 'y' };
+  }
+
   showSolution(system: any): void {
     if (!system.stored_response) return;
 
     this.state.loadSystemForSolution({
       id: system.id,
-      variables: system.variables,
+      variables: this.normalizeVariables(system.variables),
       equation1: system.equation1,
       equation2: system.equation2,
       stored_response: system.stored_response as SolverResponse
@@ -109,7 +121,7 @@ export class SavedSystemsComponent implements OnInit, OnDestroy, AfterViewChecke
     this.editingSystemId = system.id;
     this.state.loadSystemForEdit({
       id: system.id,
-      variables: system.variables,
+      variables: this.normalizeVariables(system.variables),
       equation1: system.equation1,
       equation2: system.equation2
     });

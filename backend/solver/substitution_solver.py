@@ -181,16 +181,55 @@ class SubstitutionSolver:
                 self.recorder.add(text)
             self.recorder.add_equation(eq_latex)
 
+    def _back_substitute_intermediate_steps(self, sym_var, expr, other_sym, value, result_value):
+        """
+        Build intermediate equation steps after substitution: e.g. q = 7 - 15/3, then q = 7 - 5, then q = 2.
+        Returns a list of equation_latex strings for each step to show.
+        """
+        steps = []
+        const = sp.simplify(expr.subs(other_sym, 0))
+        var_term = sp.simplify(expr - const)
+        if not var_term.has(other_sym):
+            return steps
+        coeff = var_term.coeff(other_sym)
+        try:
+            num, den = coeff.as_numer_denom()
+            num, den = int(num), int(den)
+            val_int = int(value)
+        except (TypeError, ValueError, AttributeError):
+            return steps
+        numer_subst = num * val_int
+        # Step 1: sym_var = const + numer_subst/den (unsimplified), e.g. q = 7 - 15/3
+        step_frac = const + sp.Mul(numer_subst, sp.Pow(den, -1, evaluate=False), evaluate=False)
+        steps.append(f"{sp.latex(sym_var)} = {sp.latex(step_frac)}")
+        # Step 2: simplify the fraction only, e.g. q = 7 - 5 (display as const - positive when frac_value < 0)
+        frac_value = sp.Rational(numer_subst, den)
+        if frac_value < 0:
+            step_mid_latex = f"{sp.latex(sym_var)} = {sp.latex(const)} - {sp.latex(-frac_value)}"
+        else:
+            step_mid_latex = f"{sp.latex(sym_var)} = {sp.latex(const)} + {sp.latex(frac_value)}"
+        steps.append(step_mid_latex)
+        # Step 3: final value, e.g. q = 2
+        steps.append(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
+        return steps
+
     def _record_back_substitute(self, other_var, value, expr, sym_var, other_sym, result_value):
         """Record Step 5: Substituting other_var = value into sym_var = expr: and calculation steps."""
         sym_var_name = self.var1 if sym_var == self._x else self.var2
-        self.recorder.add(f"Substituting {other_var} = {self._expr_latex(value)} into {sym_var_name} = {self._expr_latex(expr)}:")
+        value_plain = self._expr_to_plain(value)
+        expr_plain = self._expr_to_plain(expr)
+        self.recorder.add(f"Substituting {other_var} = {value_plain} into {sym_var_name} = {expr_plain}:")
         expr_latex = sp.latex(expr)
         val_latex = sp.latex(value)
         other_latex = sp.latex(other_sym)
         subst_display = expr_latex.replace(other_latex, f"({val_latex})")
         self.recorder.add_equation(f"{sp.latex(sym_var)} = {subst_display}")
-        self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
+        intermediate = self._back_substitute_intermediate_steps(sym_var, expr, other_sym, value, result_value)
+        if intermediate:
+            for eq_latex in intermediate:
+                self.recorder.add_equation(eq_latex)
+        else:
+            self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
 
     def _expand_solve_steps_from_raw(self, raw_lhs, eq_rhs, var_sym, a_t=None, b_t=None, other_sym_t=None, expr=None):
         """

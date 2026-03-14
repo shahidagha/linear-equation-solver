@@ -10,3 +10,11 @@ button.delete{background:#ef4444;color:white;border-color:#ef4444}
 .solution{background:#9ca3af;color:white;border-color:#9ca3af}
 .solution.has-solution{background:#2563eb;border-color:#2563eb}
 .pagination{display:flex;align-items:center;justify-content:space-between}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000}
+.mode-suggest-modal{background:#fff;border-radius:14px;padding:20px 24px;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,.15)}
+.mode-suggest-modal h3{margin:0 0 10px 0;font-size:18px}
+.mode-suggest-modal p{margin:0 0 16px 0;color:#374151;font-size:14px}
+.mode-suggest-modal .actions{display:flex;gap:10px;justify-content:flex-end}
+.mode-suggest-modal .actions button{padding:8px 18px;border-radius:8px;border:1px solid #d5deed;background:#f8faff;cursor:pointer;font-size:14px}
+.mode-suggest-modal .actions button.primary{background:#4f6ef7;border-color:#4f6ef7;color:#fff}

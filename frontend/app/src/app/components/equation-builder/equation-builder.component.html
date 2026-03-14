@@ -26,6 +26,7 @@
         <app-term-input
           *ngIf="frame.key === 'term1'"
           [variable]="variable1"
+          [layoutMode]="layoutMode"
           [initialTerm]="term1"
           (termChange)="onTerm1Change($event)">
         </app-term-input>
@@ -33,6 +34,7 @@
         <app-term-input
           *ngIf="frame.key === 'term2'"
           [variable]="variable2"
+          [layoutMode]="layoutMode"
           [initialTerm]="term2"
           (termChange)="onTerm2Change($event)">
         </app-term-input>
@@ -43,6 +45,7 @@
 
         <app-term-input
           *ngIf="frame.key === 'constant'"
+          [layoutMode]="layoutMode"
           [initialTerm]="constant"
           (termChange)="onConstantChange($event)">
         </app-term-input>

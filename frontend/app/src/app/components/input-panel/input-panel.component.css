@@ -4,6 +4,96 @@
   gap: 14px;
 }
 
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.top-bar app-variable-selector {
+  flex: 0 0 auto;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #d5deed;
+  background: #f8faff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mode-btn:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.mode-btn.active {
+  background: #4f6ef7;
+  border-color: #4f6ef7;
+  color: #ffffff;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.mode-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 20px 24px;
+  max-width: 380px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.mode-modal h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+}
+
+.mode-modal p {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 14px;
+}
+
+.mode-modal .actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.mode-modal .actions button {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid #d5deed;
+  background: #f8faff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.mode-modal .actions button.primary {
+  background: #4f6ef7;
+  border-color: #4f6ef7;
+  color: #ffffff;
+}
+
 .solve-row {
   display: flex;
   justify-content: center;

@@ -7,6 +7,7 @@ import { equationToLatex } from '../../utils/latex-generator';
 import { TermInputComponent } from '../term-input/term-input.component';
 import { FrameKey, FramePositions, PositionControlsComponent } from '../position-controls/position-controls.component';
 import { EquationPreviewComponent } from '../equation-preview/equation-preview.component';
+import { LayoutMode } from '../../services/solver-state.service';
 
 interface FrameItem {
   key: FrameKey;
@@ -24,6 +25,7 @@ export class EquationBuilderComponent implements OnInit, OnChanges {
   @Input() title = 'Equation';
   @Input() variable1 = 'x';
   @Input() variable2 = 'y';
+  @Input() layoutMode: LayoutMode = 'rational';
   @Input() initialEquation: any = null;
   @Output() equationChange = new EventEmitter<any>();
 

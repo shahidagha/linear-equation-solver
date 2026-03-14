@@ -8,11 +8,77 @@
       {{ term.sign === 1 ? '+' : '−' }}
     </button>
 
-    <div class="fraction">
+    <!-- Rational: sign + numerator coefficient only -->
+    <div class="single-coeff" *ngIf="layoutMode === 'rational'">
+      <input
+        type="number"
+        inputmode="numeric"
+        min="0"
+        [(ngModel)]="term.numCoeff"
+        (focus)="selectInputValue($event)"
+        (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
+        (keydown)="onNumericKeydown($event)"
+        (blur)="sanitizeNumericField('numCoeff')"
+        (ngModelChange)="updateTerm()">
+    </div>
+
+    <!-- Irrational: sign + a√b (numCoeff, numRad; b=1 allowed) -->
+    <div class="sqrt-inline" *ngIf="layoutMode === 'irrational'">
+      <input
+        type="number"
+        inputmode="numeric"
+        min="0"
+        [(ngModel)]="term.numCoeff"
+        (focus)="selectInputValue($event)"
+        (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
+        (keydown)="onNumericKeydown($event)"
+        (blur)="sanitizeNumericField('numCoeff')"
+        (ngModelChange)="updateTerm()">
+      <span class="sqrt">√</span>
+      <input
+        type="number"
+        inputmode="numeric"
+        min="1"
+        [(ngModel)]="term.numRad"
+        (focus)="selectInputValue($event)"
+        (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
+        (keydown)="onNumericKeydown($event)"
+        (blur)="sanitizeNumericField('numRad')"
+        (ngModelChange)="updateTerm()">
+    </div>
+
+    <!-- Fraction: sign + numCoeff / denCoeff -->
+    <div class="fraction-simple" *ngIf="layoutMode === 'fraction'">
+      <input
+        type="number"
+        inputmode="numeric"
+        min="0"
+        [(ngModel)]="term.numCoeff"
+        (focus)="selectInputValue($event)"
+        (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
+        (keydown)="onNumericKeydown($event)"
+        (blur)="sanitizeNumericField('numCoeff')"
+        (ngModelChange)="updateTerm()">
+      <span class="frac-slash">/</span>
+      <input
+        type="number"
+        inputmode="numeric"
+        min="1"
+        [(ngModel)]="term.denCoeff"
+        (focus)="selectInputValue($event)"
+        (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
+        (keydown)="onNumericKeydown($event)"
+        (blur)="sanitizeNumericField('denCoeff')"
+        (ngModelChange)="updateTerm()">
+    </div>
+
+    <!-- Fraction surd: full term (current layout) -->
+    <div class="fraction" *ngIf="layoutMode === 'fraction_surd'">
       <div class="fraction-row">
         <input
           type="number"
           inputmode="numeric"
+          min="0"
           [(ngModel)]="term.numCoeff"
           (focus)="selectInputValue($event)"
           (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
@@ -23,6 +89,7 @@
         <input
           type="number"
           inputmode="numeric"
+          min="1"
           [(ngModel)]="term.numRad"
           (focus)="selectInputValue($event)"
           (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
@@ -35,6 +102,7 @@
         <input
           type="number"
           inputmode="numeric"
+          min="1"
           [(ngModel)]="term.denCoeff"
           (focus)="selectInputValue($event)"
           (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"
@@ -45,6 +113,7 @@
         <input
           type="number"
           inputmode="numeric"
+          min="1"
           [(ngModel)]="term.denRad"
           (focus)="selectInputValue($event)"
           (click)="selectInputValue($event)" (mouseup)="keepSelection($event)"

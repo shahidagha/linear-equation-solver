@@ -423,11 +423,11 @@ class SolutionLatexRenderer:
         return value.replace("\\", "\\\\").replace("_", "\\_")
 
     def _wrap_latex(self, line: str, max_len: int = 70) -> List[str]:
-        """Wrap long LaTeX lines only at safe break points so we never split inside \\text{...}."""
+        """Wrap long LaTeX: prefer breaks at \"} \\text{\" or \" \\; \"; else break inside text with \"} \\\\ & \\text{\"."""
         if not line or len(line) <= max_len:
             return [line] if line else []
-        # Break at the first safe point before max_len (even if at 20 or 30) so no line exceeds max_len
         search_region = line[: max_len + 1]
+        # 1) Prefer break at "} \\text{" or " \\; "
         break_after = -1
         for sep, skip in (("} \\text{", 2), (" \\; ", 4)):
             idx = search_region.find(sep)
@@ -435,13 +435,24 @@ class SolutionLatexRenderer:
                 candidate = idx + skip
                 if break_after < 0 or candidate < break_after:
                     break_after = candidate
-        if break_after <= 0:
-            return [line]
-        first = line[:break_after].rstrip()
-        rest = line[break_after:].lstrip()
-        if not first:
-            return [line]
-        return [first] + self._wrap_latex(rest, max_len)
+        if break_after > 0:
+            first = line[:break_after].rstrip()
+            rest = line[break_after:].lstrip()
+            if first:
+                return [first] + self._wrap_latex(rest, max_len)
+        # 2) No safe point: break at a space before 70 with "} \\ & \text{" when inside \text{...} and rest is text
+        if "\\text{" in line:
+            # Find rightmost space in first 70 chars such that text after is plain (starts with letter)
+            for i in range(len(search_region) - 1, -1, -1):
+                if search_region[i] == " " and i > 0:
+                    before = line[:i].rstrip()
+                    rest = line[i + 1:]
+                    rest_stripped = rest.lstrip()
+                    if not before.endswith("}") and rest_stripped and rest_stripped[0].isalpha():
+                        line1 = line[:i] + "}"
+                        line2 = "\\text{" + rest
+                        return [line1] + self._wrap_latex(line2, max_len)
+        return [line]
 
     def _wrap_text(self, value: str, max_len: int = 70) -> List[str]:
         """Soft-wrap a plain text string into multiple lines of at most max_len chars."""

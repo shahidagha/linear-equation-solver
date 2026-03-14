@@ -72,6 +72,38 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 - **Solver guards:** (Addressed: per-method degenerate detection; API returns solution_type/message; frontend shows message and graph omits intersection.) Handle “no solution” / “infinite solutions” explicitly and return structured results instead of generic errors.
 - **LaTeX:** Add tests for wrap logic with long lines, only-text, and mixed content; optionally add a LaTeX lint or render check in CI for sample outputs.
 
+### Validation rules (exact definitions)
+
+**Implementation:** Rules 1–4 are implemented in `backend/utils/request_validator.py` (`validate_solve_payload`). The save-system and solve-system routes call the validator after normalizing the payload; on failure they return `422` with body `{ "code": "VALIDATION_ERROR", "message": "...", "detail": "..." }`. No solve or save is performed when validation fails.
+
+**Rule 1 — Exactly two equations, each with valid shape (finalized)**
+
+- **Check:** Request has exactly two equation objects (e.g. `equation1`, `equation2`). Each must be present, non-null, and an object (not string, number, or array).
+- **When:** After body is parsed, before building the in-memory system or calling solvers.
+- **Invalid:** Missing `equation1` or `equation2`; only one equation; either slot null/wrong type. **Response:** 4xx (400 or 422), body e.g. `{ "code": "VALIDATION_ERROR", "message": "Missing required field: equation2" }` (or "equation1 must be an object", etc.). No solve, no save, no side effects.
+- **Valid:** Proceed to Rule 2.
+
+**Rule 2 — Variables: exactly two, non-empty, valid format (finalized)**
+
+- **Check:** Request has a `variables` field that is a list (or array) of exactly two non-empty variable names. Each name must be a string (e.g. a single letter or allowed token). No duplicates.
+- **When:** After Rule 1 passes, before building the in-memory system.
+- **Invalid:** Missing `variables`; not a list; length ≠ 2; any element null/empty/not string; duplicate names. **Response:** 4xx, e.g. `{ "code": "VALIDATION_ERROR", "message": "variables must be a list of exactly two non-empty variable names" }` or more specific ("variables[1] is empty", "Duplicate variable name: x"). No solve, no save.
+- **Valid:** Proceed to Rule 3.
+
+**Rule 3 — Equation internal structure: terms and constant (finalized)**
+
+- **Check:** Each equation object (equation1, equation2) has either (a) a `terms` array of length 2 plus a `constant` object, or (b) legacy `term1`, `term2`, and `constant` objects. Each term and the constant must be an object with the supported coefficient shape (e.g. sign, numCoeff, numRad, denCoeff, denRad or equivalent) such that the backend can build a FractionSurd (or equivalent) without error. No extra required keys missing; numeric/string values in allowed ranges.
+- **When:** After Rule 2 passes, before calling build_fraction_surd / Equation construction.
+- **Invalid:** Missing `terms` (or `term1`/`term2`) or `constant` in either equation; wrong type (e.g. terms not array of length 2); any term or constant not an object; any term/constant missing required coefficient keys or with values that cannot be parsed (e.g. non-numeric where numeric required). **Response:** 4xx, e.g. `{ "code": "VALIDATION_ERROR", "message": "equation1.terms must be an array of two term objects" }` or "equation2.constant: invalid coefficient shape", etc. No solve, no save.
+- **Valid:** Proceed to Rule 4.
+
+**Rule 4 — System buildability (finalized)**
+
+- **Check:** Attempt to build the in-memory system from the validated payload: build FractionSurd (or equivalent) for each term and constant, construct both equations and the EquationSystem. No structural or type checks here—only that the build step completes without raising.
+- **When:** After Rule 3 passes, immediately before running standardization or solvers.
+- **Invalid:** build_fraction_surd, Equation, or EquationSystem construction raises (e.g. bad value, division by zero, unsupported type). **Response:** 4xx (e.g. 422), body e.g. `{ "code": "VALIDATION_ERROR", "message": "Invalid coefficient in equation1.term1: ..." }` or a generic "System could not be built from the given equations" with optional detail. No solve, no save.
+- **Valid:** Proceed to solve (and optionally save). Validation complete.
+
 ---
 
 ## 5. Security and production configuration

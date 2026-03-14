@@ -191,7 +191,26 @@ class SolutionLatexRenderer:
         for step in steps:
             s_type = step.get("type")
             content = step.get("content", "")
-            if s_type == "equation":
+            if s_type == "substitution_intro":
+                detailed_content = step.get("detailed_content", "")
+                intro_content = step.get("content", "")
+                if detailed_content:
+                    for ln in self._wrap_text(detailed_content):
+                        detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+                if intro_content:
+                    medium.append(f"\\text{{{self._escape_text(intro_content)}}}")
+                    short.append(f"\\text{{{self._escape_text(intro_content)}}}")
+            elif s_type == "subst_solve_step":
+                det = step.get("detailed", "")
+                eq_latex = step.get("equation", "")
+                if det:
+                    for ln in self._wrap_text(det):
+                        detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+                if eq_latex:
+                    detailed.append(eq_latex)
+                    medium.append(eq_latex)
+                    short.append(eq_latex)
+            elif s_type == "equation":
                 if content:
                     detailed.append(content)
                     medium.append(content)

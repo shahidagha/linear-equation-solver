@@ -47,15 +47,16 @@ class SubstitutionSolver:
     def _select_equation_and_variable(self):
         """
         Step 2 selection: prefer (eq, var) with coefficient ±1; if multiple, prefer simpler substitute;
-        if none, choose (eq, var) with smallest |coeff|. Returns (eq_num, solve_for_var, other_var, a, b, c).
+        if none, choose (eq, var) with smallest |coeff|.
+        Returns (eq_num, solve_for_var, other_var, a, b, c, chose_simple).
+        chose_simple = True if we picked an option with coefficient ±1.
         """
         options = self._list_simple_options()
         if options:
             if len(options) == 1:
                 eq_num, var_name, a, b, c = options[0]
                 other = self.var2 if var_name == self.var1 else self.var1
-                return (eq_num, var_name, other, a, b, c)
-            # Multiple: prefer the one giving simpler substituted equation (tie-break: eq 1, then var1)
+                return (eq_num, var_name, other, a, b, c, True)
             best = None
             for eq_num, var_name, a, b, c in options:
                 other_var = self.var2 if var_name == self.var1 else self.var1
@@ -65,8 +66,7 @@ class SubstitutionSolver:
                 if best is None or score < best[0]:
                     best = (score, eq_num, var_name, other_var, a, b, c)
             _, eq_num, var_name, other_var, a, b, c = best
-            return (eq_num, var_name, other_var, a, b, c)
-        # No ±1: choose (eq, var) with smallest |coeff|
+            return (eq_num, var_name, other_var, a, b, c, True)
         best = None
         for eq_num, (a, b, c) in enumerate([self._eq1, self._eq2], 1):
             for var_name, coeff in [(self.var1, a), (self.var2, b)]:
@@ -76,7 +76,7 @@ class SubstitutionSolver:
                 if best is None or key < best[0]:
                     best = (key, eq_num, var_name, other_var, a, b, c)
         _, eq_num, var_name, other_var, a, b, c = best
-        return (eq_num, var_name, other_var, a, b, c)
+        return (eq_num, var_name, other_var, a, b, c, False)
 
     def _solve_for_var(self, eq_num, var_name, other_var, a, b, c):
         """Solve a*var1 + b*var2 = c for var_name. Returns (expr, sym_var, other_sym)."""
@@ -91,10 +91,77 @@ class SubstitutionSolver:
         expr = sp.simplify(sol[0])
         return expr, sym_var, other_sym
 
-    def _record_solve_for(self, eq_num, var_name, expr, sym_var):
-        """Record Step 2: Solving equation (N) for var: var = expr."""
-        self.recorder.add(f"Solving equation ({eq_num}) for {var_name}:")
-        self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(expr)}")
+    def _why_we_chose(self, eq_num, var_name, chose_simple, a, b, c):
+        """Build explanation for detailed view: why we chose this equation and variable."""
+        coeff = a if var_name == self.var1 else b
+        coeff_abs = abs(sp.simplify(coeff))
+        if chose_simple and coeff_abs == 1:
+            return (
+                f"We choose equation ({eq_num}) because {var_name} has coefficient 1 or -1, "
+                f"so solving for {var_name} is simplest. Solving equation ({eq_num}) for {var_name}:"
+            )
+        if chose_simple:
+            return (
+                f"We choose equation ({eq_num}) because it gives a simpler expression when we solve for {var_name}. "
+                f"Solving equation ({eq_num}) for {var_name}:"
+            )
+        return (
+            f"We choose equation ({eq_num}) because it has the smallest coefficient for {var_name} "
+            f"among the two equations, so we solve for {var_name}. Solving equation ({eq_num}) for {var_name}:"
+        )
+
+    def _steps_to_solve_for_var(self, a, b, c, sym_var, other_sym, expr, var_name):
+        """
+        Produce step-by-step algebra from a*x + b*y = c to sym_var = expr.
+        Returns list of (detailed_explanation, equation_latex). Medium/short get only the equations.
+        """
+        steps = []
+        other_coeff = a if sym_var == self._y else b
+        coeff = b if sym_var == self._y else a
+        # Full equation (no label) is added separately
+        # Step: subtract other term from both sides
+        other_term = other_coeff * other_sym
+        rhs1 = sp.simplify(c - other_term)
+        step1_latex = f"{sp.latex(coeff * sym_var)} = {self._expr_latex(rhs1)}"
+        steps.append((
+            f"Subtract {self._expr_latex(other_term)} from both sides to isolate the term in {var_name}.",
+            step1_latex,
+        ))
+        # Step: divide both sides by coeff
+        raw_expr = sp.simplify(rhs1 / coeff)
+        step2_latex = f"{sp.latex(sym_var)} = {self._expr_latex(raw_expr)}"
+        steps.append((
+            f"Divide both sides by {self._expr_latex(coeff)} to solve for {var_name}.",
+            step2_latex,
+        ))
+        if sp.simplify(raw_expr - expr) != 0:
+            steps.append((
+                "Simplify.",
+                f"{sp.latex(sym_var)} = {self._expr_latex(expr)}",
+            ))
+        return steps
+
+    def _record_solve_for(self, eq_num, var_name, expr, sym_var, a, b, c, chose_simple):
+        """
+        Record Step 2: (detailed) why we chose this equation; (all) equation again without label;
+        then all algebra steps to get var = expr (detailed: with explanation per step; medium/short: calculation only).
+        """
+        short_line = f"Solving equation ({eq_num}) for {var_name}:"
+        detailed_line = self._why_we_chose(eq_num, var_name, chose_simple, a, b, c)
+        self.recorder.add({"short": short_line, "detailed": detailed_line, "medium": short_line})
+
+        # Equation (1) or (2) again without label
+        self.recorder.add_equation(self._eq_latex(a, b, c))
+
+        # Algebra steps: detailed gets explanation + equation, medium/short get equation only
+        other_sym = self._y if sym_var == self._x else self._x
+        algebra_steps = self._steps_to_solve_for_var(a, b, c, sym_var, other_sym, expr, var_name)
+        for detailed_text, eq_latex in algebra_steps:
+            self.recorder.add({"detailed": detailed_text, "equation": eq_latex})
+        # If the last step is not already var = expr (e.g. we only had "Divide" and raw_expr != expr), add final line
+        final_latex = f"{sp.latex(sym_var)} = {self._expr_latex(expr)}"
+        if not algebra_steps or algebra_steps[-1][1] != final_latex:
+            self.recorder.add({"detailed": "", "equation": final_latex})
 
     def _record_substitute_into(self, eq_num, var_name, expr, substituted_latex):
         """Record Step 3: Substituting ... into Equation (M): and the equation."""
@@ -147,7 +214,7 @@ class SubstitutionSolver:
 
     def solve(self):
         """Run substitution method; record steps 2-6 and verification (detailed only). Return solution dict or []."""
-        eq_num, solve_for_var, other_var, a, b, c = self._select_equation_and_variable()
+        eq_num, solve_for_var, other_var, a, b, c, chose_simple = self._select_equation_and_variable()
         # Which equation we substitute INTO (the other one)
         target_eq_num = 2 if eq_num == 1 else 1
         a_t, b_t, c_t = self._eq2 if target_eq_num == 2 else self._eq1
@@ -156,8 +223,8 @@ class SubstitutionSolver:
         if expr is None:
             return self._fallback_solve()
 
-        # Step 2
-        self._record_solve_for(eq_num, solve_for_var, expr, sym_var)
+        # Step 2: intro (why we chose), equation again without label, then all algebra steps
+        self._record_solve_for(eq_num, solve_for_var, expr, sym_var, a, b, c, chose_simple)
 
         # Step 3: substitute into target equation
         target_lhs = a_t * self._x + b_t * self._y

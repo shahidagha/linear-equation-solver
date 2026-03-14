@@ -33,6 +33,11 @@ class SubstitutionSolver:
     def _expr_latex(self, expr):
         return sp.latex(sp.simplify(expr))
 
+    def _expr_to_plain(self, expr):
+        """Plain-text form for use inside \\text{} (avoids LaTeX fragments like frac5 p3)."""
+        s = str(sp.simplify(expr)).replace(" ", "")
+        return s.replace("*", "")
+
     # --- Step 2: Select equation and variable (prefer coeff ±1, else smallest |coeff|) ---
     def _list_simple_options(self):
         """List (eq_num, var_name, a, b, c) where that variable has coefficient 1 or -1."""
@@ -163,10 +168,13 @@ class SubstitutionSolver:
         if not algebra_steps or algebra_steps[-1][1] != final_latex:
             self.recorder.add({"detailed": "", "equation": final_latex})
 
-    def _record_substitute_into(self, eq_num, var_name, expr, substituted_latex):
-        """Record Step 3: Substituting ... into Equation (M): and the equation."""
-        self.recorder.add(f"Substituting {var_name} = {self._expr_latex(expr)} into Equation ({eq_num}):")
-        self.recorder.add_equation(substituted_latex)
+    def _record_substitute_into(self, eq_num, var_name, expr, raw_substituted_latex, simplified_latex):
+        """Record Step 3: text (plain expr), then raw substitution equation, then simplified (if different)."""
+        plain = self._expr_to_plain(expr)
+        self.recorder.add(f"Substituting {var_name} = {plain} into Equation ({eq_num}):")
+        self.recorder.add_equation(raw_substituted_latex)
+        if simplified_latex.strip() != raw_substituted_latex.strip():
+            self.recorder.add_equation(simplified_latex)
 
     def _record_solve_one_var_steps(self, var_sym, eq_lhs_eq_rhs_steps):
         """Record Step 4: each calculation step (text + equation)."""
@@ -186,30 +194,47 @@ class SubstitutionSolver:
         self.recorder.add_equation(f"{sp.latex(sym_var)} = {subst_display}")
         self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
 
-    def _expand_solve_steps(self, one_var_eq, var_sym):
-        """From one_var_eq (e.g. 5*y - 10 = 0), produce list of (text, equation_latex) steps."""
+    def _expand_solve_steps(self, eq_lhs, eq_rhs, var_sym):
+        """
+        From equation eq_lhs = eq_rhs, produce step-by-step (text, equation_latex) until var_sym = value.
+        Shows: subtract rhs, simplify, clear fractions if needed, move constant, divide by coefficient.
+        """
         steps = []
-        eq = sp.simplify(one_var_eq)
-        if eq.rhs != 0:
-            eq = sp.Eq(sp.simplify(eq.lhs - eq.rhs), 0)
-        lhs = eq.lhs
-        if not lhs.has(var_sym):
+        # Step 1: Subtract rhs from both sides
+        expr = sp.simplify(eq_lhs - eq_rhs)
+        steps.append((f"Subtract {self._expr_latex(eq_rhs)} from both sides:", f"{self._expr_latex(expr)} = 0"))
+        if not expr.has(var_sym):
             return steps
-        # Collect terms: coeff*var + constant = 0
-        expanded = sp.expand(lhs)
+        expanded = sp.expand(expr)
+        if sp.simplify(expanded - expr) != 0:
+            steps.append(("Simplify.", f"{self._expr_latex(expanded)} = 0"))
         coeff = expanded.coeff(var_sym)
         constant = expanded.subs(var_sym, 0)
-        if constant != 0:
-            steps.append((f"Simplify (collect terms):", f"{self._expr_latex(expanded)} = 0"))
-            # constant to RHS
-            new_rhs = sp.simplify(-constant)
-            steps.append((f"Add {self._expr_latex(-constant)} to both sides:", f"{sp.latex(coeff * var_sym)} = {self._expr_latex(new_rhs)}"))
-            if coeff != 1 and coeff != -1:
-                steps.append((f"Divide both sides by {self._expr_latex(coeff)}:", f"{sp.latex(var_sym)} = {self._expr_latex(sp.simplify(new_rhs / coeff))}"))
-            else:
-                steps.append((None, f"{sp.latex(var_sym)} = {self._expr_latex(sp.simplify(new_rhs / coeff))}"))
-        else:
-            steps.append((None, f"{sp.latex(var_sym)} = 0"))
+        # Clear fractions if needed (multiply by LCM of denominators)
+        denoms = []
+        for term in [coeff, constant]:
+            if term.is_Rational and term.q != 1:
+                denoms.append(term.q)
+            elif term.is_Add or term.is_Mul:
+                for a in term.atoms(sp.Rational):
+                    if a.q != 1:
+                        denoms.append(a.q)
+        if denoms:
+            from math import gcd
+            lcm = denoms[0]
+            for d in denoms[1:]:
+                lcm = lcm * d // gcd(lcm, d)
+            expanded = sp.expand(expanded * lcm)
+            coeff = expanded.coeff(var_sym)
+            constant = expanded.subs(var_sym, 0)
+            steps.append((f"Multiply both sides by {int(lcm)} to clear the denominator.", f"{self._expr_latex(expanded)} = 0"))
+        # Move constant to RHS: coeff*var = -constant
+        new_rhs = sp.simplify(-constant)
+        steps.append((f"Add {self._expr_latex(-constant)} to both sides:", f"{sp.latex(coeff * var_sym)} = {self._expr_latex(new_rhs)}"))
+        # Divide by coefficient (skip redundant step when coeff is 1 or -1)
+        value = sp.simplify(new_rhs / coeff)
+        if coeff != 1 and coeff != -1:
+            steps.append((f"Divide both sides by {self._expr_latex(coeff)}:", f"{sp.latex(var_sym)} = {self._expr_latex(value)}"))
         return steps
 
     def solve(self):
@@ -226,17 +251,24 @@ class SubstitutionSolver:
         # Step 2: intro (why we chose), equation again without label, then all algebra steps
         self._record_solve_for(eq_num, solve_for_var, expr, sym_var, a, b, c, chose_simple)
 
-        # Step 3: substitute into target equation
+        # Step 3: substitute into target equation (show raw substitution then simplified)
         target_lhs = a_t * self._x + b_t * self._y
         target_eq = sp.Eq(target_lhs, c_t)
-        substituted = target_eq.subs(sym_var, expr)
-        substituted = sp.Eq(sp.simplify(substituted.lhs), sp.simplify(substituted.rhs))
-        subst_latex = f"{self._expr_latex(substituted.lhs)} = {self._expr_latex(substituted.rhs)}"
-        self._record_substitute_into(target_eq_num, solve_for_var, expr, subst_latex)
+        raw_substituted = target_eq.subs(sym_var, expr)
+        # Build raw substitution line without simplifying (so we show e.g. 3p + 5(7 - 5p/3) = 19)
+        other_sym_t = self._y if sym_var == self._x else self._x
+        raw_lhs = sp.Add(
+            sp.Mul(a_t, other_sym_t, evaluate=False),
+            sp.Mul(b_t, expr, evaluate=False),
+            evaluate=False,
+        )
+        raw_subst_latex = f"{sp.latex(raw_lhs)} = {sp.latex(c_t)}"
+        substituted = sp.Eq(sp.simplify(raw_substituted.lhs), sp.simplify(raw_substituted.rhs))
+        simplified_latex = f"{self._expr_latex(substituted.lhs)} = {self._expr_latex(substituted.rhs)}"
+        self._record_substitute_into(target_eq_num, solve_for_var, expr, raw_subst_latex, simplified_latex)
 
-        # Step 4: solve for other_sym
-        one_var_eq = sp.Eq(sp.simplify(substituted.lhs - substituted.rhs), 0)
-        calc_steps = self._expand_solve_steps(one_var_eq, other_sym)
+        # Step 4: solve for other_sym (from substituted.lhs = substituted.rhs)
+        calc_steps = self._expand_solve_steps(substituted.lhs, substituted.rhs, other_sym)
         sol_other = sp.solve(substituted, other_sym)
         if not sol_other:
             return self._fallback_solve()

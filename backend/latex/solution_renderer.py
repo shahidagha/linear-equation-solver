@@ -422,27 +422,50 @@ class SolutionLatexRenderer:
     def _escape_text(self, value: str) -> str:
         return value.replace("\\", "\\\\").replace("_", "\\_")
 
+    def _find_text_blocks(self, line: str) -> List[tuple]:
+        """Return list of (start, end) for each \\text{...} block. start = index of '\\\\', end = index of closing '}'."""
+        blocks: List[tuple] = []
+        i = 0
+        while i < len(line):
+            idx = line.find("\\text{", i)
+            if idx == -1:
+                break
+            depth = 1
+            j = idx + 6  # after '\\text{'
+            while j < len(line):
+                if line[j] == "{":
+                    depth += 1
+                elif line[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        blocks.append((idx, j))
+                        i = j + 1
+                        break
+                j += 1
+            else:
+                break
+            i = j
+        return blocks
+
     def _wrap_latex(self, line: str, max_len: int = 70) -> List[str]:
-        """Wrap long LaTeX: prefer breaks at \"} \\text{\" or \" \\; \"; else break inside text with \"} \\\\ & \\text{\"."""
+        """Wrap long LaTeX: if only text then break at space with } \\ & \\text{; if mixed then break after last math block in first 70 chars; repeat on remainder."""
         if not line or len(line) <= max_len:
             return [line] if line else []
         search_region = line[: max_len + 1]
-        # 1) Prefer break at "} \\text{" or " \\; "
-        break_after = -1
-        for sep, skip in (("} \\text{", 2), (" \\; ", 4)):
-            idx = search_region.find(sep)
-            if idx != -1:
-                candidate = idx + skip
-                if break_after < 0 or candidate < break_after:
-                    break_after = candidate
-        if break_after > 0:
-            first = line[:break_after].rstrip()
-            rest = line[break_after:].lstrip()
-            if first:
-                return [first] + self._wrap_latex(rest, max_len)
-        # 2) No safe point: break at a space before 70 with "} \\ & \text{" when inside \text{...} and rest is plain text
-        if "\\text{" in line:
-            # Find rightmost space such that text after is plain (starts with letter) and does not contain \text{
+        blocks = self._find_text_blocks(line)
+
+        # Classify: only text = no non-whitespace gap between consecutive \text{} blocks
+        is_only_text = True
+        if len(blocks) > 1:
+            for k in range(len(blocks) - 1):
+                gap_start = blocks[k][1] + 1
+                gap_end = blocks[k + 1][0]
+                if line[gap_start:gap_end].strip():
+                    is_only_text = False
+                    break
+
+        if is_only_text and "\\text{" in line:
+            # Break at a space: inside \text{}, rest plain (starts with letter, no \text{ in rest)
             for i in range(len(search_region) - 1, -1, -1):
                 if search_region[i] == " " and i > 0:
                     before = line[:i].rstrip()
@@ -457,6 +480,32 @@ class SolutionLatexRenderer:
                         line1 = line[:i] + "}"
                         line2 = "\\text{" + rest
                         return [line1] + self._wrap_latex(line2, max_len)
+            return [line]
+
+        # Mixed: break after last math block below 70 = before the rightmost \text{ that starts in (0, 70]
+        break_pos = -1
+        for start, _ in blocks:
+            if 0 < start <= 70:
+                break_pos = max(break_pos, start)
+        if break_pos > 0:
+            first = line[:break_pos].rstrip()
+            rest = line[break_pos:].lstrip()
+            if first:
+                return [first] + self._wrap_latex(rest, max_len)
+
+        # No \text{ in (0,70]: fall back to safe break at "} \\text{" or " \\; " if present
+        break_after = -1
+        for sep, skip in (("} \\text{", 2), (" \\; ", 4)):
+            idx = search_region.find(sep)
+            if idx != -1:
+                candidate = idx + skip
+                if break_after < 0 or candidate < break_after:
+                    break_after = candidate
+        if break_after > 0:
+            first = line[:break_after].rstrip()
+            rest = line[break_after:].lstrip()
+            if first:
+                return [first] + self._wrap_latex(rest, max_len)
         return [line]
 
     def _wrap_text(self, value: str, max_len: int = 70) -> List[str]:

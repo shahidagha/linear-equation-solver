@@ -61,15 +61,17 @@ export class InputPanelComponent implements OnInit, OnDestroy {
   onEquation2Change(data: any): void { this.equation2Data = data; }
 
   saveSystem(): void {
-    if (!this.equation1Data || !this.equation2Data || this.isSubmitting || !this.canSolve) return;
+    const eq1 = this.equation1Data ?? this.initialEquation1;
+    const eq2 = this.equation2Data ?? this.initialEquation2;
+    if (!eq1 || !eq2 || this.isSubmitting || !this.canSolve) return;
     this.errorMessage = '';
     this.isSubmitting = true;
 
     const payload = {
       variables: { var1: this.variable1, var2: this.variable2 },
-      equation1: this.equation1Data,
-      equation2: this.equation2Data,
-      system_id: this.currentSystemId
+      equation1: eq1,
+      equation2: eq2,
+      system_id: this.currentSystemId ?? undefined
     };
 
     this.state.setBuilderState(payload);

@@ -25,7 +25,10 @@ export class SolutionPanelComponent {
 
   graphModalOpen = false;
 
-  constructor(public readonly state: SolverStateService) {}
+  constructor(
+    public readonly state: SolverStateService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   onMethodSelected(method: string): void { this.state.setSelectedMethod(method); }
   setVerbosity(level: VerbosityLevel): void { this.state.setVerbosity(level); }

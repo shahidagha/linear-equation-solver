@@ -440,15 +440,20 @@ class SolutionLatexRenderer:
             rest = line[break_after:].lstrip()
             if first:
                 return [first] + self._wrap_latex(rest, max_len)
-        # 2) No safe point: break at a space before 70 with "} \\ & \text{" when inside \text{...} and rest is text
+        # 2) No safe point: break at a space before 70 with "} \\ & \text{" when inside \text{...} and rest is plain text
         if "\\text{" in line:
-            # Find rightmost space in first 70 chars such that text after is plain (starts with letter)
+            # Find rightmost space such that text after is plain (starts with letter) and does not contain \text{
             for i in range(len(search_region) - 1, -1, -1):
                 if search_region[i] == " " and i > 0:
                     before = line[:i].rstrip()
                     rest = line[i + 1:]
                     rest_stripped = rest.lstrip()
-                    if not before.endswith("}") and rest_stripped and rest_stripped[0].isalpha():
+                    if (
+                        not before.endswith("}")
+                        and rest_stripped
+                        and rest_stripped[0].isalpha()
+                        and "\\text{" not in rest
+                    ):
                         line1 = line[:i] + "}"
                         line2 = "\\text{" + rest
                         return [line1] + self._wrap_latex(line2, max_len)

@@ -1,84 +1,212 @@
+"""
+Substitution method: solve one equation for one variable, substitute into the other,
+solve for the remaining variable, then back-substitute.
+Steps 1 (standardization) are done upstream. Steps 2-6 and verification (detailed only) are recorded here.
+"""
 import sympy as sp
+from backend.utils.step_recorder import StepRecorder
+from backend.latex.equation_formatter import EquationFormatter
 
 
 class SubstitutionSolver:
+    def __init__(self, system):
+        self.system = system
+        self.var1 = getattr(system, "var1", "x")
+        self.var2 = getattr(system, "var2", "y")
+        self.recorder = StepRecorder()
+        self._x = sp.Symbol(self.var1)
+        self._y = sp.Symbol(self.var2)
+        a1 = system.eq1.a.to_sympy()
+        b1 = system.eq1.b.to_sympy()
+        c1 = system.eq1.c.to_sympy()
+        a2 = system.eq2.a.to_sympy()
+        b2 = system.eq2.b.to_sympy()
+        c2 = system.eq2.c.to_sympy()
+        self._eq1 = (a1, b1, c1)
+        self._eq2 = (a2, b2, c2)
 
-    @staticmethod
-    def _build_equations(system):
-        x = sp.Symbol(system.var1)
-        y = sp.Symbol(system.var2)
+    def _eq_latex(self, a, b, c, var1=None, var2=None):
+        var1 = var1 or self.var1
+        var2 = var2 or self.var2
+        return EquationFormatter.format_equation(a, b, c, var1, var2)
 
+    def _expr_latex(self, expr):
+        return sp.latex(sp.simplify(expr))
+
+    # --- Step 2: Select equation and variable (prefer coeff ±1, else smallest |coeff|) ---
+    def _list_simple_options(self):
+        """List (eq_num, var_name, a, b, c) where that variable has coefficient 1 or -1."""
+        options = []
+        for eq_num, (a, b, c) in enumerate([self._eq1, self._eq2], 1):
+            if abs(sp.simplify(a)) == 1:
+                options.append((eq_num, self.var1, a, b, c))
+            if abs(sp.simplify(b)) == 1:
+                options.append((eq_num, self.var2, a, b, c))
+        return options
+
+    def _select_equation_and_variable(self):
+        """
+        Step 2 selection: prefer (eq, var) with coefficient ±1; if multiple, prefer simpler substitute;
+        if none, choose (eq, var) with smallest |coeff|. Returns (eq_num, solve_for_var, other_var, a, b, c).
+        """
+        options = self._list_simple_options()
+        if options:
+            if len(options) == 1:
+                eq_num, var_name, a, b, c = options[0]
+                other = self.var2 if var_name == self.var1 else self.var1
+                return (eq_num, var_name, other, a, b, c)
+            # Multiple: prefer the one giving simpler substituted equation (tie-break: eq 1, then var1)
+            best = None
+            for eq_num, var_name, a, b, c in options:
+                other_var = self.var2 if var_name == self.var1 else self.var1
+                coeff = a if var_name == self.var1 else b
+                other_coeff = b if var_name == self.var1 else a
+                score = (abs(sp.simplify(coeff)), abs(sp.simplify(other_coeff)), eq_num, 0 if var_name == self.var1 else 1)
+                if best is None or score < best[0]:
+                    best = (score, eq_num, var_name, other_var, a, b, c)
+            _, eq_num, var_name, other_var, a, b, c = best
+            return (eq_num, var_name, other_var, a, b, c)
+        # No ±1: choose (eq, var) with smallest |coeff|
+        best = None
+        for eq_num, (a, b, c) in enumerate([self._eq1, self._eq2], 1):
+            for var_name, coeff in [(self.var1, a), (self.var2, b)]:
+                cost = abs(sp.simplify(coeff))
+                other_var = self.var2 if var_name == self.var1 else self.var1
+                key = (cost, eq_num, 0 if var_name == self.var1 else 1)
+                if best is None or key < best[0]:
+                    best = (key, eq_num, var_name, other_var, a, b, c)
+        _, eq_num, var_name, other_var, a, b, c = best
+        return (eq_num, var_name, other_var, a, b, c)
+
+    def _solve_for_var(self, eq_num, var_name, other_var, a, b, c):
+        """Solve a*var1 + b*var2 = c for var_name. Returns (expr, sym_var, other_sym)."""
+        x, y = self._x, self._y
+        lhs = a * x + b * y
+        eq = sp.Eq(lhs, c)
+        sym_var = x if var_name == self.var1 else y
+        other_sym = y if var_name == self.var1 else x
+        sol = sp.solve(eq, sym_var)
+        if not sol:
+            return None, sym_var, other_sym
+        expr = sp.simplify(sol[0])
+        return expr, sym_var, other_sym
+
+    def _record_solve_for(self, eq_num, var_name, expr, sym_var):
+        """Record Step 2: Solving equation (N) for var: var = expr."""
+        self.recorder.add(f"Solving equation ({eq_num}) for {var_name}:")
+        self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(expr)}")
+
+    def _record_substitute_into(self, eq_num, var_name, expr, substituted_latex):
+        """Record Step 3: Substituting ... into Equation (M): and the equation."""
+        self.recorder.add(f"Substituting {var_name} = {self._expr_latex(expr)} into Equation ({eq_num}):")
+        self.recorder.add_equation(substituted_latex)
+
+    def _record_solve_one_var_steps(self, var_sym, eq_lhs_eq_rhs_steps):
+        """Record Step 4: each calculation step (text + equation)."""
+        for text, eq_latex in eq_lhs_eq_rhs_steps:
+            if text:
+                self.recorder.add(text)
+            self.recorder.add_equation(eq_latex)
+
+    def _record_back_substitute(self, other_var, value, expr, sym_var, other_sym, result_value):
+        """Record Step 5: Substituting other_var = value into sym_var = expr: and calculation steps."""
+        sym_var_name = self.var1 if sym_var == self._x else self.var2
+        self.recorder.add(f"Substituting {other_var} = {self._expr_latex(value)} into {sym_var_name} = {self._expr_latex(expr)}:")
+        expr_latex = sp.latex(expr)
+        val_latex = sp.latex(value)
+        other_latex = sp.latex(other_sym)
+        subst_display = expr_latex.replace(other_latex, f"({val_latex})")
+        self.recorder.add_equation(f"{sp.latex(sym_var)} = {subst_display}")
+        self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
+
+    def _expand_solve_steps(self, one_var_eq, var_sym):
+        """From one_var_eq (e.g. 5*y - 10 = 0), produce list of (text, equation_latex) steps."""
+        steps = []
+        eq = sp.simplify(one_var_eq)
+        if eq.rhs != 0:
+            eq = sp.Eq(sp.simplify(eq.lhs - eq.rhs), 0)
+        lhs = eq.lhs
+        if not lhs.has(var_sym):
+            return steps
+        # Collect terms: coeff*var + constant = 0
+        expanded = sp.expand(lhs)
+        coeff = expanded.coeff(var_sym)
+        constant = expanded.subs(var_sym, 0)
+        if constant != 0:
+            steps.append((f"Simplify (collect terms):", f"{self._expr_latex(expanded)} = 0"))
+            # constant to RHS
+            new_rhs = sp.simplify(-constant)
+            steps.append((f"Add {self._expr_latex(-constant)} to both sides:", f"{sp.latex(coeff * var_sym)} = {self._expr_latex(new_rhs)}"))
+            if coeff != 1 and coeff != -1:
+                steps.append((f"Divide both sides by {self._expr_latex(coeff)}:", f"{sp.latex(var_sym)} = {self._expr_latex(sp.simplify(new_rhs / coeff))}"))
+            else:
+                steps.append((None, f"{sp.latex(var_sym)} = {self._expr_latex(sp.simplify(new_rhs / coeff))}"))
+        else:
+            steps.append((None, f"{sp.latex(var_sym)} = 0"))
+        return steps
+
+    def solve(self):
+        """Run substitution method; record steps 2-6 and verification (detailed only). Return solution dict or []."""
+        eq_num, solve_for_var, other_var, a, b, c = self._select_equation_and_variable()
+        # Which equation we substitute INTO (the other one)
+        target_eq_num = 2 if eq_num == 1 else 1
+        a_t, b_t, c_t = self._eq2 if target_eq_num == 2 else self._eq1
+
+        expr, sym_var, other_sym = self._solve_for_var(eq_num, solve_for_var, other_var, a, b, c)
+        if expr is None:
+            return self._fallback_solve()
+
+        # Step 2
+        self._record_solve_for(eq_num, solve_for_var, expr, sym_var)
+
+        # Step 3: substitute into target equation
+        target_lhs = a_t * self._x + b_t * self._y
+        target_eq = sp.Eq(target_lhs, c_t)
+        substituted = target_eq.subs(sym_var, expr)
+        substituted = sp.Eq(sp.simplify(substituted.lhs), sp.simplify(substituted.rhs))
+        subst_latex = f"{self._expr_latex(substituted.lhs)} = {self._expr_latex(substituted.rhs)}"
+        self._record_substitute_into(target_eq_num, solve_for_var, expr, subst_latex)
+
+        # Step 4: solve for other_sym
+        one_var_eq = sp.Eq(sp.simplify(substituted.lhs - substituted.rhs), 0)
+        calc_steps = self._expand_solve_steps(one_var_eq, other_sym)
+        sol_other = sp.solve(substituted, other_sym)
+        if not sol_other:
+            return self._fallback_solve()
+        other_value = sp.simplify(sol_other[0])
+        if not calc_steps:
+            self.recorder.add_equation(f"{sp.latex(other_sym)} = {self._expr_latex(other_value)}")
+        else:
+            self._record_solve_one_var_steps(other_sym, calc_steps)
+
+        # Step 5: back-substitute
+        result_first = sp.simplify(expr.subs(other_sym, other_value))
+        self._record_back_substitute(other_var, other_value, expr, sym_var, other_sym, result_first)
+
+        # Step 6: solution is appended by renderer; add verification for detailed only
+        self.recorder.add({
+            "detailed": "Check: substitute solution into Equation (1) and Equation (2) to verify.",
+            "medium": "",
+            "short": "",
+        })
+
+        # Build solution dict
+        if sym_var == self._x:
+            return {self._x: result_first, self._y: other_value}
+        return {self._x: other_value, self._y: result_first}
+
+    def _fallback_solve(self):
+        """When symbolic solve fails, use SymPy solve and still return solution (no steps)."""
         eq1 = sp.Eq(
-            system.eq1.a.to_sympy() * x + system.eq1.b.to_sympy() * y,
-            system.eq1.c.to_sympy(),
+            self._eq1[0] * self._x + self._eq1[1] * self._y,
+            self._eq1[2],
         )
         eq2 = sp.Eq(
-            system.eq2.a.to_sympy() * x + system.eq2.b.to_sympy() * y,
-            system.eq2.c.to_sympy(),
+            self._eq2[0] * self._x + self._eq2[1] * self._y,
+            self._eq2[2],
         )
-
-        return x, y, eq1, eq2
-
-    @staticmethod
-    def _solve_unique_system(eq1, eq2, x, y):
-        candidates = sp.solve((eq1, eq2), (x, y), dict=True)
-        if not candidates:
+        sol = sp.solve((eq1, eq2), (self._x, self._y), dict=True)
+        if not sol:
             return []
-
-        candidate = candidates[0]
-        if x in candidate and y in candidate:
-            return {x: sp.simplify(candidate[x]), y: sp.simplify(candidate[y])}
-
-        # Parametric/infinite family does not represent a unique ordered pair.
-        return []
-
-    def solve(self, system):
-        x, y, eq1, eq2 = self._build_equations(system)
-
-        # Prefer isolating x from equation 1 when possible.
-        isolate_source = None
-        isolate_symbol = None
-        substitute_symbol = None
-        target_eq = None
-
-        if system.eq1.a.to_sympy() != 0:
-            isolate_source = eq1
-            isolate_symbol = x
-            substitute_symbol = y
-            target_eq = eq2
-        elif system.eq2.a.to_sympy() != 0:
-            isolate_source = eq2
-            isolate_symbol = x
-            substitute_symbol = y
-            target_eq = eq1
-        elif system.eq1.b.to_sympy() != 0:
-            isolate_source = eq1
-            isolate_symbol = y
-            substitute_symbol = x
-            target_eq = eq2
-        elif system.eq2.b.to_sympy() != 0:
-            isolate_source = eq2
-            isolate_symbol = y
-            substitute_symbol = x
-            target_eq = eq1
-        else:
-            return []
-
-        isolated_values = sp.solve(isolate_source, isolate_symbol)
-        if not isolated_values:
-            return self._solve_unique_system(eq1, eq2, x, y)
-
-        isolated_expression = isolated_values[0]
-        substituted_equation = target_eq.subs(isolate_symbol, isolated_expression)
-
-        substitute_values = sp.solve(substituted_equation, substitute_symbol)
-        if not substitute_values:
-            return self._solve_unique_system(eq1, eq2, x, y)
-
-        substitute_value = sp.simplify(substitute_values[0])
-        isolate_value = sp.simplify(isolated_expression.subs(substitute_symbol, substitute_value))
-
-        if isolate_symbol == x:
-            return {x: isolate_value, y: substitute_value}
-
-        return {x: substitute_value, y: isolate_value}
+        s = sol[0]
+        return {self._x: sp.simplify(s[self._x]), self._y: sp.simplify(s[self._y])}

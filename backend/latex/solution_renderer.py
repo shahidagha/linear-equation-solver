@@ -44,7 +44,7 @@ class SolutionLatexRenderer:
         if method_name == "elimination":
             self._append_elimination(steps, detailed_lines, medium_lines, short_lines)
         elif method_name == "substitution":
-            self._append_substitution(equations, solution, detailed_lines, medium_lines, short_lines)
+            self._append_substitution(equations, solution, steps, detailed_lines, medium_lines, short_lines)
         elif method_name == "cramer":
             self._append_cramer(equations, solution, detailed_lines, medium_lines, short_lines)
         elif method_name == "graphical":
@@ -182,12 +182,38 @@ class SolutionLatexRenderer:
         if medium_step == 0:
             short.append("\\text{Elimination completed.}")
 
-    def _append_substitution(self, equations, solution, detailed, medium, short):
-        eq1 = equations[0]
-        detailed.append("\\text{Solve (1) for one variable and substitute into (2).}")
-        detailed.append(f"\\text{{From (1): }} {eq1}")
-        medium.append("\\text{Substitute expression from (1) into (2).}")
-        short.append("\\text{Substitution method applied.}")
+    def _append_substitution(self, equations, solution, steps, detailed, medium, short):
+        if not steps:
+            detailed.append("\\text{Substitution method.}")
+            medium.append("\\text{Substitution method.}")
+            short.append("\\text{Substitution method applied.}")
+            return
+        for step in steps:
+            s_type = step.get("type")
+            content = step.get("content", "")
+            if s_type == "equation":
+                if content:
+                    detailed.append(content)
+                    medium.append(content)
+                    short.append(content)
+            elif s_type == "text":
+                if content:
+                    for ln in self._wrap_text(content):
+                        line = f"\\text{{{self._escape_text(ln)}}}"
+                        detailed.append(line)
+                        medium.append(line)
+                        short.append(line)
+            elif s_type == "operation":
+                if content:
+                    for ln in self._wrap_text(content):
+                        line = f"\\text{{{self._escape_text(ln)}}}"
+                        detailed.append(line)
+                        medium.append(line)
+                        short.append(line)
+            elif s_type == "detailed_only":
+                if content:
+                    for ln in self._wrap_text(content):
+                        detailed.append(f"\\text{{{self._escape_text(ln)}}}")
 
     def _append_cramer(self, equations, solution, detailed, medium, short):
         # Equations are expected in form ax + by = c

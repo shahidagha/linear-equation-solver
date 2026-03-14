@@ -168,13 +168,11 @@ class SubstitutionSolver:
         if not algebra_steps or algebra_steps[-1][1] != final_latex:
             self.recorder.add({"detailed": "", "equation": final_latex})
 
-    def _record_substitute_into(self, eq_num, var_name, expr, raw_substituted_latex, simplified_latex):
-        """Record Step 3: text (plain expr), then raw substitution equation, then simplified (if different)."""
+    def _record_substitute_into(self, eq_num, var_name, expr, raw_substituted_latex):
+        """Record Step 3: text (plain expr), then raw substitution equation. Intermediate steps follow from _expand_solve_steps_from_raw."""
         plain = self._expr_to_plain(expr)
         self.recorder.add(f"Substituting {var_name} = {plain} into Equation ({eq_num}):")
         self.recorder.add_equation(raw_substituted_latex)
-        if simplified_latex.strip() != raw_substituted_latex.strip():
-            self.recorder.add_equation(simplified_latex)
 
     def _record_solve_one_var_steps(self, var_sym, eq_lhs_eq_rhs_steps):
         """Record Step 4: each calculation step (text + equation)."""
@@ -194,13 +192,87 @@ class SubstitutionSolver:
         self.recorder.add_equation(f"{sp.latex(sym_var)} = {subst_display}")
         self.recorder.add_equation(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
 
-    def _expand_solve_steps(self, eq_lhs, eq_rhs, var_sym):
+    def _expand_solve_steps_from_raw(self, raw_lhs, eq_rhs, var_sym, a_t=None, b_t=None, other_sym_t=None, expr=None):
         """
-        From equation eq_lhs = eq_rhs, produce step-by-step (text, equation_latex) until var_sym = value.
-        Shows: subtract rhs, simplify, clear fractions if needed, move constant, divide by coefficient.
+        From raw substituted equation raw_lhs = eq_rhs, show full calculation:
+        expand → multiply by denom → arrange terms → simplify → multiply by -1 if leading sign is - → divide → simplify.
+        When a_t, b_t, other_sym_t, expr are given, step 1 shows 3p + 35 - 25p/3 (no combining p terms).
         """
         steps = []
-        # Step 1: Subtract rhs from both sides
+        # 1. Expand (distribute): e.g. 3p + 35 - 25p/3 = 19 (show without combining variable terms)
+        expanded_lhs = sp.expand(raw_lhs)
+        expand_display = None
+        if a_t is not None and b_t is not None and other_sym_t is not None and expr is not None:
+            expanded_second = sp.expand(b_t * expr)
+            const_second = expanded_second.subs(var_sym, 0)
+            var_second = sp.simplify(expanded_second - const_second)
+            expand_display = sp.Add(a_t * other_sym_t, const_second, var_second, evaluate=False)
+            steps.append(("Expand (distribute):", f"{sp.latex(expand_display)} = {sp.latex(eq_rhs)}"))
+        else:
+            steps.append(("Expand (distribute):", f"{sp.latex(expanded_lhs)} = {sp.latex(eq_rhs)}"))
+        # 2. Multiply by denominator to remove fractions (e.g. 9p + 105 - 25p = 57)
+        denoms = []
+        for atom in expanded_lhs.atoms(sp.Rational):
+            if atom.q != 1:
+                denoms.append(atom.q)
+        if not denoms:
+            mult = 1
+            cleared_lhs = expanded_lhs
+            cleared_rhs = eq_rhs
+            cleared_lhs_display = cleared_lhs
+        else:
+            from math import gcd
+            mult = denoms[0]
+            for d in denoms[1:]:
+                mult = mult * d // gcd(mult, d)
+            # Use expand_display * mult for display so we get 9p + 105 - 25p = 57
+            lhs_to_mult = expand_display if expand_display is not None else expanded_lhs
+            cleared_lhs = sp.expand(lhs_to_mult * mult)
+            cleared_rhs = sp.simplify(eq_rhs * mult)
+            if expand_display is not None:
+                cleared_lhs_display = sp.Add(*[sp.expand(t * mult) for t in sp.Add.make_args(expand_display)], evaluate=False)
+            else:
+                cleared_lhs_display = cleared_lhs
+            steps.append((f"Multiply the equation by {int(mult)} to remove the denominator.", f"{sp.latex(cleared_lhs_display)} = {sp.latex(cleared_rhs)}"))
+        # 3. Arranging the terms: variable terms on one side, constants on the other (e.g. 9p - 25p = 57 - 105)
+        var_terms = [t for t in sp.Add.make_args(cleared_lhs_display) if t.has(var_sym)]
+        const_terms = [t for t in sp.Add.make_args(cleared_lhs) if not t.has(var_sym)]
+        var_part = sp.Add(*var_terms, evaluate=False) if len(var_terms) > 1 else (var_terms[0] if var_terms else sp.S.Zero)
+        const_part = sp.Add(*const_terms) if const_terms else sp.S.Zero
+        rhs_arranged = sp.Add(cleared_rhs, sp.Mul(-1, const_part, evaluate=False), evaluate=False)
+        steps.append(("Arranging the terms:", f"{sp.latex(var_part)} = {sp.latex(rhs_arranged)}"))
+        # 4. Simplify: e.g. -16p = -48
+        simplified_lhs = sp.simplify(var_part)
+        const_side = sp.simplify(rhs_arranged)
+        steps.append(("Simplify.", f"{self._expr_latex(simplified_lhs)} = {self._expr_latex(const_side)}"))
+        coeff = simplified_lhs.coeff(var_sym)
+        # 5. If leading coefficient is negative: multiply by -1
+        if coeff < 0:
+            steps.append((
+                "Because the first sign is -, we change all signs (multiply the equation by -1).",
+                f"{self._expr_latex(-simplified_lhs)} = {self._expr_latex(-const_side)}",
+            ))
+            coeff = -coeff
+            const_side = -const_side
+        # 6. Divide by coefficient: var = const_side/coeff (e.g. p = 48/16, show unsimplified when integers)
+        try:
+            c_num, c_den = int(const_side), int(coeff)
+            value_frac = sp.Mul(c_num, sp.Pow(c_den, -1, evaluate=False), evaluate=False)
+        except (TypeError, ValueError):
+            value_frac = const_side / coeff
+        steps.append((f"Divide both sides by {self._expr_latex(coeff)}:", f"{sp.latex(var_sym)} = {sp.latex(value_frac)}"))
+        # 7. Simplify if value simplifies (e.g. 48/16 → 3)
+        value_simple = sp.simplify(value_frac)
+        if value_simple != value_frac:
+            steps.append(("Simplify.", f"{sp.latex(var_sym)} = {self._expr_latex(value_simple)}"))
+        return steps
+
+    def _expand_solve_steps(self, eq_lhs, eq_rhs, var_sym):
+        """
+        Fallback: from equation eq_lhs = eq_rhs, produce step-by-step (text, equation_latex).
+        Used when _expand_solve_steps_from_raw is not used (e.g. no fractions).
+        """
+        steps = []
         expr = sp.simplify(eq_lhs - eq_rhs)
         steps.append((f"Subtract {self._expr_latex(eq_rhs)} from both sides:", f"{self._expr_latex(expr)} = 0"))
         if not expr.has(var_sym):
@@ -210,7 +282,6 @@ class SubstitutionSolver:
             steps.append(("Simplify.", f"{self._expr_latex(expanded)} = 0"))
         coeff = expanded.coeff(var_sym)
         constant = expanded.subs(var_sym, 0)
-        # Clear fractions if needed (multiply by LCM of denominators)
         denoms = []
         for term in [coeff, constant]:
             if term.is_Rational and term.q != 1:
@@ -228,10 +299,8 @@ class SubstitutionSolver:
             coeff = expanded.coeff(var_sym)
             constant = expanded.subs(var_sym, 0)
             steps.append((f"Multiply both sides by {int(lcm)} to clear the denominator.", f"{self._expr_latex(expanded)} = 0"))
-        # Move constant to RHS: coeff*var = -constant
         new_rhs = sp.simplify(-constant)
         steps.append((f"Add {self._expr_latex(-constant)} to both sides:", f"{sp.latex(coeff * var_sym)} = {self._expr_latex(new_rhs)}"))
-        # Divide by coefficient (skip redundant step when coeff is 1 or -1)
         value = sp.simplify(new_rhs / coeff)
         if coeff != 1 and coeff != -1:
             steps.append((f"Divide both sides by {self._expr_latex(coeff)}:", f"{sp.latex(var_sym)} = {self._expr_latex(value)}"))
@@ -264,11 +333,10 @@ class SubstitutionSolver:
         )
         raw_subst_latex = f"{sp.latex(raw_lhs)} = {sp.latex(c_t)}"
         substituted = sp.Eq(sp.simplify(raw_substituted.lhs), sp.simplify(raw_substituted.rhs))
-        simplified_latex = f"{self._expr_latex(substituted.lhs)} = {self._expr_latex(substituted.rhs)}"
-        self._record_substitute_into(target_eq_num, solve_for_var, expr, raw_subst_latex, simplified_latex)
+        self._record_substitute_into(target_eq_num, solve_for_var, expr, raw_subst_latex)
 
-        # Step 4: solve for other_sym (from substituted.lhs = substituted.rhs)
-        calc_steps = self._expand_solve_steps(substituted.lhs, substituted.rhs, other_sym)
+        # Step 4: solve for other_sym with full intermediate steps (expand, multiply by denom, arrange, simplify, sign, divide)
+        calc_steps = self._expand_solve_steps_from_raw(raw_lhs, c_t, other_sym, a_t, b_t, other_sym_t, expr)
         sol_other = sp.solve(substituted, other_sym)
         if not sol_other:
             return self._fallback_solve()

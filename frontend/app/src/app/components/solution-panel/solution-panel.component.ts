@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { AsyncPipe, KeyValuePipe, NgFor, NgIf, TitleCasePipe } from '@angular/common';
 import { combineLatest, take } from 'rxjs';
 import { MethodSelectorComponent } from '../method-selector/method-selector.component';
@@ -72,9 +72,11 @@ export class SolutionPanelComponent {
 
   private showCopySolutionMessage(status: 'success' | 'failure'): void {
     this.copySolutionMessage = status;
+    this.cdr.detectChanges();
     this.copySolutionTimeout = setTimeout(() => {
       this.copySolutionMessage = null;
       this.copySolutionTimeout = null;
+      this.cdr.detectChanges();
     }, 2500);
   }
 

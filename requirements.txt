@@ -1,2 +1,16 @@
-sympy
-matplotlib
+# Backend runtime dependencies (pin versions for reproducible installs)
+fastapi>=0.115.0,<1
+uvicorn[standard]>=0.32.0,<1
+sqlalchemy>=2.0.0,<3
+pydantic>=2.0.0,<3
+python-dotenv>=1.0.0,<2
+sympy>=1.12.0,<2
+matplotlib>=3.8.0,<4
+
+# Database drivers (install one for your backend)
+# SQLite: built-in, no extra package
+# PostgreSQL (optional, for production):
+# psycopg2-binary>=2.9.0,<3
+
+# Migrations
+alembic>=1.13.0,<2

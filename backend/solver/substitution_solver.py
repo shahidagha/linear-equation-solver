@@ -5,6 +5,8 @@ Steps 1 (standardization) are done upstream. Steps 2-6 and verification (detaile
 """
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
+from backend.utils.grade_scope import would_add_subtract_unlike_surds
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -369,16 +371,49 @@ class SubstitutionSolver:
         target_lhs = a_t * self._x + b_t * self._y
         target_eq = sp.Eq(target_lhs, c_t)
         raw_substituted = target_eq.subs(sym_var, expr)
+        # SymPy may return BooleanTrue/BooleanFalse when the substituted form simplifies to an identity or contradiction
+        if not hasattr(raw_substituted, "lhs") or not isinstance(raw_substituted, sp.Eq):
+            if raw_substituted == sp.true or raw_substituted is True:
+                self.recorder.add_equation(
+                    "\\text{After substitution the equation simplifies to an identity (always true). "
+                    "The system has infinitely many solutions.}"
+                )
+                return degenerate_infinite()
+            self.recorder.add_equation(
+                "\\text{After substitution the equation simplifies to a contradiction. The system has no solution.}"
+            )
+            return degenerate_none()
         # Build raw substitution line without simplifying (so we show e.g. 3p + 5(7 - 5p/3) = 19)
         other_sym_t = self._y if sym_var == self._x else self._x
-        raw_lhs = sp.Add(
-            sp.Mul(a_t, other_sym_t, evaluate=False),
-            sp.Mul(b_t, expr, evaluate=False),
-            evaluate=False,
-        )
+        term1 = sp.Mul(a_t, other_sym_t, evaluate=False)
+        term2 = sp.Mul(b_t, expr, evaluate=False)
+        if would_add_subtract_unlike_surds(term1, term2):
+            self.recorder.add_equation(
+                "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                "which is beyond the scope of the current grade.}"
+            )
+            return above_grade()
+        raw_lhs = sp.Add(term1, term2, evaluate=False)
         raw_subst_latex = f"{sp.latex(raw_lhs)} = {sp.latex(c_t)}"
         substituted = sp.Eq(sp.simplify(raw_substituted.lhs), sp.simplify(raw_substituted.rhs))
         self._record_substitute_into(target_eq_num, solve_for_var, expr, raw_subst_latex)
+
+        # Detect degenerate: after substitution we get one equation in one variable; if it simplifies to 0 = k (k != 0) or 0 = 0
+        diff = sp.simplify(substituted.lhs - substituted.rhs)
+        if not diff.has(other_sym):
+            # No variable left: constant. 0 = 0 -> infinite; 0 = k (k != 0) -> no solution
+            if sp.simplify(diff) == 0:
+                self.recorder.add_equation(
+                    f"\\text{{Simplifying: }} {sp.latex(substituted.lhs)} = {sp.latex(substituted.rhs)} "
+                    "\\text{ gives } 0 = 0 \\text{ (always true). So the two equations represent the same line; "
+                    "the system has infinitely many solutions.}"
+                )
+                return degenerate_infinite()
+            self.recorder.add_equation(
+                f"\\text{{Simplifying: }} {sp.latex(substituted.lhs)} = {sp.latex(substituted.rhs)} "
+                f"\\text{{ gives }} 0 = {sp.latex(diff)} \\text{{ (a contradiction). So the system has no solution.}}"
+            )
+            return degenerate_none()
 
         # Step 4: solve for other_sym with full intermediate steps (expand, multiply by denom, arrange, simplify, sign, divide)
         calc_steps = self._expand_solve_steps_from_raw(raw_lhs, c_t, other_sym, a_t, b_t, other_sym_t, expr)

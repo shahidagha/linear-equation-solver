@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.schemas.equation_schema import SolveRequestSchema
+from backend.schemas.equation_schema import (
+    SolveRequestSchema,
+    SolveResponseSchema,
+    SaveResponseSchema,
+)
 from backend.services.equation_service import (
     save_equation_system,
     update_equation_system,
@@ -35,20 +39,23 @@ def _normalize_payload(payload: SolveRequestSchema | dict) -> dict:
     return data
 
 
-@router.post('/save-system')
+@router.post(
+    "/save-system",
+    response_model=None,
+    responses={200: {"description": "Save result", "model": SaveResponseSchema}},
+)
 def save_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
-    """
-    API endpoint to save equation systems.
-    """
-
+    """Save equation system. Returns status (saved | duplicate | invalid | variable_conflict)."""
     normalized_payload = _normalize_payload(payload)
-
     result = save_equation_system(db, normalized_payload)
-
     return result
 
 
-@router.post('/solve-system')
+@router.post(
+    "/solve-system",
+    response_model=None,
+    responses={200: {"description": "Solution and LaTeX per method", "model": SolveResponseSchema}},
+)
 def solve_equation_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
     payload_dict = _normalize_payload(payload)
 

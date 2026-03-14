@@ -11,6 +11,7 @@ from backend.solver.substitution_solver import SubstitutionSolver
 from backend.solver.cramer_solver import CramerSolver
 from backend.latex.equation_formatter import EquationFormatter
 from backend.latex.solution_renderer import SolutionLatexRenderer
+from backend.utils.degenerate import is_degenerate
 import sympy as sp
 
 
@@ -159,6 +160,9 @@ def _no_unique_solution(var1: str, var2: str):
 
 
 def _normalize_method_solution(raw_solution, var1: str, var2: str):
+    if is_degenerate(raw_solution):
+        return raw_solution  # { solution_type, message }
+
     if raw_solution == "No unique solution":
         return _no_unique_solution(var1, var2)
 
@@ -376,6 +380,17 @@ def solve_system(db: Session, system_id: int, payload: dict):
     cramer_method_steps = _serialize_steps(cramer_solver.recorder.get_steps())
     cramer_solution = _normalize_method_solution(cramer_raw, var1, var2)
 
+    degenerate = is_degenerate(elimination_solution)
+    if degenerate:
+        solution_payload = None
+        solution_json_for_db = elimination_solution  # { solution_type, message }
+    else:
+        solution_payload = {
+            var1: to_python_number(elimination_solution[var1]),
+            var2: to_python_number(elimination_solution[var2]),
+        }
+        solution_json_for_db = solution_payload
+
     graphical_solver = GraphicalSolver(standardized_system)
     points1, points2 = graphical_solver.generate_tables()
     equations = _equation_lines(standardized_system.eq1, standardized_system.eq2, var1, var2)
@@ -384,21 +399,23 @@ def solve_system(db: Session, system_id: int, payload: dict):
         "equation2_points": convert_points(points2),
         "equation1_label": equations[0] if equations else "",
         "equation2_label": equations[1] if len(equations) > 1 else "",
-        "intersection": {
+        "intersection": None if degenerate else {
             var1: to_python_number(elimination_solution[var1]),
             var2: to_python_number(elimination_solution[var2]),
         },
     }
+    if degenerate:
+        graph_data["solution_type"] = elimination_solution["solution_type"]
+        graph_data["message"] = elimination_solution["message"]
+
     renderer = SolutionLatexRenderer(var1=var1, var2=var2)
+    solution_for_render = elimination_solution if degenerate else solution_payload
 
     elimination_latex = renderer.render(
         method_name="elimination",
         equations=equations,
         raw_equations=raw_equations,
-        solution={
-            var1: to_python_number(elimination_solution[var1]),
-            var2: to_python_number(elimination_solution[var2]),
-        },
+        solution=solution_for_render,
         steps=elimination_method_steps,
         standardization_steps=standardization_steps,
     )
@@ -406,7 +423,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         method_name="substitution",
         equations=equations,
         raw_equations=raw_equations,
-        solution={
+        solution=substitution_solution if is_degenerate(substitution_solution) else {
             var1: to_python_number(substitution_solution[var1]),
             var2: to_python_number(substitution_solution[var2]),
         },
@@ -417,7 +434,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         method_name="cramer",
         equations=equations,
         raw_equations=raw_equations,
-        solution={
+        solution=cramer_solution if is_degenerate(cramer_solution) else {
             var1: to_python_number(cramer_solution[var1]),
             var2: to_python_number(cramer_solution[var2]),
         },
@@ -428,10 +445,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
         method_name="graphical",
         equations=equations,
         raw_equations=raw_equations,
-        solution={
-            var1: to_python_number(elimination_solution[var1]),
-            var2: to_python_number(elimination_solution[var2]),
-        },
+        solution=solution_for_render,
         graph_data=graph_data,
         standardization_steps=standardization_steps,
     )
@@ -445,10 +459,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
             "latex_medium": elimination_latex["latex_medium"],
             "latex_short": elimination_latex["latex_short"],
         },
-        {
-            var1: to_python_number(elimination_solution[var1]),
-            var2: to_python_number(elimination_solution[var2]),
-        },
+        solution_json_for_db,
         None,
     )
     substitution_record = _upsert_method_record(
@@ -460,10 +471,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
             "latex_medium": substitution_latex["latex_medium"],
             "latex_short": substitution_latex["latex_short"],
         },
-        {
-            var1: to_python_number(substitution_solution[var1]),
-            var2: to_python_number(substitution_solution[var2]),
-        },
+        substitution_solution if is_degenerate(substitution_solution) else {var1: to_python_number(substitution_solution[var1]), var2: to_python_number(substitution_solution[var2])},
         None,
     )
     cramer_record = _upsert_method_record(
@@ -475,10 +483,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
             "latex_medium": cramer_latex["latex_medium"],
             "latex_short": cramer_latex["latex_short"],
         },
-        {
-            var1: to_python_number(cramer_solution[var1]),
-            var2: to_python_number(cramer_solution[var2]),
-        },
+        cramer_solution if is_degenerate(cramer_solution) else {var1: to_python_number(cramer_solution[var1]), var2: to_python_number(cramer_solution[var2])},
         None,
     )
     graphical_record = _upsert_method_record(
@@ -490,10 +495,7 @@ def solve_system(db: Session, system_id: int, payload: dict):
             "latex_medium": graphical_latex["latex_medium"],
             "latex_short": graphical_latex["latex_short"],
         },
-        {
-            var1: to_python_number(elimination_solution[var1]),
-            var2: to_python_number(elimination_solution[var2]),
-        },
+        solution_json_for_db,
         graph_data,
     )
 
@@ -504,10 +506,9 @@ def solve_system(db: Session, system_id: int, payload: dict):
     db.refresh(graphical_record)
 
     return {
-        "solution": {
-            var1: to_python_number(elimination_solution[var1]),
-            var2: to_python_number(elimination_solution[var2]),
-        },
+        "solution": solution_payload,
+        "solution_type": elimination_solution.get("solution_type") if degenerate else "unique",
+        "message": elimination_solution.get("message") if degenerate else None,
         "methods": {
             "elimination_latex": {
                 "latex_detailed": elimination_record.latex_detailed,

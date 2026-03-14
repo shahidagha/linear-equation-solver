@@ -1,5 +1,7 @@
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
+from backend.utils.grade_scope import would_add_subtract_unlike_surds
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -10,7 +12,6 @@ class EliminationSolver:
         self.system = system
         self.eq1 = system.eq1
         self.eq2 = system.eq2
-        self.above_grade = False
 
         # Records only elimination‑specific steps.
         # Standardization and equation numbering are handled upstream
@@ -24,6 +25,25 @@ class EliminationSolver:
     def vertical_elimination(self, eq1, eq2, result, op=None):
         """op: 'add' or 'subtract' so the layout shows + or − and underset only for subtract."""
         self.recorder.add_vertical(eq1, eq2, result, op=op)
+
+    def _record_and_return_degenerate(self, eq_line1, eq_line2, C, op):
+        """Record 0 = C or 0 = 0, add conclusion step, return degenerate_none() or degenerate_infinite()."""
+        C = sp.simplify(C)
+        if C == 0:
+            result_line = "0 = 0"
+        else:
+            result_line = f"0 = {sp.latex(C)}"
+        self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
+        self.recorder.add_equation(result_line)
+        if C == 0:
+            self.recorder.add_equation(
+                "\\text{We get } 0 = 0 \\text{; the equations are dependent — infinitely many solutions.}"
+            )
+            return degenerate_infinite()
+        self.recorder.add_equation(
+            "\\text{We get } 0 = k \\text{ with } k \\neq 0 \\text{ — the system has no solution (inconsistent).}"
+        )
+        return degenerate_none()
 
     @staticmethod
     def _term(coeff, var):
@@ -39,41 +59,18 @@ class EliminationSolver:
         return f"{sp.latex(coeff)}{var}"
 
     # -----------------------------
-    # like‑surd guard (SECTION 1)
+    # like‑surd guard: at add/subtract step, unlike surds → above grade
     # -----------------------------
 
-    @staticmethod
-    def _radicand(expr):
-        expr = sp.simplify(expr)
-        roots = [p.base for p in expr.atoms(sp.Pow) if p.exp == sp.Rational(1, 2)]
-        if not roots:
-            return None
-        base0 = sp.simplify(roots[0])
-        for r in roots[1:]:
-            if not sp.simplify(r - base0) == 0:
-                return "MIXED"
-        return base0
-
-    def _above_grade(self):
-        if not self.above_grade:
-            self.recorder.add("Above the grade of the student")
-            self.above_grade = True
-
-    def _check_like_surd_pair(self, e1, e2):
-        r1 = self._radicand(e1)
-        r2 = self._radicand(e2)
-
-        # Mixed radicands within a single coefficient.
-        if r1 == "MIXED" or r2 == "MIXED":
-            self._above_grade()
-            return False
-
-        # Both have a single radicand but they differ.
-        if r1 is not None and r2 is not None and not sp.simplify(r1 - r2) == 0:
-            self._above_grade()
-            return False
-
-        return True
+    def _check_like_surds_and_maybe_above_grade(self, a1, b1, c1, a2, b2, c2):
+        """If any pair (a1,a2), (b1,b2), (c1,c2) would add/subtract unlike surds, record step and return above_grade()."""
+        if would_add_subtract_unlike_surds(a1, a2) or would_add_subtract_unlike_surds(b1, b2) or would_add_subtract_unlike_surds(c1, c2):
+            self.recorder.add_equation(
+                "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                "which is beyond the scope of the current grade.}"
+            )
+            return above_grade()
+        return None
 
     # -----------------------------
     # strategy detection
@@ -239,42 +236,33 @@ class EliminationSolver:
                 self.recorder.add_equation(
                     f"\\text{{Adding equations (coefficients of }} {var2} \\text{{ have opposite signs)}}"
                 )
-                if not (
-                    self._check_like_surd_pair(a1, a2)
-                    and self._check_like_surd_pair(b1, b2)
-                    and self._check_like_surd_pair(c1, c2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+                if result is not None:
+                    return result
                 A = a1 + a2
                 C = c1 + c2
             else:
                 if a1 > a2:
                     self.recorder.add_equation("\\text{Subtracting equations } (1) - (2)")
-                    if not (
-                        self._check_like_surd_pair(a1, a2)
-                        and self._check_like_surd_pair(b1, b2)
-                        and self._check_like_surd_pair(c1, c2)
-                    ):
-                        return
+                    result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+                    if result is not None:
+                        return result
                     A = a1 - a2
                     C = c1 - c2
                 else:
                     self.recorder.add_equation("\\text{Subtracting equations } (2) - (1)")
-                    if not (
-                        self._check_like_surd_pair(a1, a2)
-                        and self._check_like_surd_pair(b1, b2)
-                        and self._check_like_surd_pair(c1, c2)
-                    ):
-                        return
+                    result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+                    if result is not None:
+                        return result
                     A = a2 - a1
                     C = c2 - c1
-
-            if A == 0:
-                return
 
             op = "add" if sp.sign(b1) != sp.sign(b2) else "subtract"
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             # Use _term so coefficient 1 is hidden in the result line.
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
@@ -291,42 +279,33 @@ class EliminationSolver:
                 self.recorder.add_equation(
                     f"\\text{{Adding equations (coefficients of }} {var1} \\text{{ have opposite signs)}}"
                 )
-                if not (
-                    self._check_like_surd_pair(a1, a2)
-                    and self._check_like_surd_pair(b1, b2)
-                    and self._check_like_surd_pair(c1, c2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+                if result is not None:
+                    return result
                 B = b1 + b2
                 C = c1 + c2
             else:
                 if b1 > b2:
                     self.recorder.add_equation("\\text{Subtracting equations } (1) - (2)")
-                    if not (
-                        self._check_like_surd_pair(a1, a2)
-                        and self._check_like_surd_pair(b1, b2)
-                        and self._check_like_surd_pair(c1, c2)
-                    ):
-                        return
+                    result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+                    if result is not None:
+                        return result
                     B = b1 - b2
                     C = c1 - c2
                 else:
                     self.recorder.add_equation("\\text{Subtracting equations } (2) - (1)")
-                    if not (
-                        self._check_like_surd_pair(a1, a2)
-                        and self._check_like_surd_pair(b1, b2)
-                        and self._check_like_surd_pair(c1, c2)
-                    ):
-                        return
+                    result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+                    if result is not None:
+                        return result
                     B = b2 - b1
                     C = c2 - c1
-
-            if B == 0:
-                return
 
             op = "add" if sp.sign(a1) != sp.sign(a2) else "subtract"
             eq_line1 = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
             eq_line2 = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
+            if B == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -343,12 +322,9 @@ class EliminationSolver:
         self.recorder.add_equation("\\text{Using Six Step Method.}")
 
         # Step 1: add (1) and (2)
-        if not (
-            self._check_like_surd_pair(a1, a2)
-            and self._check_like_surd_pair(b1, b2)
-            and self._check_like_surd_pair(c1, c2)
-        ):
-            return
+        result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+        if result is not None:
+            return result
 
         a3 = a1 + a2
         b3 = b1 + b2
@@ -389,23 +365,17 @@ class EliminationSolver:
         # Step 3: subtract equations according to a1, a2
         if a1 > a2:
             self.recorder.add_equation("\\text{Subtracting equation (2) from (1)}")
-            if not (
-                self._check_like_surd_pair(a1, a2)
-                and self._check_like_surd_pair(b1, b2)
-                and self._check_like_surd_pair(c1, c2)
-            ):
-                return
+            result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+            if result is not None:
+                return result
             a4 = a1 - a2
             b4 = b1 - b2
             c4 = c1 - c2
         else:
             self.recorder.add_equation("\\text{Subtracting equation (1) from (2)}")
-            if not (
-                self._check_like_surd_pair(a1, a2)
-                and self._check_like_surd_pair(b1, b2)
-                and self._check_like_surd_pair(c1, c2)
-            ):
-                return
+            result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
+            if result is not None:
+                return result
             a4 = a2 - a1
             b4 = b2 - b1
             c4 = c2 - c1
@@ -534,30 +504,24 @@ class EliminationSolver:
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
             if sp.sign(B1) != sp.sign(B2):
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 A = A1 + A2
                 C = C1 + C2
                 self.recorder.add_equation(f"\\text{{Adding equations ({current_eq_no1}) and ({current_eq_no2})}}")
             else:
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 A = A1 - A2
                 C = C1 - C2
                 self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -609,30 +573,24 @@ class EliminationSolver:
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
             if sp.sign(A1) != sp.sign(A2):
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 B = B1 + B2
                 C = C1 + C2
                 self.recorder.add_operation("Adding equations")
             else:
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 B = B1 - B2
                 C = C1 - C2
                 self.recorder.add_equation("\\text{Subtracting equations}")
 
-            if B == 0:
-                return
-
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
+            if B == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -678,30 +636,24 @@ class EliminationSolver:
             eq_line2 = EquationFormatter.format_equation(A2, B2, C2, var1, var2)
 
             if sp.sign(B1) != sp.sign(B2):
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 A = A1 + A2
                 C = C1 + C2
                 self.recorder.add_operation("Adding equations")
             else:
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 A = A1 - A2
                 C = C1 - C2
                 self.recorder.add_equation("\\text{Subtracting equations}")
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -762,30 +714,24 @@ class EliminationSolver:
 
         if eliminate == "y":
             if sp.sign(B1) != sp.sign(B2):
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 A = A1 + A2
                 C = C1 + C2
                 self.recorder.add_equation(f"\\text{{Adding equations ({current_eq_no1}) and ({current_eq_no2})}}")
             else:
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 A = A1 - A2
                 C = C1 - C2
                 self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
-            if A == 0:
-                return
-
             op = "add" if sp.sign(B1) != sp.sign(B2) else "subtract"
+            if A == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             x_term = self._term(A, var1)
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -795,30 +741,24 @@ class EliminationSolver:
             self._substitute_x(x_value)
         else:
             if sp.sign(A1) != sp.sign(A2):
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 B = B1 + B2
                 C = C1 + C2
                 self.recorder.add_equation(f"\\text{{Adding equations ({current_eq_no1}) and ({current_eq_no2})}}")
             else:
-                if not (
-                    self._check_like_surd_pair(A1, A2)
-                    and self._check_like_surd_pair(B1, B2)
-                    and self._check_like_surd_pair(C1, C2)
-                ):
-                    return
+                result = self._check_like_surds_and_maybe_above_grade(A1, B1, C1, A2, B2, C2)
+                if result is not None:
+                    return result
                 B = B1 - B2
                 C = C1 - C2
                 self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
-            if B == 0:
-                return
-
             op = "add" if sp.sign(A1) != sp.sign(A2) else "subtract"
+            if B == 0:
+                return self._record_and_return_degenerate(eq_line1, eq_line2, C, op)
+
             y_term = self._term(B, var2)
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
@@ -862,12 +802,16 @@ class EliminationSolver:
                 "\\text{ and both equations have same middle sign we will implement six step method.}"
             )
 
+        result = None
         if strategy == "DIRECT":
-            self._solve_direct(a1, b1, c1, a2, b2, c2)
+            result = self._solve_direct(a1, b1, c1, a2, b2, c2)
         elif strategy == "CROSS":
-            self._solve_cross(a1, b1, c1, a2, b2, c2)
+            result = self._solve_cross(a1, b1, c1, a2, b2, c2)
         else:
-            self._solve_lcm(a1, b1, c1, a2, b2, c2)
+            result = self._solve_lcm(a1, b1, c1, a2, b2, c2)
+
+        if result is not None:
+            return result
 
         x = sp.Symbol(self.system.var1)
         y = sp.Symbol(self.system.var2)

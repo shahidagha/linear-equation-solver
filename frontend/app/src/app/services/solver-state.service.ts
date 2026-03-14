@@ -26,6 +26,8 @@ export class SolverStateService {
     equation2: this.createDefaultEquation()
   });
   private readonly solutionSubject = new BehaviorSubject<Record<string, string | number> | null>(null);
+  private readonly solutionTypeSubject = new BehaviorSubject<SolverResponse['solution_type'] | undefined>(undefined);
+  private readonly messageSubject = new BehaviorSubject<string | null | undefined>(undefined);
   private readonly methodsSubject = new BehaviorSubject<SolverResponse['methods'] | null>(null);
   private readonly graphSubject = new BehaviorSubject<SolverResponse['graph'] | null>(null);
   private readonly selectedMethodSubject = new BehaviorSubject<string>('elimination');
@@ -39,6 +41,8 @@ export class SolverStateService {
   readonly variables$ = this.variablesSubject.asObservable();
   readonly equations$ = this.equationsSubject.asObservable();
   readonly solution$ = this.solutionSubject.asObservable();
+  readonly solutionType$ = this.solutionTypeSubject.asObservable();
+  readonly message$ = this.messageSubject.asObservable();
   readonly methods$ = this.methodsSubject.asObservable();
   readonly graph$ = this.graphSubject.asObservable();
   readonly selectedMethod$ = this.selectedMethodSubject.asObservable();
@@ -71,6 +75,8 @@ export class SolverStateService {
       equation2: system.equation2
     });
     this.solutionSubject.next(system.stored_response.solution ?? null);
+    this.solutionTypeSubject.next(system.stored_response.solution_type ?? (system.stored_response as any).graph?.solution_type);
+    this.messageSubject.next(system.stored_response.message ?? (system.stored_response as any).graph?.message ?? null);
     this.methodsSubject.next(system.stored_response.methods ?? null);
     this.graphSubject.next(system.stored_response.graph ?? null);
     this.selectedMethodSubject.next('elimination');
@@ -104,6 +110,8 @@ export class SolverStateService {
   setResponse(systemId: number | null, response: SolverResponse): void {
     this.currentSystemIdSubject.next(systemId);
     this.solutionSubject.next(response.solution ?? null);
+    this.solutionTypeSubject.next(response.solution_type);
+    this.messageSubject.next(response.message ?? response.graph?.message ?? null);
     this.methodsSubject.next(response.methods ?? null);
     this.graphSubject.next(response.graph ?? null);
     this.selectedMethodSubject.next('elimination');
@@ -141,6 +149,8 @@ export class SolverStateService {
       equation2: this.createDefaultEquation()
     });
     this.solutionSubject.next(null);
+    this.solutionTypeSubject.next(undefined);
+    this.messageSubject.next(undefined);
     this.methodsSubject.next(null);
     this.graphSubject.next(null);
     this.selectedMethodSubject.next('elimination');

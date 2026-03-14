@@ -426,16 +426,16 @@ class SolutionLatexRenderer:
         """Wrap long LaTeX lines only at safe break points so we never split inside \\text{...}."""
         if not line or len(line) <= max_len:
             return [line] if line else []
-        # Only break after "} \\text{" or " \\; " so both sides stay valid (no break inside \text{...})
+        # Break at the first safe point before max_len (even if at 20 or 30) so no line exceeds max_len
         search_region = line[: max_len + 1]
         break_after = -1
         for sep, skip in (("} \\text{", 2), (" \\; ", 4)):
-            idx = search_region.rfind(sep)
+            idx = search_region.find(sep)
             if idx != -1:
-                break_after = idx + skip
-                break
+                candidate = idx + skip
+                if break_after < 0 or candidate < break_after:
+                    break_after = candidate
         if break_after <= 0:
-            # Do not break at arbitrary space — can split inside \text{...} and break LaTeX
             return [line]
         first = line[:break_after].rstrip()
         rest = line[break_after:].lstrip()

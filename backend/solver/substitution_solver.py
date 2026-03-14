@@ -371,8 +371,8 @@ class SubstitutionSolver:
         target_lhs = a_t * self._x + b_t * self._y
         target_eq = sp.Eq(target_lhs, c_t)
         raw_substituted = target_eq.subs(sym_var, expr)
-        # SymPy may return True/False when the substituted form simplifies to an identity or contradiction
-        if not isinstance(raw_substituted, sp.Eq):
+        # SymPy may return BooleanTrue/BooleanFalse when the substituted form simplifies to an identity or contradiction
+        if not hasattr(raw_substituted, "lhs") or not isinstance(raw_substituted, sp.Eq):
             if raw_substituted == sp.true or raw_substituted is True:
                 self.recorder.add_equation(
                     "\\text{After substitution the equation simplifies to an identity (always true). "

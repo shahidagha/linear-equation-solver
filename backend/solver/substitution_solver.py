@@ -5,7 +5,8 @@ Steps 1 (standardization) are done upstream. Steps 2-6 and verification (detaile
 """
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
-from backend.utils.degenerate import degenerate_none, degenerate_infinite
+from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
+from backend.utils.grade_scope import would_add_subtract_unlike_surds
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -372,11 +373,15 @@ class SubstitutionSolver:
         raw_substituted = target_eq.subs(sym_var, expr)
         # Build raw substitution line without simplifying (so we show e.g. 3p + 5(7 - 5p/3) = 19)
         other_sym_t = self._y if sym_var == self._x else self._x
-        raw_lhs = sp.Add(
-            sp.Mul(a_t, other_sym_t, evaluate=False),
-            sp.Mul(b_t, expr, evaluate=False),
-            evaluate=False,
-        )
+        term1 = sp.Mul(a_t, other_sym_t, evaluate=False)
+        term2 = sp.Mul(b_t, expr, evaluate=False)
+        if would_add_subtract_unlike_surds(term1, term2):
+            self.recorder.add_equation(
+                "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                "which is beyond the scope of the current grade.}"
+            )
+            return above_grade()
+        raw_lhs = sp.Add(term1, term2, evaluate=False)
         raw_subst_latex = f"{sp.latex(raw_lhs)} = {sp.latex(c_t)}"
         substituted = sp.Eq(sp.simplify(raw_substituted.lhs), sp.simplify(raw_substituted.rhs))
         self._record_substitute_into(target_eq_num, solve_for_var, expr, raw_subst_latex)

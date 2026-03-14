@@ -12,7 +12,7 @@ export interface MethodLatexPayload {
   latex_short: string;
 }
 
-export type SolutionType = 'unique' | 'none' | 'infinite';
+export type SolutionType = 'unique' | 'none' | 'infinite' | 'above_grade';
 
 export interface SolverResponse {
   system_id?: number;

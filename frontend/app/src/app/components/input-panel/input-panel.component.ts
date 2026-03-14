@@ -174,7 +174,7 @@ export class InputPanelComponent implements OnInit, OnDestroy {
           this.errorMessage = response.message ?? 'Unable to solve system.';
           return;
         }
-        if (!response.solution && response.solution_type !== 'none' && response.solution_type !== 'infinite') {
+        if (!response.solution && response.solution_type !== 'none' && response.solution_type !== 'infinite' && response.solution_type !== 'above_grade') {
           this.errorMessage = response.message ?? 'Unable to solve system.';
           return;
         }

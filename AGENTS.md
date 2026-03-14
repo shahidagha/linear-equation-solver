@@ -123,7 +123,9 @@ Each solver decides degeneracy at the natural point in its own steps (no central
 • Cramer: If D = 0, compute D_x and D_y. If either ≠ 0 → inconsistent (no solution); if both 0 → dependent (infinitely many). Record and return degenerate.
 • Graphical: classify() returns "unique" | "none" | "infinite" from slopes/intercepts; used for graph caption and intersection display.
 
-API: Response includes solution_type ("unique" | "none" | "infinite"), message (when degenerate), and solution (null when degenerate). Graph intersection is null when degenerate. LaTeX final line shows the message instead of (var1, var2) = (x, y).
+API: Response includes solution_type ("unique" | "none" | "infinite" | "above_grade"), message (when non-unique), and solution (null when non-unique). Graph intersection is null when degenerate/above_grade. LaTeX final line shows the message instead of (var1, var2) = (x, y).
+
+**Above grade:** In whichever method, at a step where we would add or subtract two expressions that involve surds with different radicands (or mixed radicands), we declare "above grade" and return above_grade(). Shared logic in backend.utils.grade_scope (would_add_subtract_unlike_surds); each solver checks at its concrete add/subtract step (elimination when combining equations, substitution when forming the substituted sum, Cramer when computing determinant differences).
 
 ---
 

@@ -6,7 +6,8 @@ When D = 0: compute D_x and D_y to distinguish no solution (inconsistent) vs inf
 """
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
-from backend.utils.degenerate import degenerate_none, degenerate_infinite
+from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
+from backend.utils.grade_scope import would_add_subtract_unlike_surds
 
 
 def _to_sympy(value):
@@ -59,6 +60,12 @@ class CramerSolver:
         self.recorder.add_equation(
             f"D = \\begin{{vmatrix}} {_expr_latex(a1)} & {_expr_latex(b1)} \\\\ {_expr_latex(a2)} & {_expr_latex(b2)} \\end{{vmatrix}}"
         )
+        if would_add_subtract_unlike_surds(a1 * b2, a2 * b1):
+            self.recorder.add_equation(
+                "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                "which is beyond the scope of the current grade.}"
+            )
+            return above_grade()
         D = sp.simplify(a1 * b2 - a2 * b1)
         self._record_det_computation("D", a1 * b2, a2 * b1, D, "a_1 b_2 - a_2 b_1", a1, b2, a2, b1)
 
@@ -67,6 +74,12 @@ class CramerSolver:
                 "\\text{Since } D = 0 \\text{, the system has no unique solution.}"
             )
             # Compute D_x and D_y to distinguish inconsistent (no solution) vs dependent (infinitely many)
+            if would_add_subtract_unlike_surds(c1 * b2, c2 * b1) or would_add_subtract_unlike_surds(a1 * c2, a2 * c1):
+                self.recorder.add_equation(
+                    "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                    "which is beyond the scope of the current grade.}"
+                )
+                return above_grade()
             Dx = sp.simplify(c1 * b2 - c2 * b1)
             Dy = sp.simplify(a1 * c2 - a2 * c1)
             self.recorder.add_equation(
@@ -95,6 +108,12 @@ class CramerSolver:
         self.recorder.add_equation(
             f"D_{{{self.var1}}} = \\begin{{vmatrix}} {_expr_latex(c1)} & {_expr_latex(b1)} \\\\ {_expr_latex(c2)} & {_expr_latex(b2)} \\end{{vmatrix}}"
         )
+        if would_add_subtract_unlike_surds(c1 * b2, c2 * b1):
+            self.recorder.add_equation(
+                "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                "which is beyond the scope of the current grade.}"
+            )
+            return above_grade()
         Dx = sp.simplify(c1 * b2 - c2 * b1)
         self._record_det_computation(f"D_{{{self.var1}}}", c1 * b2, c2 * b1, Dx, "c_1 b_2 - c_2 b_1", c1, b2, c2, b1)
 
@@ -108,6 +127,12 @@ class CramerSolver:
         self.recorder.add_equation(
             f"D_{{{self.var2}}} = \\begin{{vmatrix}} {_expr_latex(a1)} & {_expr_latex(c1)} \\\\ {_expr_latex(a2)} & {_expr_latex(c2)} \\end{{vmatrix}}"
         )
+        if would_add_subtract_unlike_surds(a1 * c2, a2 * c1):
+            self.recorder.add_equation(
+                "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
+                "which is beyond the scope of the current grade.}"
+            )
+            return above_grade()
         Dy = sp.simplify(a1 * c2 - a2 * c1)
         self._record_det_computation(f"D_{{{self.var2}}}", a1 * c2, a2 * c1, Dy, "a_1 c_2 - a_2 c_1", a1, c2, a2, c1)
 

@@ -232,10 +232,13 @@ class EliminationSolver:
             eliminate = "x"
 
         if eliminate == "y":
-            self.recorder.add("Using Direct Elimination on y (|b₁| = |b₂|)")
-
+            self.recorder.add_equation(
+                f"\\text{{Using Direct Elimination on }} {var2} \\text{{ (}}|b_1| = |b_2|\\text{{)}}"
+            )
             if sp.sign(b1) != sp.sign(b2):
-                self.recorder.add_operation("Adding equations (coefficients of y have opposite signs)")
+                self.recorder.add_equation(
+                    f"\\text{{Adding equations (coefficients of }} {var2} \\text{{ have opposite signs)}}"
+                )
                 if not (
                     self._check_like_surd_pair(a1, a2)
                     and self._check_like_surd_pair(b1, b2)
@@ -246,7 +249,7 @@ class EliminationSolver:
                 C = c1 + c2
             else:
                 if a1 > a2:
-                    self.recorder.add_operation("Subtracting equations (1 − 2)")
+                    self.recorder.add_equation("\\text{Subtracting equations } (1) - (2)")
                     if not (
                         self._check_like_surd_pair(a1, a2)
                         and self._check_like_surd_pair(b1, b2)
@@ -256,7 +259,7 @@ class EliminationSolver:
                     A = a1 - a2
                     C = c1 - c2
                 else:
-                    self.recorder.add_operation("Subtracting equations (2 − 1)")
+                    self.recorder.add_equation("\\text{Subtracting equations } (2) - (1)")
                     if not (
                         self._check_like_surd_pair(a1, a2)
                         and self._check_like_surd_pair(b1, b2)
@@ -281,10 +284,13 @@ class EliminationSolver:
             x_value = sp.simplify(C / A)
             self._substitute_x(x_value)
         else:
-            self.recorder.add("Using Direct Elimination on x (|a₁| = |a₂|)")
-
+            self.recorder.add_equation(
+                f"\\text{{Using Direct Elimination on }} {var1} \\text{{ (}}|a_1| = |a_2|\\text{{)}}"
+            )
             if sp.sign(a1) != sp.sign(a2):
-                self.recorder.add_operation("Adding equations (coefficients of x have opposite signs)")
+                self.recorder.add_equation(
+                    f"\\text{{Adding equations (coefficients of }} {var1} \\text{{ have opposite signs)}}"
+                )
                 if not (
                     self._check_like_surd_pair(a1, a2)
                     and self._check_like_surd_pair(b1, b2)
@@ -295,7 +301,7 @@ class EliminationSolver:
                 C = c1 + c2
             else:
                 if b1 > b2:
-                    self.recorder.add_operation("Subtracting equations (1 − 2)")
+                    self.recorder.add_equation("\\text{Subtracting equations } (1) - (2)")
                     if not (
                         self._check_like_surd_pair(a1, a2)
                         and self._check_like_surd_pair(b1, b2)
@@ -305,7 +311,7 @@ class EliminationSolver:
                     B = b1 - b2
                     C = c1 - c2
                 else:
-                    self.recorder.add_operation("Subtracting equations (2 − 1)")
+                    self.recorder.add_equation("\\text{Subtracting equations } (2) - (1)")
                     if not (
                         self._check_like_surd_pair(a1, a2)
                         and self._check_like_surd_pair(b1, b2)
@@ -334,7 +340,7 @@ class EliminationSolver:
     # -----------------------------
 
     def _solve_cross(self, a1, b1, c1, a2, b2, c2):
-        self.recorder.add("Using Six Step Method.")
+        self.recorder.add_equation("\\text{Using Six Step Method.}")
 
         # Step 1: add (1) and (2)
         if not (
@@ -350,7 +356,7 @@ class EliminationSolver:
         var1 = getattr(self.system, "var1", "x")
         var2 = getattr(self.system, "var2", "y")
 
-        self.recorder.add_operation("Adding equations (1) and (2)")
+        self.recorder.add_equation("\\text{Adding equations (1) and (2)}")
         eq1_line = EquationFormatter.format_equation(a1, b1, c1, var1, var2)
         eq2_line = EquationFormatter.format_equation(a2, b2, c2, var1, var2)
         eq3_line = EquationFormatter.format_equation(a3, b3, c3, var1, var2)
@@ -359,11 +365,18 @@ class EliminationSolver:
 
         # Step (5): divide message (detailed / medium; short blank). Divisor for (3) is a3.
         divisor = a3
+        var1 = getattr(self.system, "var1", "x")
+        var2 = getattr(self.system, "var2", "y")
         self.recorder.add({
             "detailed": (
                 f"Divide this equation by {sp.latex(divisor)} so that coefficient of x and y becomes ±1 (x ± y = m)."
             ),
             "medium": f"Divide the equation by {sp.latex(divisor)}, we get,",
+            "detailed_latex": (
+                f"\\text{{Divide this equation by }} {sp.latex(divisor)} \\text{{ so that coefficient of }} "
+                f"{var1} \\text{{ and }} {var2} \\text{{ becomes }} \\pm 1 \\text{{ (}} {var1} \\pm {var2} = m \\text{{).}}"
+            ),
+            "medium_latex": f"\\text{{Divide the equation by }} {sp.latex(divisor)} \\text{{, we get,}}",
         })
         # Step (6): reduced equation (3) with number
         m = sp.simplify(c3 / a3)
@@ -375,7 +388,7 @@ class EliminationSolver:
 
         # Step 3: subtract equations according to a1, a2
         if a1 > a2:
-            self.recorder.add_operation("Subtracting equation (2) from (1)")
+            self.recorder.add_equation("\\text{Subtracting equation (2) from (1)}")
             if not (
                 self._check_like_surd_pair(a1, a2)
                 and self._check_like_surd_pair(b1, b2)
@@ -386,7 +399,7 @@ class EliminationSolver:
             b4 = b1 - b2
             c4 = c1 - c2
         else:
-            self.recorder.add_operation("Subtracting equation (1) from (2)")
+            self.recorder.add_equation("\\text{Subtracting equation (1) from (2)}")
             if not (
                 self._check_like_surd_pair(a1, a2)
                 and self._check_like_surd_pair(b1, b2)
@@ -409,6 +422,11 @@ class EliminationSolver:
                 f"Divide this equation by {sp.latex(divisor)} so that coefficient of x and y becomes ±1 (x ∓ y = n)."
             ),
             "medium": f"Divide the equation by {sp.latex(divisor)}, we get,",
+            "detailed_latex": (
+                f"\\text{{Divide this equation by }} {sp.latex(divisor)} \\text{{ so that coefficient of }} "
+                f"{var1} \\text{{ and }} {var2} \\text{{ becomes }} \\pm 1 \\text{{ (}} {var1} \\mp {var2} = n \\text{{).}}"
+            ),
+            "medium_latex": f"\\text{{Divide the equation by }} {sp.latex(divisor)} \\text{{, we get,}}",
         })
         # Step (10): reduced equation (4) with label
         n = sp.simplify(c4 / a4)
@@ -524,7 +542,7 @@ class EliminationSolver:
                     return
                 A = A1 + A2
                 C = C1 + C2
-                self.recorder.add_operation(f"Adding equations ({current_eq_no1}) and ({current_eq_no2})")
+                self.recorder.add_equation(f"\\text{{Adding equations ({current_eq_no1}) and ({current_eq_no2})}}")
             else:
                 if not (
                     self._check_like_surd_pair(A1, A2)
@@ -534,7 +552,7 @@ class EliminationSolver:
                     return
                 A = A1 - A2
                 C = C1 - C2
-                self.recorder.add_operation(f"Subtracting equation ({current_eq_no2}) from ({current_eq_no1})")
+                self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
             if A == 0:
                 return
@@ -609,7 +627,7 @@ class EliminationSolver:
                     return
                 B = B1 - B2
                 C = C1 - C2
-                self.recorder.add_operation("Subtracting equations")
+                self.recorder.add_equation("\\text{Subtracting equations}")
 
             if B == 0:
                 return
@@ -678,7 +696,7 @@ class EliminationSolver:
                     return
                 A = A1 - A2
                 C = C1 - C2
-                self.recorder.add_operation("Subtracting equations")
+                self.recorder.add_equation("\\text{Subtracting equations}")
 
             if A == 0:
                 return
@@ -752,7 +770,7 @@ class EliminationSolver:
                     return
                 A = A1 + A2
                 C = C1 + C2
-                self.recorder.add_operation(f"Adding equations ({current_eq_no1}) and ({current_eq_no2})")
+                self.recorder.add_equation(f"\\text{{Adding equations ({current_eq_no1}) and ({current_eq_no2})}}")
             else:
                 if not (
                     self._check_like_surd_pair(A1, A2)
@@ -762,7 +780,7 @@ class EliminationSolver:
                     return
                 A = A1 - A2
                 C = C1 - C2
-                self.recorder.add_operation(f"Subtracting equation ({current_eq_no2}) from ({current_eq_no1})")
+                self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
             if A == 0:
                 return
@@ -785,7 +803,7 @@ class EliminationSolver:
                     return
                 B = B1 + B2
                 C = C1 + C2
-                self.recorder.add_operation(f"Adding equations ({current_eq_no1}) and ({current_eq_no2})")
+                self.recorder.add_equation(f"\\text{{Adding equations ({current_eq_no1}) and ({current_eq_no2})}}")
             else:
                 if not (
                     self._check_like_surd_pair(A1, A2)
@@ -795,7 +813,7 @@ class EliminationSolver:
                     return
                 B = B1 - B2
                 C = C1 - C2
-                self.recorder.add_operation(f"Subtracting equation ({current_eq_no2}) from ({current_eq_no1})")
+                self.recorder.add_equation(f"\\text{{Subtracting equation ({current_eq_no2}) from ({current_eq_no1})}}")
 
             if B == 0:
                 return
@@ -839,9 +857,9 @@ class EliminationSolver:
                 "or subtract the equations immediately to eliminate one variable."
             )
         else:  # CROSS → Six step Method
-            self.recorder.add(
-                "Elimination Strategy: Six step Method. Since |a₁|=|b₂| and |a₂|=|b₁| and both equations have "
-                "same middle sign we will implement six step method."
+            self.recorder.add_equation(
+                "\\text{Elimination Strategy: Six step Method. Since } |a_1|=|b_2| \\text{ and } |a_2|=|b_1| "
+                "\\text{ and both equations have same middle sign we will implement six step method.}"
             )
 
         if strategy == "DIRECT":

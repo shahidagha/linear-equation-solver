@@ -186,18 +186,22 @@ def _serialize_steps(steps):
                 "type": "substitution_intro",
                 "content": step.content["short"],
                 "detailed_content": step.content["detailed"],
+                "content_latex": step.content.get("content_latex"),
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and "medium" in step.content:
             serialized.append({
                 "type": "divide_step",
                 "detailed": step.content["detailed"],
                 "medium": step.content["medium"],
+                "detailed_latex": step.content.get("detailed_latex"),
+                "medium_latex": step.content.get("medium_latex"),
             })
         elif step.type == "text" and isinstance(step.content, dict) and "equation" in step.content:
             serialized.append({
                 "type": "subst_solve_step",
                 "detailed": step.content.get("detailed", ""),
                 "equation": step.content["equation"],
+                "detailed_latex": step.content.get("detailed_latex"),
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and step.content.get("medium") == "" and step.content.get("short") == "" and "equation" not in step.content:
             serialized.append({

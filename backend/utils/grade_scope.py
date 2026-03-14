@@ -28,11 +28,14 @@ def radicand(expr: Any) -> Optional[Any]:
 def would_add_subtract_unlike_surds(expr1: Any, expr2: Any) -> bool:
     """
     True if adding or subtracting expr1 and expr2 would involve surds with different
-    radicands (or mixed radicands). At such a step we declare "above grade".
+    radicands, mixed radicands, or one rational and one surd (e.g. 5 - √3). At such a step we declare "above grade".
     """
     r1 = radicand(expr1)
     r2 = radicand(expr2)
     if r1 == "MIXED" or r2 == "MIXED":
+        return True
+    # One has a surd, the other has none (rational ± surd, e.g. 5 - √3) → above grade
+    if (r1 is None) != (r2 is None):
         return True
     if r1 is not None and r2 is not None and sp.simplify(r1 - r2) != 0:
         return True

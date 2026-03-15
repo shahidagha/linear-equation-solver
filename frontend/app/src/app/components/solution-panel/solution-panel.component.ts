@@ -242,7 +242,7 @@ export class SolutionPanelComponent {
         const isGraphical = selectedMethod === 'graphical';
         const graphDataUrl = isGraphical ? this.getGraphImageDataUrl(graph ?? null) : null;
         const graphSection = graphDataUrl
-          ? `<h2 style="margin:24px 0 16px;">Graph</h2><div class="export-block"><img src="${graphDataUrl}" alt="Graph of the two lines" style="max-width:100%; height:auto;" /></div>`
+          ? `<div style="page-break-inside: avoid;"><h2 style="margin:24px 0 16px;">Graph</h2><div class="export-block"><img src="${graphDataUrl}" alt="Graph of the two lines" style="max-width:100%; max-height:420px; width:auto; height:auto; display:block;" /></div></div>`
           : '';
         const wrapper = document.createElement('div');
         wrapper.className = 'export-pdf-wrapper';

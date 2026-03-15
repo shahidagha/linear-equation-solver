@@ -34,16 +34,31 @@ export class SolutionPanelComponent {
   setVerbosity(level: VerbosityLevel): void { this.state.setVerbosity(level); }
   exitSolution(): void { this.state.resetSolutionState(); }
 
+  /** Display names for Copy Question instruction line. */
+  private static readonly METHOD_DISPLAY_NAMES: Record<string, string> = {
+    elimination: 'Elimination method',
+    substitution: 'Substitution method',
+    cramer: "Cramer's rule",
+    graphical: 'Graphical method',
+  };
+
   copyQuestion(): void {
     this.clearCopySolutionMessage();
-    combineLatest([this.state.equations$, this.state.variables$]).pipe(take(1)).subscribe(([eqs, vars]) => {
+    combineLatest([
+      this.state.equations$,
+      this.state.variables$,
+      this.state.selectedMethod$,
+    ]).pipe(take(1)).subscribe(([eqs, vars, selectedMethod]) => {
       if (!eqs?.equation1 || !eqs?.equation2) {
         this.showCopySolutionMessage('failure');
         return;
       }
       const latex1 = equationToLatex(eqs.equation1 as any, vars as any);
       const latex2 = equationToLatex(eqs.equation2 as any, vars as any);
-      const rawLatex = `${latex1} ; ${latex2}`;
+      const methodName = SolutionPanelComponent.METHOD_DISPLAY_NAMES[selectedMethod || 'elimination']
+        ?? 'Elimination method';
+      const instruction = `Solve the following simultaneous equations by ${methodName}.`;
+      const rawLatex = `${instruction}\n${latex1} ; ${latex2}`;
       navigator.clipboard.writeText(rawLatex)
         .then(() => this.showCopySolutionMessage('success'))
         .catch(() => this.showCopySolutionMessage('failure'));

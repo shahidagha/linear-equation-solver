@@ -297,8 +297,8 @@ class SolutionLatexRenderer:
         except (TypeError, ValueError):
             return str(value)
 
-    def _points_table_latex(self, points: List[List[Any]]) -> str:
-        """Build LaTeX array: x row, y row, (x,y) row. Uses up to 3 points."""
+    def _points_table_latex(self, points: List[List[Any]], equation: Optional[str] = None) -> str:
+        """Build LaTeX array: optional equation row (merged), then x, y, (x,y) rows. Uses up to 3 points."""
         points = points[:3]
         if not points:
             return "\\varnothing"
@@ -306,13 +306,18 @@ class SolutionLatexRenderer:
         y_vals = [self._format_coord(p[1]) for p in points]
         pair_vals = [f"({self._format_coord(p[0])}, {self._format_coord(p[1])})" for p in points]
         n = len(points)
+        n_cols = n + 1  # label column + one per point
         cols = "|c|" + "c|" * n
         row_x = "x & " + " & ".join(x_vals) + " \\\\"
         row_y = "y & " + " & ".join(y_vals) + " \\\\"
         row_xy = "(x, y) & " + " & ".join(pair_vals) + " \\\\"
+        equation_row = ""
+        if equation and equation.strip():
+            equation_row = f"\\multicolumn{{{n_cols}}}{{|c|}}{{{equation.strip()}}} \\\\\n\\hline\n"
         return (
             f"\\begin{{array}}{{{cols}}}\n"
             "\\hline\n"
+            f"{equation_row}"
             f"{row_x}\n"
             "\\hline\n"
             f"{row_y}\n"
@@ -325,14 +330,12 @@ class SolutionLatexRenderer:
     def _append_graphical(self, graph_data, equations: List[str], detailed, medium, short):
         p1 = graph_data.get("equation1_points", [])
         p2 = graph_data.get("equation2_points", [])
-        eq1_line = (equations[0] if equations else "") + " \\; ...(1)"
-        eq2_line = (equations[1] if len(equations) > 1 else "") + " \\; ...(2)"
-        table1 = self._points_table_latex(p1)
-        table2 = self._points_table_latex(p2)
+        eq1 = (equations[0] if equations else "").strip()
+        eq2 = (equations[1] if len(equations) > 1 else "").strip()
+        table1 = self._points_table_latex(p1, equation=eq1)
+        table2 = self._points_table_latex(p2, equation=eq2)
         for lines in (detailed, medium, short):
-            lines.append(eq1_line + ":")
             lines.append(table1)
-            lines.append(eq2_line + ":")
             lines.append(table2)
 
     def _vertical_array(self, eq1: str, eq2: str, result: str, op: str = None) -> str:

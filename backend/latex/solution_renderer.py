@@ -298,9 +298,9 @@ class SolutionLatexRenderer:
             return str(value)
 
     def _points_table_latex(self, points: List[List[Any]], equation: Optional[str] = None) -> str:
-        """Build LaTeX array: optional equation row (merged), then x, y, (x,y) rows. Uses up to 3 points.
-        Uses \\cr for row breaks so the table can be embedded inside \\begin{aligned} without
-        inner \\ being interpreted as aligned row separators."""
+        """Build LaTeX table with merged header: outer single-column array, equation in first row,
+        inner array for x/y/(x,y) data. Uses \\cr for row breaks so the table can be embedded
+        inside \\begin{aligned} without inner \\ being interpreted as aligned row separators."""
         points = points[:3]
         if not points:
             return "\\varnothing"
@@ -308,25 +308,28 @@ class SolutionLatexRenderer:
         y_vals = [self._format_coord(p[1]) for p in points]
         pair_vals = [f"({self._format_coord(p[0])}, {self._format_coord(p[1])})" for p in points]
         n = len(points)
-        n_cols = n + 1  # label column + one per point
-        cols = "|c|" + "c|" * n
-        cr = " \\cr "  # row break inside array; \\ would break when table is inside \\begin{aligned}
-        row_x = "x & " + " & ".join(x_vals) + cr
-        row_y = "y & " + " & ".join(y_vals) + cr
-        row_xy = "(x, y) & " + " & ".join(pair_vals) + cr
-        equation_row = ""
+        cr = " \\cr "
+        eq_safe = ""
         if equation and equation.strip():
             eq_safe = equation.strip().replace("&", "\\&").replace("\n", " ")
-            equation_row = f"\\multicolumn{{{n_cols}}}{{c}}{{{eq_safe}}} {cr}\\hline\n"
-        return (
-            f"\\begin{{array}}{{{cols}}}\n"
-            "\\hline\n"
-            f"{equation_row}"
-            f"{row_x}\n"
-            "\\hline\n"
-            f"{row_y}\n"
-            "\\hline\n"
+        cols_inner = "c|" + "c|" * n  # c|c|c|c for 3 points
+        row_x = "x & " + " & ".join(x_vals)
+        row_y = "y & " + " & ".join(y_vals)
+        row_xy = "(x, y) & " + " & ".join(pair_vals)
+        inner = (
+            f"\\begin{{array}}{{{cols_inner}}}\n"
+            f"{row_x} {cr}\\hline\n"
+            f"{row_y} {cr}\\hline\n"
             f"{row_xy}\n"
+            "\\end{array}"
+        )
+        # Outer array: one column; row 1 = equation (merged header), row 2 = inner table
+        return (
+            "\\begin{array}{|c|}\n"
+            "\\hline\n"
+            f"{eq_safe} {cr}\n"
+            "\\hline\n"
+            f"{inner} {cr}\n"
             "\\hline\n"
             "\\end{array}"
         )

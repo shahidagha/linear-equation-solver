@@ -26,6 +26,8 @@
     <div class="controls-row">
       <button type="button" [disabled]="!(state.methods$ | async)" (click)="copyQuestion()">Copy Question</button>
       <button type="button" [disabled]="!(state.methods$ | async)" (click)="copySolution()">Copy Solution</button>
+      <button type="button" [disabled]="!(state.methods$ | async)" (click)="exportToPdf()" aria-label="Export question and solution to PDF">Export to PDF</button>
+      <button type="button" [disabled]="!(state.methods$ | async)" (click)="exportToWord()" aria-label="Export question and solution to Word">Export to Word</button>
       <ng-container *ngIf="(state.selectedMethod$ | async) === 'graphical'">
         <button type="button" [disabled]="!(state.graph$ | async)" (click)="copyGraphAsPng()">Copy graph as PNG</button>
         <button type="button" [disabled]="!(state.graph$ | async)" (click)="openGraphModal()">View graph</button>

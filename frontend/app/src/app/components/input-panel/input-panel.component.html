@@ -63,6 +63,7 @@
     {{ isSubmitting ? 'Solving...' : 'Solve System' }}
   </button>
   <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+  <p class="error error-hint" *ngIf="errorMessage && existingVariables.length">Existing system uses: {{ existingVariables.join(', ') }}.</p>
   <p class="error" *ngIf="!validationResult.valid && !errorMessage && validationResult.message">{{ validationResult.message }}</p>
 
   <div class="modal-backdrop" *ngIf="showModeSwitchConfirm" (click)="onModeConfirmBackdropClick($event)">

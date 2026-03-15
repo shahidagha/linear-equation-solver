@@ -28,6 +28,8 @@ export class InputPanelComponent implements OnInit, OnDestroy {
   currentSystemId: number | null = null;
   isSubmitting = false;
   errorMessage = '';
+  /** When status is variable_conflict, the variables used by the existing system. */
+  existingVariables: string[] = [];
   layoutMode: LayoutMode = 'rational';
   showModeSwitchConfirm = false;
   pendingMode: LayoutMode | null = null;
@@ -151,6 +153,7 @@ export class InputPanelComponent implements OnInit, OnDestroy {
       return;
     }
     this.errorMessage = '';
+    this.existingVariables = [];
     this.isSubmitting = true;
 
     const payload = {
@@ -172,10 +175,12 @@ export class InputPanelComponent implements OnInit, OnDestroy {
 
         if (!response.methods) {
           this.errorMessage = response.message ?? 'Unable to solve system.';
+          this.existingVariables = Array.isArray(response.existing_variables) ? response.existing_variables : [];
           return;
         }
         if (!response.solution && response.solution_type !== 'none' && response.solution_type !== 'infinite' && response.solution_type !== 'above_grade') {
           this.errorMessage = response.message ?? 'Unable to solve system.';
+          this.existingVariables = Array.isArray(response.existing_variables) ? response.existing_variables : [];
           return;
         }
 

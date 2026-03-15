@@ -5,11 +5,11 @@
   </header>
 
   <div class="solver-main">
-    <section class="input-panel">
+    <section class="input-panel" aria-label="Equation input">
       <app-input-panel (solved)="onSolved($event)"></app-input-panel>
     </section>
 
-    <section class="solution-panel">
+    <section class="solution-panel" aria-label="Solution and saved systems">
       <app-right-panel></app-right-panel>
     </section>
   </div>

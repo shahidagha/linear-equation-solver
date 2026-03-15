@@ -1,4 +1,5 @@
-<section class="panel-card">
+<section class="panel-card" role="region" aria-label="Solution viewer" data-testid="solution-panel">
+  <p class="sr-only" aria-live="polite" aria-atomic="true">{{ (state.solutionSummary$ | async) || 'No solution yet.' }}</p>
   <div class="header-row">
     <h3>Solution Viewer</h3>
     <app-method-selector
@@ -9,12 +10,14 @@
   </div>
 
   <div class="toolbar-row">
-    <div class="verbosity-row">
+    <div class="verbosity-row" role="group" aria-label="Verbosity">
       <button
         *ngFor="let level of verbosities"
         type="button"
+        [attr.aria-pressed]="(state.verbosity$ | async) === level"
         [disabled]="!(state.methods$ | async)"
         [class.active]="(state.verbosity$ | async) === level"
+        [attr.aria-label]="'Verbosity: ' + (level | titlecase)"
         (click)="setVerbosity(level)">
         {{ level | titlecase }}
       </button>
@@ -41,7 +44,7 @@
   </app-view-graph-modal>
 
   <ng-container *ngIf="state.methods$ | async as methods; else noSolution">
-    <div class="solution-value" *ngIf="state.solution$ | async as solution">
+    <div class="solution-value" *ngIf="state.solution$ | async as solution" data-testid="solution-value" role="status">
       <span *ngFor="let entry of solution | keyvalue">{{ entry.key }} = {{ entry.value }}</span>
     </div>
     <div class="solution-degenerate" *ngIf="(state.solutionType$ | async) === 'none' || (state.solutionType$ | async) === 'infinite' || (state.solutionType$ | async) === 'above_grade'">
@@ -57,7 +60,7 @@
   </ng-container>
 
   <ng-template #noSolution>
-    <div class="empty-solution-message">
+    <div class="empty-solution-message" data-testid="empty-solution-message">
       No solution yet. Build equations and click Solve System.
     </div>
   </ng-template>

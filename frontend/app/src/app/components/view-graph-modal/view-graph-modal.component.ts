@@ -17,6 +17,17 @@ export class ViewGraphModalComponent implements OnChanges {
 
   @ViewChild('canvasEl') canvasRef!: ElementRef<HTMLCanvasElement>;
 
+  /** Short description of the graph for screen readers. */
+  get graphSummaryText(): string {
+    if (!this.graphData) return 'Graph of two linear equations.';
+    const inter = this.graphData.intersection;
+    if (inter && typeof inter === 'object' && Object.keys(inter).length >= 2) {
+      const vals = Object.values(inter);
+      return `Two lines with intersection at (${vals.join(', ')}).`;
+    }
+    return 'Two lines; no unique intersection.';
+  }
+
   onBackdropClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
       this.close.emit();

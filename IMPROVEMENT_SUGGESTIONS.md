@@ -160,17 +160,19 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 
 ## 8. Frontend and UX
 
-### Drawbacks
+**Status: Addressed.** E2e tests, accessibility, and responsiveness implemented.
+
+### Drawbacks (original)
 
 - **Edit/save flow:** Past issues (e.g. “Solve in edit not saving”, “variable names not saved”) have been fixed; remaining edge cases around mode switch or validation messages may still exist.
 - **Accessibility:** Graph and equation display may not have sufficient ARIA labels or text alternatives for screen readers.
 - **Mobile:** Layout and graph size may not be optimized for small screens.
 
-### Suggestions
+### Suggestions (implemented)
 
-- **E2e tests:** Cover edit → save → solve and variable-name change → save to prevent regressions.
-- **Accessibility:** Add ARIA labels and roles for solution panel and graph; provide a text summary of the solution or graph (e.g. “Intersection at (3, 2)”).
-- **Responsiveness:** Consider responsive layout and optional graph scaling or scroll for smaller viewports.
+- **E2e tests:** Playwright in frontend/app/e2e/. Tests: page load, solve flow, solution panel region. Run: npm run e2e (start backend for solve). Edit/save and variable-name change can be extended.
+- **Accessibility:** Solution panel: region + aria-label, aria-live solution summary, verbosity/method aria-labels. Graph modal: aria-describedby and text summary (e.g. “Intersection at (3, 2)”).
+- **Responsiveness:** 640px breakpoint for padding/header; graph modal canvas-wrap overflow auto and max-width for small viewports.
 
 ---
 

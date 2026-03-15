@@ -22,8 +22,17 @@ h3 {
   margin: 0 0 12px 0;
 }
 
+.graph-summary {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
 .canvas-wrap {
   margin-bottom: 12px;
+  max-width: min(560px, 95vw);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .canvas-wrap canvas {

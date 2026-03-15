@@ -186,11 +186,13 @@ Backend tests live in **`tests/`**. Install dev dependencies and run:
 
 Tests cover: EquationStandardizer, all four solvers (elimination, substitution, Cramer, graphical), SolutionLatexRenderer, request validation (Rules 1–4), and API 422 responses for invalid payloads. See **IMPROVEMENT_SUGGESTIONS.md** §1 for details.
 
+**Frontend e2e (Playwright):** From `frontend/app/` run `npm install`, then `npm run e2e`. Start the backend (and optionally `ng serve`) for the solve flow. See `frontend/app/e2e/`.
+
 ---
 
 ## Future work
 
-- Extend automated tests (frontend e2e, CI on commit/PR); backend unit and integration tests are in place.
+- Extend automated tests (CI on commit/PR); backend unit/integration and frontend e2e (Playwright) are in place.
 - Stricter API contracts and optional versioning; shared types to avoid frontend/backend drift.
 - Production hardening: auth, rate limiting, structured logging, restrict CORS.
 - Graph: configurable range, SVG export, accessibility.

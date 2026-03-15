@@ -1,8 +1,9 @@
 <div class="modal-backdrop" *ngIf="isOpen" (click)="onBackdropClick($event)">
-  <section class="modal" role="dialog" aria-modal="true" aria-label="Graph" (click)="$event.stopPropagation()">
+  <section class="modal" role="dialog" aria-modal="true" aria-label="Graph" [attr.aria-describedby]="isOpen ? 'graph-summary' : null" (click)="$event.stopPropagation()">
     <h3>Graph</h3>
+    <p id="graph-summary" class="graph-summary">{{ graphSummaryText }}</p>
     <div class="canvas-wrap">
-      <canvas #canvasEl width="560" height="560"></canvas>
+      <canvas #canvasEl width="560" height="560" aria-hidden="true"></canvas>
     </div>
     <div class="actions">
       <button type="button" (click)="close.emit()">Close</button>

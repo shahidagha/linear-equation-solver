@@ -62,3 +62,21 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .solver-main {
+    padding: 12px;
+  }
+
+  .solver-header {
+    padding: 8px 12px;
+  }
+
+  .solver-header h1 {
+    font-size: 18px;
+  }
+
+  .solver-header .author {
+    font-size: 12px;
+  }
+}

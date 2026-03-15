@@ -42,6 +42,11 @@ export class SolutionPanelComponent {
     graphical: 'Graphical method',
   };
 
+  /** Escape a string for use inside LaTeX \text{...}. */
+  private static escapeForLatexText(s: string): string {
+    return s.replace(/\\/g, '\\textbackslash{}').replace(/[{}]/g, (c) => (c === '{' ? '\\{' : '\\}'));
+  }
+
   copyQuestion(): void {
     this.clearCopySolutionMessage();
     combineLatest([
@@ -57,8 +62,10 @@ export class SolutionPanelComponent {
       const latex2 = equationToLatex(eqs.equation2 as any, vars as any);
       const methodName = SolutionPanelComponent.METHOD_DISPLAY_NAMES[selectedMethod || 'elimination']
         ?? 'Elimination method';
-      const instruction = `Solve the following simultaneous equations by ${methodName}.`;
-      const rawLatex = `${instruction}\n${latex1} ; ${latex2}`;
+      const instructionText = SolutionPanelComponent.escapeForLatexText(
+        `Solve the following simultaneous equations by ${methodName}.`
+      );
+      const rawLatex = `\\begin{aligned}\n&\\text{${instructionText}} \\\\\n&${latex1} \\\\\n&${latex2}\n\\end{aligned}`;
       navigator.clipboard.writeText(rawLatex)
         .then(() => this.showCopySolutionMessage('success'))
         .catch(() => this.showCopySolutionMessage('failure'));

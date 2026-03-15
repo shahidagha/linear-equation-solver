@@ -1,7 +1,8 @@
 .panel-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:10px; height:100%; }
 
-.header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .header-row h3 { margin:0; font-size:18px; }
+.header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
 .toolbar-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .verbosity-row, .controls-row { display:flex; gap:8px; flex-wrap:wrap; }

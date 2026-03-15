@@ -28,8 +28,8 @@ class SolutionLatexRenderer:
 
         detailed_lines = self._given_equations_block(given_equations)
         medium_lines = self._given_equations_block(given_equations)
-        # Short: standardization = Given + eq (1) + eq (2) only; method steps appended later as before
-        if standardization_steps:
+        # Short: Given + eq (1) + eq (2) for non-graphical; graphical skips the numbered lines (eq in table headers)
+        if standardization_steps and method_name != "graphical":
             short_lines = self._given_equations_block(given_equations)
             if equations:
                 short_lines.append(f"{equations[0]}\\; ...(1)")
@@ -297,8 +297,10 @@ class SolutionLatexRenderer:
         except (TypeError, ValueError):
             return str(value)
 
-    def _points_table_latex(self, points: List[List[Any]]) -> str:
-        """Build LaTeX array: x row, y row, (x,y) row. Uses up to 3 points."""
+    def _points_table_latex(self, points: List[List[Any]], equation: Optional[str] = None) -> str:
+        """Build LaTeX table with merged header: outer single-column array, equation in first row,
+        inner array for x/y/(x,y) data. Uses \\cr for row breaks so the table can be embedded
+        inside \\begin{aligned} without inner \\ being interpreted as aligned row separators."""
         points = points[:3]
         if not points:
             return "\\varnothing"
@@ -306,18 +308,28 @@ class SolutionLatexRenderer:
         y_vals = [self._format_coord(p[1]) for p in points]
         pair_vals = [f"({self._format_coord(p[0])}, {self._format_coord(p[1])})" for p in points]
         n = len(points)
-        cols = "|c|" + "c|" * n
-        row_x = "x & " + " & ".join(x_vals) + " \\\\"
-        row_y = "y & " + " & ".join(y_vals) + " \\\\"
-        row_xy = "(x, y) & " + " & ".join(pair_vals) + " \\\\"
-        return (
-            f"\\begin{{array}}{{{cols}}}\n"
-            "\\hline\n"
-            f"{row_x}\n"
-            "\\hline\n"
-            f"{row_y}\n"
-            "\\hline\n"
+        cr = " \\cr "
+        eq_safe = ""
+        if equation and equation.strip():
+            eq_safe = equation.strip().replace("&", "\\&").replace("\n", " ")
+        cols_inner = "|".join(["c"] * (n + 1))  # c|c|c|c for 3 points (no trailing |)
+        row_x = "x & " + " & ".join(x_vals)
+        row_y = "y & " + " & ".join(y_vals)
+        row_xy = "(x, y) & " + " & ".join(pair_vals)
+        inner = (
+            f"\\begin{{array}}{{{cols_inner}}}\n"
+            f"{row_x} {cr}\\hline\n"
+            f"{row_y} {cr}\\hline\n"
             f"{row_xy}\n"
+            "\\end{array}"
+        )
+        # Outer array: one column; row 1 = equation (merged header), row 2 = inner table
+        return (
+            "\\begin{array}{|c|}\n"
+            "\\hline\n"
+            f"{eq_safe} {cr}\n"
+            "\\hline\n"
+            f"{inner} {cr}\n"
             "\\hline\n"
             "\\end{array}"
         )
@@ -325,14 +337,12 @@ class SolutionLatexRenderer:
     def _append_graphical(self, graph_data, equations: List[str], detailed, medium, short):
         p1 = graph_data.get("equation1_points", [])
         p2 = graph_data.get("equation2_points", [])
-        eq1_line = (equations[0] if equations else "") + " \\; ...(1)"
-        eq2_line = (equations[1] if len(equations) > 1 else "") + " \\; ...(2)"
-        table1 = self._points_table_latex(p1)
-        table2 = self._points_table_latex(p2)
+        eq1 = (equations[0] if equations else "").strip()
+        eq2 = (equations[1] if len(equations) > 1 else "").strip()
+        table1 = self._points_table_latex(p1, equation=eq1)
+        table2 = self._points_table_latex(p2, equation=eq2)
         for lines in (detailed, medium, short):
-            lines.append(eq1_line + ":")
             lines.append(table1)
-            lines.append(eq2_line + ":")
             lines.append(table2)
 
     def _vertical_array(self, eq1: str, eq2: str, result: str, op: str = None) -> str:

@@ -2,11 +2,15 @@
   <p class="sr-only" aria-live="polite" aria-atomic="true">{{ (state.solutionSummary$ | async) || 'No solution yet.' }}</p>
   <div class="header-row">
     <h3>Solution Viewer</h3>
-    <app-method-selector
-      [disabled]="!(state.methods$ | async)"
-      [selectedMethod]="(state.selectedMethod$ | async) || 'elimination'"
-      (methodSelected)="onMethodSelected($event)">
-    </app-method-selector>
+    <div class="header-actions">
+      <app-method-selector
+        [disabled]="!(state.methods$ | async)"
+        [selectedMethod]="(state.selectedMethod$ | async) || 'elimination'"
+        (methodSelected)="onMethodSelected($event)">
+      </app-method-selector>
+      <button type="button" [disabled]="!(state.methods$ | async)" (click)="exportToPdf()" aria-label="Export question and solution to PDF">Export to PDF</button>
+      <button type="button" [disabled]="!(state.methods$ | async)" (click)="exportToWord()" aria-label="Export question and solution to Word">Export to Word</button>
+    </div>
   </div>
 
   <div class="toolbar-row">

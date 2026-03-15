@@ -28,6 +28,10 @@ export class InputPanelComponent implements OnInit, OnDestroy {
   currentSystemId: number | null = null;
   isSubmitting = false;
   errorMessage = '';
+  /** When status is variable_conflict, the variables used by the existing system. */
+  existingVariables: string[] = [];
+  /** Show "Do you want to change variables? Yes / No" dialog for variable_conflict. */
+  showVariableConflictDialog = false;
   layoutMode: LayoutMode = 'rational';
   showModeSwitchConfirm = false;
   pendingMode: LayoutMode | null = null;
@@ -92,6 +96,29 @@ export class InputPanelComponent implements OnInit, OnDestroy {
     }
   }
 
+  closeVariableConflictDialog(): void {
+    this.showVariableConflictDialog = false;
+  }
+
+  confirmChangeVariables(): void {
+    if (this.existingVariables.length >= 2) {
+      const newVar1 = String(this.existingVariables[0] ?? 'x').trim() || 'x';
+      const newVar2 = String(this.existingVariables[1] ?? 'y').trim() || 'y';
+      this.variable1 = newVar1;
+      this.variable2 = newVar2;
+      const eq1 = this.equation1Data ?? this.initialEquation1;
+      const eq2 = this.equation2Data ?? this.initialEquation2;
+      if (eq1 && eq2) {
+        this.state.setBuilderState({
+          variables: { var1: newVar1, var2: newVar2 },
+          equation1: eq1,
+          equation2: eq2
+        });
+      }
+    }
+    this.showVariableConflictDialog = false;
+  }
+
   /** Validation: only visible fields for current layout mode. Invalid blocks Solve. */
   get validationResult(): { valid: boolean; message?: string } {
     const eq1 = this.equation1Data ?? this.initialEquation1;
@@ -151,6 +178,7 @@ export class InputPanelComponent implements OnInit, OnDestroy {
       return;
     }
     this.errorMessage = '';
+    this.existingVariables = [];
     this.isSubmitting = true;
 
     const payload = {
@@ -171,11 +199,18 @@ export class InputPanelComponent implements OnInit, OnDestroy {
         }
 
         if (!response.methods) {
-          this.errorMessage = response.message ?? 'Unable to solve system.';
+          if (response.status === 'variable_conflict') {
+            this.existingVariables = Array.isArray(response.existing_variables) ? response.existing_variables : [];
+            this.showVariableConflictDialog = true;
+          } else {
+            this.errorMessage = response.message ?? 'Unable to solve system.';
+            this.existingVariables = Array.isArray(response.existing_variables) ? response.existing_variables : [];
+          }
           return;
         }
         if (!response.solution && response.solution_type !== 'none' && response.solution_type !== 'infinite' && response.solution_type !== 'above_grade') {
           this.errorMessage = response.message ?? 'Unable to solve system.';
+          this.existingVariables = Array.isArray(response.existing_variables) ? response.existing_variables : [];
           return;
         }
 

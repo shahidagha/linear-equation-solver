@@ -312,7 +312,7 @@ class SolutionLatexRenderer:
         eq_safe = ""
         if equation and equation.strip():
             eq_safe = equation.strip().replace("&", "\\&").replace("\n", " ")
-        cols_inner = "c|" + "c|" * n  # c|c|c|c for 3 points
+        cols_inner = "|".join(["c"] * (n + 1))  # c|c|c|c for 3 points (no trailing |)
         row_x = "x & " + " & ".join(x_vals)
         row_y = "y & " + " & ".join(y_vals)
         row_xy = "(x, y) & " + " & ".join(pair_vals)

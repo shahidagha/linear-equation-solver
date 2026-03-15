@@ -65,7 +65,7 @@ export class SolutionPanelComponent {
       const instructionText = SolutionPanelComponent.escapeForLatexText(
         `Solve the following simultaneous equations by ${methodName}.`
       );
-      const rawLatex = `\\begin{aligned}\n&\\text{${instructionText}} \\\\\n&${latex1} \\\\\n&${latex2}\n\\end{aligned}`;
+      const rawLatex = `\\begin{aligned}\n&\\text{${instructionText}} \\\\\n&${latex1} \\; ; \\; ${latex2}\n\\end{aligned}`;
       navigator.clipboard.writeText(rawLatex)
         .then(() => this.showCopySolutionMessage('success'))
         .catch(() => this.showCopySolutionMessage('failure'));

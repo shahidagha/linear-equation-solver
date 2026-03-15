@@ -63,8 +63,18 @@
     {{ isSubmitting ? 'Solving...' : 'Solve System' }}
   </button>
   <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
-  <p class="error error-hint" *ngIf="errorMessage && existingVariables.length">Existing system uses: {{ existingVariables.join(', ') }}.</p>
   <p class="error" *ngIf="!validationResult.valid && !errorMessage && validationResult.message">{{ validationResult.message }}</p>
+
+  <div class="modal-backdrop" *ngIf="showVariableConflictDialog" (click)="closeVariableConflictDialog()">
+    <section class="modal mode-modal" role="dialog" aria-modal="true" aria-labelledby="variable-conflict-title" (click)="$event.stopPropagation()">
+      <h3 id="variable-conflict-title">Same equations, different variable names</h3>
+      <p>Same equations already exist with variable names <strong>{{ existingVariables.join(', ') }}</strong>. Do you want to change your variables to match?</p>
+      <div class="actions">
+        <button type="button" (click)="closeVariableConflictDialog()">No</button>
+        <button type="button" class="primary" (click)="confirmChangeVariables()">Yes</button>
+      </div>
+    </section>
+  </div>
 
   <div class="modal-backdrop" *ngIf="showModeSwitchConfirm" (click)="onModeConfirmBackdropClick($event)">
     <section class="modal mode-modal" role="dialog" aria-modal="true">

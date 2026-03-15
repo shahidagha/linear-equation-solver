@@ -298,7 +298,9 @@ class SolutionLatexRenderer:
             return str(value)
 
     def _points_table_latex(self, points: List[List[Any]], equation: Optional[str] = None) -> str:
-        """Build LaTeX array: optional equation row (merged), then x, y, (x,y) rows. Uses up to 3 points."""
+        """Build LaTeX array: optional equation row (merged), then x, y, (x,y) rows. Uses up to 3 points.
+        Uses \\cr for row breaks so the table can be embedded inside \\begin{aligned} without
+        inner \\ being interpreted as aligned row separators."""
         points = points[:3]
         if not points:
             return "\\varnothing"
@@ -308,14 +310,14 @@ class SolutionLatexRenderer:
         n = len(points)
         n_cols = n + 1  # label column + one per point
         cols = "|c|" + "c|" * n
-        row_x = "x & " + " & ".join(x_vals) + " \\\\"
-        row_y = "y & " + " & ".join(y_vals) + " \\\\"
-        row_xy = "(x, y) & " + " & ".join(pair_vals) + " \\\\"
+        cr = " \\cr "  # row break inside array; \\ would break when table is inside \\begin{aligned}
+        row_x = "x & " + " & ".join(x_vals) + cr
+        row_y = "y & " + " & ".join(y_vals) + cr
+        row_xy = "(x, y) & " + " & ".join(pair_vals) + cr
         equation_row = ""
         if equation and equation.strip():
-            # Escape & so it doesn't break the row; use single centered cell across all columns
             eq_safe = equation.strip().replace("&", "\\&").replace("\n", " ")
-            equation_row = f"\\multicolumn{{{n_cols}}}{{c}}{{{eq_safe}}} \\\\\n\\hline\n"
+            equation_row = f"\\multicolumn{{{n_cols}}}{{c}}{{{eq_safe}}} {cr}\\hline\n"
         return (
             f"\\begin{{array}}{{{cols}}}\n"
             "\\hline\n"

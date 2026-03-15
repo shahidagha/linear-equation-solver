@@ -59,7 +59,7 @@
     (equationChange)="onEquation2Change($event)">
   </app-equation-builder>
 
-  <button type="button" class="solve-btn" [disabled]="isSubmitting || !canSolve || !validationResult.valid" (click)="saveSystem()">
+  <button type="button" class="solve-btn" data-testid="solve-btn" aria-label="Solve system and save" [disabled]="isSubmitting || !canSolve || !validationResult.valid" (click)="saveSystem()">
     {{ isSubmitting ? 'Solving...' : 'Solve System' }}
   </button>
   <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>

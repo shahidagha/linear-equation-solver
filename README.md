@@ -110,10 +110,12 @@ linear-equation-solver/
 │   │   └── graphical_solver.py
 │   ├── latex/
 │   │   ├── equation_formatter.py
-│   │   ├── math_to_latex.py
+│   │   ├── math_to_latex.py       # optional; not in request path
 │   │   └── solution_renderer.py  # Verbosity tiers, standardization, wrap, graphical tables
+│   ├── normalization/
+│   │   └── equation_standardizer.py
 │   ├── graph/
-│   │   └── graph_plotter.py
+│   │   └── graph_plotter.py       # optional; not in request path
 │   ├── utils/
 │   │   ├── step_recorder.py
 │   │   ├── step.py
@@ -175,9 +177,22 @@ Schema is managed by **Alembic**. No tables are created at application startup.
 
 ---
 
+## Running tests
+
+Backend tests live in **`tests/`**. Install dev dependencies and run:
+
+- `pip install -r requirements-dev.txt`
+- From project root: `PYTHONPATH=. python -m pytest tests/ -v`
+
+Tests cover: EquationStandardizer, all four solvers (elimination, substitution, Cramer, graphical), SolutionLatexRenderer, request validation (Rules 1–4), and API 422 responses for invalid payloads. See **IMPROVEMENT_SUGGESTIONS.md** §1 for details.
+
+**Frontend e2e (Playwright):** From `frontend/app/` run `npm install`, then `npm run e2e`. Start the backend (and optionally `ng serve`) for the solve flow. See `frontend/app/e2e/`.
+
+---
+
 ## Future work
 
-- Automated tests (backend: normalization, solvers, renderer; frontend: components and e2e).
+- Extend automated tests (CI on commit/PR); backend unit/integration and frontend e2e (Playwright) are in place.
 - Stricter API contracts and optional versioning; shared types to avoid frontend/backend drift.
 - Production hardening: auth, rate limiting, structured logging, restrict CORS.
 - Graph: configurable range, SVG export, accessibility.

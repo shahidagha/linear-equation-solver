@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, combineLatest } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { SolverResponse } from '../models/solver-response.model';
 
 export interface BuilderState {
@@ -51,6 +52,24 @@ export class SolverStateService {
   readonly canSolve$ = this.canSolveSubject.asObservable();
   readonly savedSystemsRefresh$ = this.savedSystemsRefreshSubject.asObservable();
   readonly layoutMode$ = this.layoutModeSubject.asObservable();
+
+  /** Short text summary of the solution for screen readers and aria-live. */
+  readonly solutionSummary$ = combineLatest([
+    this.solutionSubject.asObservable(),
+    this.solutionTypeSubject.asObservable(),
+    this.messageSubject.asObservable()
+  ]).pipe(
+    map(([solution, solutionType, message]) => {
+      if (solutionType === 'none' || solutionType === 'infinite' || solutionType === 'above_grade') {
+        return message || `Solution type: ${solutionType}.`;
+      }
+      if (solution && typeof solution === 'object' && Object.keys(solution).length > 0) {
+        const parts = Object.entries(solution).map(([k, v]) => `${k} = ${v}`);
+        return `Solution: ${parts.join(', ')}.`;
+      }
+      return null;
+    })
+  );
 
   getCurrentSystemId(): number | null {
     return this.currentSystemIdSubject.value;

@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.utils.request_validator import validate_solve_payload
 from backend.schemas.equation_schema import (
     SolveRequestSchema,
     SolveResponseSchema,
@@ -20,7 +22,7 @@ router = APIRouter()
 
 
 def _normalize_payload(payload: SolveRequestSchema | dict) -> dict:
-    """Normalize request payload to the service contract."""
+    """Normalize to canonical shape: variables as [var1, var2], each equation as { terms, constant }. Legacy term1/term2 are folded into terms[]."""
 
     if isinstance(payload, SolveRequestSchema):
         data = payload.model_dump()
@@ -42,11 +44,14 @@ def _normalize_payload(payload: SolveRequestSchema | dict) -> dict:
 @router.post(
     "/save-system",
     response_model=None,
-    responses={200: {"description": "Save result", "model": SaveResponseSchema}},
+    responses={200: {"description": "Save result", "model": SaveResponseSchema}, 422: {"description": "Validation error"}},
 )
 def save_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
     """Save equation system. Returns status (saved | duplicate | invalid | variable_conflict)."""
     normalized_payload = _normalize_payload(payload)
+    validation_error = validate_solve_payload(normalized_payload)
+    if validation_error is not None:
+        return JSONResponse(status_code=422, content=validation_error)
     result = save_equation_system(db, normalized_payload)
     return result
 
@@ -54,10 +59,13 @@ def save_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
 @router.post(
     "/solve-system",
     response_model=None,
-    responses={200: {"description": "Solution and LaTeX per method", "model": SolveResponseSchema}},
+    responses={200: {"description": "Solution and LaTeX per method", "model": SolveResponseSchema}, 422: {"description": "Validation error"}},
 )
 def solve_equation_system(payload: SolveRequestSchema, db: Session = Depends(get_db)):
     payload_dict = _normalize_payload(payload)
+    validation_error = validate_solve_payload(payload_dict)
+    if validation_error is not None:
+        return JSONResponse(status_code=422, content=validation_error)
 
     incoming_system_id = payload_dict.get("system_id")
     if incoming_system_id is not None:

@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 
-# ----- Request (API accepts terms[] or term1/term2; canonical form for storage is terms + constant only) -----
+# ----- Request: preferred shape is terms[] + constant; term1/term2 are deprecated (legacy) -----
 
 class TermSchema(BaseModel):
     sign: str | int
@@ -15,13 +15,13 @@ class TermSchema(BaseModel):
 
 class EquationSchema(BaseModel):
     terms: list[TermSchema] | None = Field(default=None, min_length=2, max_length=2)
-    term1: TermSchema | None = None
-    term2: TermSchema | None = None
+    term1: TermSchema | None = None  # deprecated: use terms[0]
+    term2: TermSchema | None = None  # deprecated: use terms[1]
     constant: TermSchema
 
     @model_validator(mode="after")
     def ensure_terms(self):
-        """Accept both legacy `terms` payload and current `term1`/`term2` payload."""
+        """Canonical shape is terms[]; legacy term1/term2 are still accepted for backward compatibility."""
 
         if self.terms is None:
             if self.term1 is None or self.term2 is None:

@@ -6,21 +6,23 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 
 ## 1. Testing
 
-### Drawbacks
+**Status: Partially addressed.** Backend test suite added; frontend e2e and CI remain optional.
 
-- **Sparse automated tests:** Backend has no visible test suite for normalization, solvers, or LaTeX rendering. Frontend has some `.spec.ts` files but coverage is unclear.
+### Drawbacks (original)
+
+- **Sparse automated tests:** Backend had no visible test suite for normalization, solvers, or LaTeX rendering. Frontend has some `.spec.ts` files but coverage is unclear.
 - **Regression risk:** Changes to step recording, LaTeX wrapping, or solver logic can break output without being caught.
-- **No integration tests:** The full flow (POST payload → DB → LaTeX response) is not asserted end-to-end.
+- **No integration tests:** The full flow (POST payload → DB → LaTeX response) was not asserted end-to-end.
 
-### Suggestions
+### Suggestions (implemented)
 
-- **Backend:** Add unit tests for:
-  - `EquationStandardizer` (standard form, LCM/GCD, sign normalization).
-  - Each solver (elimination, substitution, Cramer, graphical) with fixed inputs and expected solution + step structure.
-  - `SolutionLatexRenderer` (wrap logic, verbosity levels, no invalid LaTeX fragments).
-- **Backend:** Add integration tests for `POST /solve-system` and `GET /systems` (e.g. with a test DB or SQLite in-memory).
-- **Frontend:** Run and extend component/service tests; add e2e tests for the solve flow, method/verbosity switch, and copy actions.
-- **CI:** Run backend and frontend tests on every commit/PR.
+- **Backend unit tests** (run with `PYTHONPATH=. python -m pytest tests/ -v`; install deps: `pip install -r requirements-dev.txt`):
+  - `tests/test_equation_standardizer.py`: EquationStandardizer (standard form, steps, leading positive, solution preserved).
+  - `tests/test_solvers.py`: Elimination, substitution, Cramer (unique solution and degenerate cases); GraphicalSolver (generate_tables, classify).
+  - `tests/test_solution_renderer.py`: SolutionLatexRenderer (three verbosity levels, _final_answer, _wrap_latex, _given_equations_block, _aligned).
+  - `tests/test_request_validator.py`: Validation Rules 1–4 (valid payload, missing equation, variables, terms, legacy term1/term2).
+- **Integration tests:** `tests/test_integration.py` uses FastAPI TestClient; asserts 422 for invalid payloads (missing equation2, duplicate variables, invalid save payload).
+- **Not yet done:** Full POST → DB → solve → LaTeX response e2e; frontend e2e; CI pipeline to run tests on commit/PR.
 
 ---
 
@@ -72,6 +74,38 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 - **Solver guards:** (Addressed: per-method degenerate detection; API returns solution_type/message; frontend shows message and graph omits intersection.) Handle “no solution” / “infinite solutions” explicitly and return structured results instead of generic errors.
 - **LaTeX:** Add tests for wrap logic with long lines, only-text, and mixed content; optionally add a LaTeX lint or render check in CI for sample outputs.
 
+### Validation rules (exact definitions)
+
+**Implementation:** Rules 1–4 are implemented in `backend/utils/request_validator.py` (`validate_solve_payload`). The save-system and solve-system routes call the validator after normalizing the payload; on failure they return `422` with body `{ "code": "VALIDATION_ERROR", "message": "...", "detail": "..." }`. No solve or save is performed when validation fails.
+
+**Rule 1 — Exactly two equations, each with valid shape (finalized)**
+
+- **Check:** Request has exactly two equation objects (e.g. `equation1`, `equation2`). Each must be present, non-null, and an object (not string, number, or array).
+- **When:** After body is parsed, before building the in-memory system or calling solvers.
+- **Invalid:** Missing `equation1` or `equation2`; only one equation; either slot null/wrong type. **Response:** 4xx (400 or 422), body e.g. `{ "code": "VALIDATION_ERROR", "message": "Missing required field: equation2" }` (or "equation1 must be an object", etc.). No solve, no save, no side effects.
+- **Valid:** Proceed to Rule 2.
+
+**Rule 2 — Variables: exactly two, non-empty, valid format (finalized)**
+
+- **Check:** Request has a `variables` field that is a list (or array) of exactly two non-empty variable names. Each name must be a string (e.g. a single letter or allowed token). No duplicates.
+- **When:** After Rule 1 passes, before building the in-memory system.
+- **Invalid:** Missing `variables`; not a list; length ≠ 2; any element null/empty/not string; duplicate names. **Response:** 4xx, e.g. `{ "code": "VALIDATION_ERROR", "message": "variables must be a list of exactly two non-empty variable names" }` or more specific ("variables[1] is empty", "Duplicate variable name: x"). No solve, no save.
+- **Valid:** Proceed to Rule 3.
+
+**Rule 3 — Equation internal structure: terms and constant (finalized)**
+
+- **Check:** Each equation object (equation1, equation2) has either (a) a `terms` array of length 2 plus a `constant` object, or (b) legacy `term1`, `term2`, and `constant` objects. Each term and the constant must be an object with the supported coefficient shape (e.g. sign, numCoeff, numRad, denCoeff, denRad or equivalent) such that the backend can build a FractionSurd (or equivalent) without error. No extra required keys missing; numeric/string values in allowed ranges.
+- **When:** After Rule 2 passes, before calling build_fraction_surd / Equation construction.
+- **Invalid:** Missing `terms` (or `term1`/`term2`) or `constant` in either equation; wrong type (e.g. terms not array of length 2); any term or constant not an object; any term/constant missing required coefficient keys or with values that cannot be parsed (e.g. non-numeric where numeric required). **Response:** 4xx, e.g. `{ "code": "VALIDATION_ERROR", "message": "equation1.terms must be an array of two term objects" }` or "equation2.constant: invalid coefficient shape", etc. No solve, no save.
+- **Valid:** Proceed to Rule 4.
+
+**Rule 4 — System buildability (finalized)**
+
+- **Check:** Attempt to build the in-memory system from the validated payload: build FractionSurd (or equivalent) for each term and constant, construct both equations and the EquationSystem. No structural or type checks here—only that the build step completes without raising.
+- **When:** After Rule 3 passes, immediately before running standardization or solvers.
+- **Invalid:** build_fraction_surd, Equation, or EquationSystem construction raises (e.g. bad value, division by zero, unsupported type). **Response:** 4xx (e.g. 422), body e.g. `{ "code": "VALIDATION_ERROR", "message": "Invalid coefficient in equation1.term1: ..." }` or a generic "System could not be built from the given equations" with optional detail. No solve, no save.
+- **Valid:** Proceed to solve (and optionally save). Validation complete.
+
 ---
 
 ## 5. Security and production configuration
@@ -92,17 +126,19 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 
 ## 6. Codebase and maintainability
 
-### Drawbacks
+**Status: Addressed.** Module audit done; docs aligned; payload deprecation documented.
 
-- **Dead or underused code:** `backend/graph/graph_plotter.py` and `backend/latex/math_to_latex.py` may not be in the main request path; unclear whether they are legacy or for future use.
+### Drawbacks (original)
+
+- **Dead or underused code:** `backend/graph/graph_plotter.py` and `backend/latex/math_to_latex.py` were not in the main request path.
 - **Naming and layout:** Some references still say “Normalizer” while the actual module is `equation_standardizer`; docs and comments can get out of sync.
-- **Mixed legacy formats:** Support for both `term1`/`term2` and `terms[]` increases branching and maintenance cost.
+- **Mixed legacy formats:** Support for both `term1`/`term2` and `terms[]` adds branching.
 
-### Suggestions
+### Suggestions (implemented)
 
-- **Audit modules:** Confirm whether `graph_plotter.py` and `math_to_latex.py` are used. If not, remove or document as “optional/future” and avoid importing in the main flow until needed.
-- **Documentation:** Keep `README.md`, `AGENTS.md`, and `TECHNICAL_ARCHITECTURE_REPORT.md` aligned with actual module names (e.g. `EquationStandardizer`, not “Normalizer”) and entry points.
-- **Payload format:** Migrate to a single payload shape (`terms[]` + variables) and deprecate legacy keys; simplify `_normalize_payload` once frontend is updated.
+- **Audit modules:** Confirmed `graph_plotter.py` and `math_to_latex.py` are not imported in the request path. Added module-level docstrings in both files stating they are optional/future; do not import in the main flow.
+- **Documentation:** TECHNICAL_ARCHITECTURE_REPORT, TECHNICAL_REPORT, and TECHNICAL_REPORT_V2 now reference EquationStandardizer and equation_standardizer.py; AGENTS.md and README include normalization and mark graph_plotter and math_to_latex as optional.
+- **Payload format:** Canonical shape is `terms[]` + variables; `term1`/`term2` are documented as deprecated and still accepted for backward compatibility.
 
 ---
 
@@ -124,17 +160,19 @@ This document lists **drawbacks of the current project** and **concrete suggesti
 
 ## 8. Frontend and UX
 
-### Drawbacks
+**Status: Addressed.** E2e tests, accessibility, and responsiveness implemented.
+
+### Drawbacks (original)
 
 - **Edit/save flow:** Past issues (e.g. “Solve in edit not saving”, “variable names not saved”) have been fixed; remaining edge cases around mode switch or validation messages may still exist.
 - **Accessibility:** Graph and equation display may not have sufficient ARIA labels or text alternatives for screen readers.
 - **Mobile:** Layout and graph size may not be optimized for small screens.
 
-### Suggestions
+### Suggestions (implemented)
 
-- **E2e tests:** Cover edit → save → solve and variable-name change → save to prevent regressions.
-- **Accessibility:** Add ARIA labels and roles for solution panel and graph; provide a text summary of the solution or graph (e.g. “Intersection at (3, 2)”).
-- **Responsiveness:** Consider responsive layout and optional graph scaling or scroll for smaller viewports.
+- **E2e tests:** Playwright in frontend/app/e2e/. Tests: page load, solve flow, solution panel region. Run: npm run e2e (start backend for solve). Edit/save and variable-name change can be extended.
+- **Accessibility:** Solution panel: region + aria-label, aria-live solution summary, verbosity/method aria-labels. Graph modal: aria-describedby and text summary (e.g. “Intersection at (3, 2)”).
+- **Responsiveness:** 640px breakpoint for padding/header; graph modal canvas-wrap overflow auto and max-width for small viewports.
 
 ---
 

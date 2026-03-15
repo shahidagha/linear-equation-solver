@@ -51,9 +51,10 @@ class SolutionLatexRenderer:
             self._append_graphical(graph_data or {}, equations, detailed_lines, medium_lines, short_lines)
 
         final_answer = self._final_answer(solution)
-        detailed_lines.append(final_answer)
-        medium_lines.append(final_answer)
-        short_lines.append(final_answer)
+        for ln in self._wrap_latex(final_answer):
+            detailed_lines.append(ln)
+            medium_lines.append(ln)
+            short_lines.append(ln)
 
         return {
             "latex_detailed": self._aligned(detailed_lines),

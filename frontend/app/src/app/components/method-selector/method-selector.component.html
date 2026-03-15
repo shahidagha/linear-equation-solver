@@ -1,10 +1,12 @@
-<div class="method-list">
+<div class="method-list" role="group" aria-label="Solving method">
   <button
     *ngFor="let method of methods"
     type="button"
     class="method-btn"
+    [attr.aria-pressed]="selectedMethod === method.key"
     [class.active]="selectedMethod === method.key"
     [disabled]="disabled"
+    [attr.aria-label]="'Method: ' + method.label"
     (click)="selectMethod(method.key)">
     {{ method.label }}
   </button>

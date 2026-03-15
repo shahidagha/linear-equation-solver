@@ -197,7 +197,7 @@ Tests cover: EquationStandardizer, all four solvers (elimination, substitution, 
 - Production hardening: auth, rate limiting, structured logging, restrict CORS.
 - Graph: configurable range, SVG export, accessibility.
 
-See **IMPROVEMENT_SUGGESTIONS.md** for a detailed list of improvements and drawbacks to address.
+See **IMPROVEMENT_SUGGESTIONS.md** for a detailed list of improvements and drawbacks to address. For **security guidelines** (server launch, compulsory login) and a **step-by-step expansion roadmap** (quadratic, linear 1 variable, and beyond), see **docs/UPGRADE_AND_SECURITY_ROADMAP.md**.
 
 ---
 

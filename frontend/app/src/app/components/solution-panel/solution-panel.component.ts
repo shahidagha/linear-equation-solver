@@ -201,17 +201,31 @@ export class SolutionPanelComponent {
     }
   }
 
+  /** Draw graph to a canvas (same as copy graph); returns data URL or null if no graph. */
+  private getGraphImageDataUrl(graph: SolverResponse['graph'] | null): string | null {
+    if (!graph?.equation1_points?.length || !graph?.equation2_points?.length) return null;
+    const canvas = document.createElement('canvas');
+    const size = 560;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    drawGraph(ctx, graph as any, size, size);
+    return canvas.toDataURL('image/png');
+  }
+
   exportToPdf(): void {
     this.clearCopySolutionMessage();
     combineLatest([
       this.state.equations$,
       this.state.variables$,
       this.state.methods$,
+      this.state.graph$,
       this.state.selectedMethod$,
       this.state.verbosity$,
     ])
       .pipe(take(1))
-      .subscribe(([eqs, vars, methods, selectedMethod, verbosity]) => {
+      .subscribe(([eqs, vars, methods, graph, selectedMethod, verbosity]) => {
         const content = this.getExportContent(
           eqs ?? null,
           vars && typeof vars === 'object' && 'var1' in vars ? vars : null,
@@ -225,6 +239,11 @@ export class SolutionPanelComponent {
         }
         const questionHtml = this.latexToHtml(content.questionLatex);
         const solutionHtml = this.latexToHtml(content.solutionLatex);
+        const isGraphical = selectedMethod === 'graphical';
+        const graphDataUrl = isGraphical ? this.getGraphImageDataUrl(graph ?? null) : null;
+        const graphSection = graphDataUrl
+          ? `<h2 style="margin:24px 0 16px;">Graph</h2><div class="export-block"><img src="${graphDataUrl}" alt="Graph of the two lines" style="max-width:100%; height:auto;" /></div>`
+          : '';
         const wrapper = document.createElement('div');
         wrapper.className = 'export-pdf-wrapper';
         wrapper.style.cssText = 'padding:24px; font-family:serif; max-width:800px;';
@@ -233,6 +252,7 @@ export class SolutionPanelComponent {
           <div class="katex export-block">${questionHtml}</div>
           <h2 style="margin:24px 0 16px;">Solution</h2>
           <div class="katex export-block">${solutionHtml}</div>
+          ${graphSection}
         `;
         document.body.appendChild(wrapper);
         const opts = { margin: 10, image: { type: 'jpeg' as const, quality: 0.98 } };
@@ -257,11 +277,12 @@ export class SolutionPanelComponent {
       this.state.equations$,
       this.state.variables$,
       this.state.methods$,
+      this.state.graph$,
       this.state.selectedMethod$,
       this.state.verbosity$,
     ])
       .pipe(take(1))
-      .subscribe(async ([eqs, vars, methods, selectedMethod, verbosity]) => {
+      .subscribe(async ([eqs, vars, methods, graph, selectedMethod, verbosity]) => {
         const content = this.getExportContent(
           eqs ?? null,
           vars && typeof vars === 'object' && 'var1' in vars ? vars : null,
@@ -300,38 +321,59 @@ export class SolutionPanelComponent {
               );
             });
           const [bufQ, bufS] = await Promise.all([toArrayBuffer(canvasQ), toArrayBuffer(canvasS)]);
-          const scale = (w: number, h: number) => {
+          const scaleImg = (w: number, h: number) => {
             if (w <= maxWidth) return { width: Math.round(w), height: Math.round(h) };
             const r = maxWidth / w;
             return { width: maxWidth, height: Math.round(h * r) };
           };
+          const children: Paragraph[] = [
+            new Paragraph({ text: 'Question', heading: 'Heading1', alignment: AlignmentType.LEFT }),
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  data: new Uint8Array(bufQ),
+                  type: 'png',
+                  transformation: scaleImg(canvasQ.width, canvasQ.height),
+                }),
+              ],
+            }),
+            new Paragraph({ text: 'Solution', heading: 'Heading1', alignment: AlignmentType.LEFT }),
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  data: new Uint8Array(bufS),
+                  type: 'png',
+                  transformation: scaleImg(canvasS.width, canvasS.height),
+                }),
+              ],
+            }),
+          ];
+          const isGraphical = selectedMethod === 'graphical';
+          if (isGraphical && graph?.equation1_points?.length && graph?.equation2_points?.length) {
+            const graphCanvas = document.createElement('canvas');
+            const size = 560;
+            graphCanvas.width = size;
+            graphCanvas.height = size;
+            const ctx = graphCanvas.getContext('2d');
+            if (ctx) {
+              drawGraph(ctx, graph as any, size, size);
+              const bufGraph = await toArrayBuffer(graphCanvas);
+              children.push(
+                new Paragraph({ text: 'Graph', heading: 'Heading1', alignment: AlignmentType.LEFT }),
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: new Uint8Array(bufGraph),
+                      type: 'png',
+                      transformation: scaleImg(graphCanvas.width, graphCanvas.height),
+                    }),
+                  ],
+                })
+              );
+            }
+          }
           const doc = new Document({
-            sections: [
-              {
-                children: [
-                  new Paragraph({ text: 'Question', heading: 'Heading1', alignment: AlignmentType.LEFT }),
-                  new Paragraph({
-                    children: [
-                      new ImageRun({
-                        data: new Uint8Array(bufQ),
-                        type: 'png',
-                        transformation: scale(canvasQ.width, canvasQ.height),
-                      }),
-                    ],
-                  }),
-                  new Paragraph({ text: 'Solution', heading: 'Heading1', alignment: AlignmentType.LEFT }),
-                  new Paragraph({
-                    children: [
-                      new ImageRun({
-                        data: new Uint8Array(bufS),
-                        type: 'png',
-                        transformation: scale(canvasS.width, canvasS.height),
-                      }),
-                    ],
-                  }),
-                ],
-              },
-            ],
+            sections: [{ children }],
           });
           const blob = await Packer.toBlob(doc);
           saveAs(blob, 'export.docx');

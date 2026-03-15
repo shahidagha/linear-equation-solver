@@ -28,8 +28,8 @@ class SolutionLatexRenderer:
 
         detailed_lines = self._given_equations_block(given_equations)
         medium_lines = self._given_equations_block(given_equations)
-        # Short: standardization = Given + eq (1) + eq (2) only; method steps appended later as before
-        if standardization_steps:
+        # Short: Given + eq (1) + eq (2) for non-graphical; graphical skips the numbered lines (eq in table headers)
+        if standardization_steps and method_name != "graphical":
             short_lines = self._given_equations_block(given_equations)
             if equations:
                 short_lines.append(f"{equations[0]}\\; ...(1)")
@@ -313,7 +313,9 @@ class SolutionLatexRenderer:
         row_xy = "(x, y) & " + " & ".join(pair_vals) + " \\\\"
         equation_row = ""
         if equation and equation.strip():
-            equation_row = f"\\multicolumn{{{n_cols}}}{{|c|}}{{{equation.strip()}}} \\\\\n\\hline\n"
+            # Escape & so it doesn't break the row; use single centered cell across all columns
+            eq_safe = equation.strip().replace("&", "\\&").replace("\n", " ")
+            equation_row = f"\\multicolumn{{{n_cols}}}{{c}}{{{eq_safe}}} \\\\\n\\hline\n"
         return (
             f"\\begin{{array}}{{{cols}}}\n"
             "\\hline\n"

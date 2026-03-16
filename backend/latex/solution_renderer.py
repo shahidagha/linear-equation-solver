@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional
 
 import sympy as sp
 
+from backend.utils.step_roles import MEDIUM_ROLES, SHORT_ROLES
+
 
 class SolutionLatexRenderer:
     """Render solver output into MathJax/KaTeX-friendly LaTeX blocks."""
@@ -101,23 +103,32 @@ class SolutionLatexRenderer:
 
     def _append_elimination(self, steps, detailed, medium, short):
         last_content = None
-        # Short = medium minus steps (1), (3), (5), (7), (9), (11) by append order
         medium_step = 0
         _skip_short = (1, 3, 5, 7, 9, 11)
+        any_to_short = False
 
         for step in steps:
+            role = step.get("role")
+            if role is not None:
+                in_medium, in_short = self._include_by_role(step, MEDIUM_ROLES, SHORT_ROLES)
+            else:
+                in_medium, in_short = True, True  # backward compat: no role → show in all
+
             s_type = step.get("type")
             if s_type == "vertical_elimination":
+                if role is None:
+                    medium_step += 1
+                    in_short = medium_step not in _skip_short
                 block = self._vertical_array(
                     step["eq1"], step["eq2"], step["result"], op=step.get("op")
                 )
                 detailed.append(block)
-                medium.append(block)
-                medium_step += 1
-                if medium_step not in _skip_short:
+                if in_medium:
+                    medium.append(block)
+                if in_short:
                     short.append(block)
+                    any_to_short = True
             elif s_type == "substitution_intro":
-                # Detailed: why we chose this equation; Medium/Short: intro line (mixed LaTeX or text)
                 detailed_content = step.get("detailed_content", "")
                 content = step.get("content", "")
                 content_latex = step.get("content_latex")
@@ -125,17 +136,23 @@ class SolutionLatexRenderer:
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if content_latex:
                     for ln in self._wrap_latex(content_latex):
-                        medium.append(ln)
-                        medium_step += 1
-                        if medium_step not in _skip_short:
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
                             short.append(ln)
+                            any_to_short = True
+                        if role is None:
+                            medium_step += 1
+                            in_short = medium_step not in _skip_short
                 elif content:
-                    medium.append(f"\\text{{{self._escape_text(content)}}}")
-                    medium_step += 1
-                    if medium_step not in _skip_short:
+                    if in_medium:
+                        medium.append(f"\\text{{{self._escape_text(content)}}}")
+                    if in_short:
                         short.append(f"\\text{{{self._escape_text(content)}}}")
+                        any_to_short = True
+                    if role is None:
+                        medium_step += 1
             elif s_type == "divide_step":
-                # Step (5): detailed and medium text or mixed LaTeX; short blank
                 detailed_latex = step.get("detailed_latex")
                 medium_latex = step.get("medium_latex")
                 detailed_content = step.get("detailed", "")
@@ -148,18 +165,24 @@ class SolutionLatexRenderer:
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if medium_latex:
                     for ln in self._wrap_latex(medium_latex):
-                        medium.append(ln)
-                        medium_step += 1
-                        if medium_step not in _skip_short:
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
                             short.append(ln)
+                            any_to_short = True
+                        if role is None:
+                            medium_step += 1
+                            in_short = medium_step not in _skip_short
                 elif medium_content:
                     line = f"\\text{{{self._escape_text(medium_content)}}}"
-                    medium.append(line)
-                    medium_step += 1
-                    if medium_step not in _skip_short:
+                    if in_medium:
+                        medium.append(line)
+                    if in_short:
                         short.append(line)
+                        any_to_short = True
+                    if role is None:
+                        medium_step += 1
             elif s_type == "detailed_only":
-                # Step (11): only in detailed; blank for medium and short
                 content = step.get("content", "")
                 for ln in self._wrap_text(content):
                     detailed.append(f"\\text{{{self._escape_text(ln)}}}")
@@ -171,20 +194,18 @@ class SolutionLatexRenderer:
                     continue
                 last_content = content
                 if s_type == "equation":
-                    # Equation content is LaTeX; wrap long lines for consistent line length
                     for ln in self._wrap_latex(content):
                         detailed.append(ln)
-                        medium.append(ln)
-                        medium_step += 1
-                        if medium_step not in _skip_short:
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
                             short.append(ln)
+                            any_to_short = True
+                        if role is None:
+                            medium_step += 1
+                            in_short = medium_step not in _skip_short
                 else:
-                    # Strategy explanations and other prose are rendered as wrapped text.
-                    # We soft-wrap long sentences into multiple shorter lines so there is
-                    # no horizontal scrolling in the aligned environment.
                     lines = self._wrap_text(content)
-
-                    # LCM / Six step strategy explanations appear only in detailed view.
                     lcm_expl = (
                         "Elimination strategy: LCM" in content
                         or "Using LCM Elimination strategy" in content
@@ -195,13 +216,20 @@ class SolutionLatexRenderer:
                     for ln in lines:
                         text_line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(text_line)
-                        if not lcm_expl:
+                        if role is not None:
+                            if in_medium:
+                                medium.append(text_line)
+                            if in_short:
+                                short.append(text_line)
+                                any_to_short = True
+                        elif not lcm_expl:
                             medium.append(text_line)
                             medium_step += 1
                             if medium_step not in _skip_short:
                                 short.append(text_line)
+                                any_to_short = True
 
-        if medium_step == 0:
+        if not any_to_short:
             short.append("\\text{Elimination completed.}")
 
     def _append_substitution(self, equations, solution, steps, detailed, medium, short):
@@ -211,6 +239,11 @@ class SolutionLatexRenderer:
             short.append("\\text{Substitution method applied.}")
             return
         for step in steps:
+            role = step.get("role")
+            in_medium, in_short = (
+                self._include_by_role(step, MEDIUM_ROLES, SHORT_ROLES)
+                if role is not None else (True, True)
+            )
             s_type = step.get("type")
             content = step.get("content", "")
             if s_type == "substitution_intro":
@@ -220,8 +253,10 @@ class SolutionLatexRenderer:
                     for ln in self._wrap_text(detailed_content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if intro_content:
-                    medium.append(f"\\text{{{self._escape_text(intro_content)}}}")
-                    short.append(f"\\text{{{self._escape_text(intro_content)}}}")
+                    if in_medium:
+                        medium.append(f"\\text{{{self._escape_text(intro_content)}}}")
+                    if in_short:
+                        short.append(f"\\text{{{self._escape_text(intro_content)}}}")
             elif s_type == "subst_solve_step":
                 det = step.get("detailed", "")
                 det_latex = step.get("detailed_latex")
@@ -229,40 +264,58 @@ class SolutionLatexRenderer:
                 if det_latex:
                     for ln in self._wrap_latex(det_latex):
                         detailed.append(ln)
-                        medium.append(ln)
-                        short.append(ln)
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
+                            short.append(ln)
                 elif det:
                     for ln in self._wrap_text(det):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if eq_latex:
                     for ln in self._wrap_latex(eq_latex):
                         detailed.append(ln)
-                        medium.append(ln)
-                        short.append(ln)
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
+                            short.append(ln)
             elif s_type == "equation":
                 if content:
                     for ln in self._wrap_latex(content):
                         detailed.append(ln)
-                        medium.append(ln)
-                        short.append(ln)
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
+                            short.append(ln)
             elif s_type == "text":
                 if content:
                     for ln in self._wrap_text(content):
                         line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(line)
-                        medium.append(line)
-                        short.append(line)
+                        if in_medium:
+                            medium.append(line)
+                        if in_short:
+                            short.append(line)
             elif s_type == "operation":
                 if content:
                     for ln in self._wrap_text(content):
                         line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(line)
-                        medium.append(line)
-                        short.append(line)
+                        if in_medium:
+                            medium.append(line)
+                        if in_short:
+                            short.append(line)
             elif s_type == "detailed_only":
                 if content:
                     for ln in self._wrap_text(content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+
+    @staticmethod
+    def _include_by_role(step: Dict[str, Any], medium_roles: frozenset, short_roles: frozenset) -> tuple:
+        """Return (in_medium, in_short) from step role. If no role, include in all (backward compat)."""
+        role = step.get("role")
+        if role is None:
+            return True, True
+        return role in medium_roles, role in short_roles
 
     def _append_cramer(self, equations, solution, steps, detailed, medium, short):
         if not steps:
@@ -271,21 +324,26 @@ class SolutionLatexRenderer:
             short.append("\\text{Cramer.}")
             return
         for step in steps:
+            in_medium, in_short = self._include_by_role(step, MEDIUM_ROLES, SHORT_ROLES)
             s_type = step.get("type")
             content = step.get("content", "")
             if s_type == "equation":
                 if content:
                     for ln in self._wrap_latex(content):
                         detailed.append(ln)
-                        medium.append(ln)
-                        short.append(ln)
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
+                            short.append(ln)
             elif s_type == "text":
                 if content:
-                    for ln in self._wrap_text(content):
+                    for ln in self._wrap_text(str(content)):
                         line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(line)
-                        medium.append(line)
-                        short.append(line)
+                        if in_medium:
+                            medium.append(line)
+                        if in_short:
+                            short.append(line)
 
     def _format_coord(self, value: Any) -> str:
         """Format a numeric coordinate for LaTeX (integer or fraction)."""
@@ -334,16 +392,47 @@ class SolutionLatexRenderer:
             "\\end{array}"
         )
 
+    def _substitution_steps_table_latex(self, steps_list: List[List[str]]) -> str:
+        """Build a 3-column, 1-row table; each column shows calculation steps for one point.
+        steps_list: list of 3 elements, each a list of LaTeX equation strings.
+        Uses \\cr for row breaks so the table can be embedded inside \\begin{aligned}."""
+        if not steps_list or len(steps_list) < 3:
+            return ""
+        cr = " \\cr "
+        cells = []
+        for block in steps_list[:3]:
+            if not block:
+                cells.append("")
+                continue
+            inner = cr.join(block)
+            cells.append(f"\\begin{{array}}{{c}}{inner}\\end{{array}}")
+        row = " & ".join(cells)
+        return (
+            "\\begin{array}{|c|c|c|}\n"
+            "\\hline\n"
+            f"{row} {cr}\n"
+            "\\hline\n"
+            "\\end{array}"
+        )
+
     def _append_graphical(self, graph_data, equations: List[str], detailed, medium, short):
         p1 = graph_data.get("equation1_points", [])
         p2 = graph_data.get("equation2_points", [])
+        steps1 = graph_data.get("equation1_substitution_steps", [])
+        steps2 = graph_data.get("equation2_substitution_steps", [])
         eq1 = (equations[0] if equations else "").strip()
         eq2 = (equations[1] if len(equations) > 1 else "").strip()
         table1 = self._points_table_latex(p1, equation=eq1)
         table2 = self._points_table_latex(p2, equation=eq2)
+        steps_table1 = self._substitution_steps_table_latex(steps1) if steps1 else ""
+        steps_table2 = self._substitution_steps_table_latex(steps2) if steps2 else ""
         for lines in (detailed, medium, short):
             lines.append(table1)
+            if steps_table1:
+                lines.append(steps_table1)
             lines.append(table2)
+            if steps_table2:
+                lines.append(steps_table2)
 
     def _vertical_array(self, eq1: str, eq2: str, result: str, op: str = None) -> str:
         t1 = self._split_equation(eq1)

@@ -85,6 +85,70 @@ def _equation_lines(eq1: Equation, eq2: Equation, var1: str, var2: str):
     ]
 
 
+def _graphical_substitution_steps(
+    eq: Equation,
+    points: list,
+    var1: str,
+    var2: str,
+) -> list:
+    """
+    For each of the 3 points, return a list of LaTeX strings showing the calculation steps:
+    Step 1: equation (e.g. 3x + y = 8)
+    Step 2: Put x = x0
+    Step 3: a(x0) + b*y = c   (e.g. 3(0) + y = 8)
+    Step 4: (a*x0 simplified) + y = c   (e.g. 0 + y = 8 or 3 + y = 8)
+    Step 5: y = c - (a*x0)   (e.g. y = 8 - 3)
+    Step 6: y = y0   (e.g. y = 5)
+    Returns a list of 3 elements; each element is a list of LaTeX equation lines.
+    """
+    a = eq.a.to_sympy()
+    b = eq.b.to_sympy()
+    c = eq.c.to_sympy()
+    x_sym = sp.Symbol(var1)
+    y_sym = sp.Symbol(var2)
+    result = []
+    for point in points[:3]:
+        x0_val = sp.sympify(point[0])
+        y0_val = sp.sympify(point[1])
+        lines = []
+        # Step 1: equation  e.g. 3x + y = 8
+        lhs_eq = a * x_sym + b * y_sym
+        lines.append(f"{sp.latex(lhs_eq)} = {sp.latex(c)}")
+        # Step 2: Put var1 = x0
+        lines.append(f"\\text{{Put }} {sp.latex(x_sym)} = {sp.latex(x0_val)}")
+        # Step 3: a(x0) + b*y = c   (show parentheses around x0); suppress coefficient when a is 1 or -1
+        ax0_expr = a * x0_val  # will simplify when we want step 4
+        a_simpl = sp.simplify(a)
+        if a_simpl == 1:
+            step3_lhs = f"\\left({sp.latex(x0_val)}\\right) + {sp.latex(b * y_sym)}"
+        elif a_simpl == -1:
+            step3_lhs = f"-\\left({sp.latex(x0_val)}\\right) + {sp.latex(b * y_sym)}"
+        else:
+            step3_lhs = f"{sp.latex(a)}\\left({sp.latex(x0_val)}\\right) + {sp.latex(b * y_sym)}"
+        lines.append(f"{step3_lhs} = {sp.latex(c)}")
+        # Step 4: (a*x0) simplified + b*y = c   e.g. 0 + y = 8  or  3 + y = 8
+        ax0_simpl = sp.simplify(ax0_expr)
+        step4_lhs = f"{sp.latex(ax0_simpl)} + {sp.latex(b * y_sym)}"
+        lines.append(f"{step4_lhs} = {sp.latex(c)}")
+        # Step 5: y = c - (a*x0)  when b is 1 or -1; else b*y = c - (a*x0)
+        # Wrap subtracted term in parentheses when negative so we get "y = 2 - (-6)" not "y = 2 - -6"
+        ax0_latex = sp.latex(ax0_simpl)
+        is_negative = ax0_latex.strip().startswith("-") and len(ax0_latex.strip()) > 1
+        sub_term = f"\\left({ax0_latex}\\right)" if is_negative else ax0_latex
+        if sp.simplify(b) == 1 or sp.simplify(b) == -1:
+            lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} - {sub_term}")
+        else:
+            lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(c)} - {sub_term}")
+        # When subtracted term is negative, add step: y = c + (-ax0)  e.g. y = 2 + 6
+        if is_negative:
+            plus_term = sp.simplify(-ax0_simpl)
+            lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} + {sp.latex(plus_term)}")
+        # Final step: y = y0
+        lines.append(f"{sp.latex(y_sym)} = {sp.latex(y0_val)}")
+        result.append(lines)
+    return result
+
+
 def _normalize_solution_map(raw_solution, var1: str, var2: str) -> dict:
     """Normalize solver outputs to a stable {var1: value, var2: value} mapping."""
 
@@ -172,25 +236,31 @@ def _normalize_method_solution(raw_solution, var1: str, var2: str):
     return _normalize_solution_map(raw_solution, var1, var2)
 
 
+def _step_role(step):
+    return getattr(step, "role", None)
+
+
 def _serialize_steps(steps):
     serialized = []
     for step in steps:
+        role = _step_role(step)
+        extra = {} if role is None else {"role": role}
         if step.type == "vertical_elimination":
-            serialized.append(
-                {
-                    "type": step.type,
-                    "eq1": step.content.get("eq1"),
-                    "eq2": step.content.get("eq2"),
-                    "result": step.content.get("result"),
-                    "op": step.content.get("op"),
-                }
-            )
+            serialized.append({
+                "type": step.type,
+                "eq1": step.content.get("eq1"),
+                "eq2": step.content.get("eq2"),
+                "result": step.content.get("result"),
+                "op": step.content.get("op"),
+                **extra,
+            })
         elif step.type == "text" and isinstance(step.content, dict) and "short" in step.content and "detailed" in step.content:
             serialized.append({
                 "type": "substitution_intro",
                 "content": step.content["short"],
                 "detailed_content": step.content["detailed"],
                 "content_latex": step.content.get("content_latex"),
+                **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and "medium" in step.content:
             serialized.append({
@@ -199,6 +269,7 @@ def _serialize_steps(steps):
                 "medium": step.content["medium"],
                 "detailed_latex": step.content.get("detailed_latex"),
                 "medium_latex": step.content.get("medium_latex"),
+                **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "equation" in step.content:
             serialized.append({
@@ -206,14 +277,16 @@ def _serialize_steps(steps):
                 "detailed": step.content.get("detailed", ""),
                 "equation": step.content["equation"],
                 "detailed_latex": step.content.get("detailed_latex"),
+                **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and step.content.get("medium") == "" and step.content.get("short") == "" and "equation" not in step.content:
             serialized.append({
                 "type": "detailed_only",
                 "content": step.content["detailed"],
+                **extra,
             })
         else:
-            serialized.append({"type": step.type, "content": str(step.content)})
+            serialized.append({"type": step.type, "content": str(step.content), **extra})
     return serialized
 
 
@@ -397,6 +470,8 @@ def solve_system(db: Session, system_id: int, payload: dict):
     graph_data = {
         "equation1_points": convert_points(points1),
         "equation2_points": convert_points(points2),
+        "equation1_substitution_steps": _graphical_substitution_steps(standardized_system.eq1, points1, var1, var2),
+        "equation2_substitution_steps": _graphical_substitution_steps(standardized_system.eq2, points2, var1, var2),
         "equation1_label": equations[0] if equations else "",
         "equation2_label": equations[1] if len(equations) > 1 else "",
         "intersection": None if degenerate else {

@@ -8,6 +8,7 @@ from backend.utils.step_recorder import StepRecorder
 from backend.utils.step_roles import BLOCK_INTRO, EXPLANATION_TEXT, STUDENT_CALC, STUDENT_RESULT_TEXT
 from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
 from backend.utils.grade_scope import would_add_subtract_unlike_surds
+from backend.utils.substitute_and_solve_block import get_visible_steps, substitute_and_solve_for_var
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -422,12 +423,20 @@ class SubstitutionSolver:
             )
             return degenerate_none()
 
-        # Step 4: solve for other_sym with full intermediate steps (expand, multiply by denom, arrange, simplify, sign, divide)
-        calc_steps = self._expand_solve_steps_from_raw(raw_lhs, c_t, other_sym, a_t, b_t, other_sym_t, expr)
+        # Step 4: solve for other_sym using unified substitute-and-solve block (fixed logical path, visibility rules)
+        block_steps = substitute_and_solve_for_var(
+            a_t, b_t, c_t, solve_for_var, expr, other_var, target_eq_num
+        )
         sol_other = sp.solve(substituted, other_sym)
         if not sol_other:
             return self._fallback_solve()
         other_value = sp.simplify(sol_other[0])
+        visible_steps = get_visible_steps(block_steps)
+        calc_steps = [
+            (s.get("description", ""), s["latex"], s.get("description"))
+            for s in visible_steps
+            if s["type"] not in ("intro", "substitute_raw")
+        ]
         if not calc_steps:
             self.recorder.add_equation(f"{sp.latex(other_sym)} = {self._expr_latex(other_value)}")
         else:

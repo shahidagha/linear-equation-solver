@@ -125,10 +125,14 @@ def _graphical_substitution_steps(
         step4_lhs = f"{sp.latex(ax0_simpl)} + {sp.latex(b * y_sym)}"
         lines.append(f"{step4_lhs} = {sp.latex(c)}")
         # Step 5: y = c - (a*x0)  when b is 1 or -1; else b*y = c - (a*x0)
+        # Wrap subtracted term in parentheses when negative so we get "y = 2 - (-6)" not "y = 2 - -6"
+        ax0_latex = sp.latex(ax0_simpl)
+        is_negative = ax0_latex.strip().startswith("-") and len(ax0_latex.strip()) > 1
+        sub_term = f"\\left({ax0_latex}\\right)" if is_negative else ax0_latex
         if sp.simplify(b) == 1 or sp.simplify(b) == -1:
-            lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} - {sp.latex(ax0_simpl)}")
+            lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} - {sub_term}")
         else:
-            lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(c)} - {sp.latex(ax0_simpl)}")
+            lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(c)} - {sub_term}")
         # Step 6: y = y0
         lines.append(f"{sp.latex(y_sym)} = {sp.latex(y0_val)}")
         result.append(lines)

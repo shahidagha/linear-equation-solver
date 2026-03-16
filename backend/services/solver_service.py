@@ -85,6 +85,42 @@ def _equation_lines(eq1: Equation, eq2: Equation, var1: str, var2: str):
     ]
 
 
+def _graphical_substitution_steps(
+    eq: Equation,
+    points: list,
+    var1: str,
+    var2: str,
+) -> list:
+    """
+    For each of the 3 points, return a list of LaTeX strings showing the calculation:
+    substitute x = x0 into the equation and solve for y to get y = y0.
+    Returns a list of 3 elements; each element is a list of LaTeX equation lines.
+    """
+    a = eq.a.to_sympy()
+    b = eq.b.to_sympy()
+    c = eq.c.to_sympy()
+    x_sym = sp.Symbol(var1)
+    y_sym = sp.Symbol(var2)
+    result = []
+    for point in points[:3]:
+        x0_val = sp.sympify(point[0])
+        y0_val = sp.sympify(point[1])
+        lines = []
+        # Line 1: Substitute var1 = x0  =>  a*x0 + b*y = c
+        lhs1 = a * x0_val + b * y_sym
+        rhs1 = c
+        lhs1 = sp.simplify(lhs1)
+        lines.append(f"{sp.latex(lhs1)} = {sp.latex(rhs1)}")
+        # Line 2: b*y = c - a*x0
+        rhs2 = c - a * x0_val
+        rhs2 = sp.simplify(sp.radsimp(rhs2))
+        lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(rhs2)}")
+        # Line 3: y = y0
+        lines.append(f"{sp.latex(y_sym)} = {sp.latex(y0_val)}")
+        result.append(lines)
+    return result
+
+
 def _normalize_solution_map(raw_solution, var1: str, var2: str) -> dict:
     """Normalize solver outputs to a stable {var1: value, var2: value} mapping."""
 
@@ -397,6 +433,8 @@ def solve_system(db: Session, system_id: int, payload: dict):
     graph_data = {
         "equation1_points": convert_points(points1),
         "equation2_points": convert_points(points2),
+        "equation1_substitution_steps": _graphical_substitution_steps(standardized_system.eq1, points1, var1, var2),
+        "equation2_substitution_steps": _graphical_substitution_steps(standardized_system.eq2, points2, var1, var2),
         "equation1_label": equations[0] if equations else "",
         "equation2_label": equations[1] if len(equations) > 1 else "",
         "intersection": None if degenerate else {

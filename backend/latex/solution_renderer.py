@@ -334,16 +334,47 @@ class SolutionLatexRenderer:
             "\\end{array}"
         )
 
+    def _substitution_steps_table_latex(self, steps_list: List[List[str]]) -> str:
+        """Build a 3-column, 1-row table; each column shows calculation steps for one point.
+        steps_list: list of 3 elements, each a list of LaTeX equation strings.
+        Uses \\cr for row breaks so the table can be embedded inside \\begin{aligned}."""
+        if not steps_list or len(steps_list) < 3:
+            return ""
+        cr = " \\cr "
+        cells = []
+        for block in steps_list[:3]:
+            if not block:
+                cells.append("")
+                continue
+            inner = cr.join(block)
+            cells.append(f"\\begin{{array}}{{c}}{inner}\\end{{array}}")
+        row = " & ".join(cells)
+        return (
+            "\\begin{array}{|c|c|c|}\n"
+            "\\hline\n"
+            f"{row} {cr}\n"
+            "\\hline\n"
+            "\\end{array}"
+        )
+
     def _append_graphical(self, graph_data, equations: List[str], detailed, medium, short):
         p1 = graph_data.get("equation1_points", [])
         p2 = graph_data.get("equation2_points", [])
+        steps1 = graph_data.get("equation1_substitution_steps", [])
+        steps2 = graph_data.get("equation2_substitution_steps", [])
         eq1 = (equations[0] if equations else "").strip()
         eq2 = (equations[1] if len(equations) > 1 else "").strip()
         table1 = self._points_table_latex(p1, equation=eq1)
         table2 = self._points_table_latex(p2, equation=eq2)
+        steps_table1 = self._substitution_steps_table_latex(steps1) if steps1 else ""
+        steps_table2 = self._substitution_steps_table_latex(steps2) if steps2 else ""
         for lines in (detailed, medium, short):
             lines.append(table1)
+            if steps_table1:
+                lines.append(steps_table1)
             lines.append(table2)
+            if steps_table2:
+                lines.append(steps_table2)
 
     def _vertical_array(self, eq1: str, eq2: str, result: str, op: str = None) -> str:
         t1 = self._split_equation(eq1)

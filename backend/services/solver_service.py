@@ -116,9 +116,15 @@ def _graphical_substitution_steps(
         lines.append(f"{sp.latex(lhs_eq)} = {sp.latex(c)}")
         # Step 2: Put var1 = x0
         lines.append(f"\\text{{Put }} {sp.latex(x_sym)} = {sp.latex(x0_val)}")
-        # Step 3: a(x0) + b*y = c   (show parentheses around x0)
+        # Step 3: a(x0) + b*y = c   (show parentheses around x0); suppress coefficient when a is 1 or -1
         ax0_expr = a * x0_val  # will simplify when we want step 4
-        step3_lhs = f"{sp.latex(a)}({sp.latex(x0_val)}) + {sp.latex(b * y_sym)}"
+        a_simpl = sp.simplify(a)
+        if a_simpl == 1:
+            step3_lhs = f"\\left({sp.latex(x0_val)}\\right) + {sp.latex(b * y_sym)}"
+        elif a_simpl == -1:
+            step3_lhs = f"-\\left({sp.latex(x0_val)}\\right) + {sp.latex(b * y_sym)}"
+        else:
+            step3_lhs = f"{sp.latex(a)}\\left({sp.latex(x0_val)}\\right) + {sp.latex(b * y_sym)}"
         lines.append(f"{step3_lhs} = {sp.latex(c)}")
         # Step 4: (a*x0) simplified + b*y = c   e.g. 0 + y = 8  or  3 + y = 8
         ax0_simpl = sp.simplify(ax0_expr)
@@ -133,7 +139,11 @@ def _graphical_substitution_steps(
             lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} - {sub_term}")
         else:
             lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(c)} - {sub_term}")
-        # Step 6: y = y0
+        # When subtracted term is negative, add step: y = c + (-ax0)  e.g. y = 2 + 6
+        if is_negative:
+            plus_term = sp.simplify(-ax0_simpl)
+            lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} + {sp.latex(plus_term)}")
+        # Final step: y = y0
         lines.append(f"{sp.latex(y_sym)} = {sp.latex(y0_val)}")
         result.append(lines)
     return result

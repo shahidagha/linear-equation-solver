@@ -1,5 +1,12 @@
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.step_roles import (
+    BLOCK_INTRO,
+    EXPLANATION_RESULT_TEXT,
+    EXPLANATION_TEXT,
+    STUDENT_CALC,
+    STUDENT_CALC_LAST_LINE,
+)
 from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
 from backend.utils.grade_scope import would_add_subtract_unlike_surds
 from backend.latex.equation_formatter import EquationFormatter
@@ -24,7 +31,7 @@ class EliminationSolver:
 
     def vertical_elimination(self, eq1, eq2, result, op=None):
         """op: 'add' or 'subtract' so the layout shows + or − and underset only for subtract."""
-        self.recorder.add_vertical(eq1, eq2, result, op=op)
+        self.recorder.add_vertical(eq1, eq2, result, op=op, role=STUDENT_CALC)
 
     def _record_and_return_degenerate(self, eq_line1, eq_line2, C, op):
         """Record 0 = C or 0 = 0, add conclusion step, return degenerate_none() or degenerate_infinite()."""
@@ -34,14 +41,16 @@ class EliminationSolver:
         else:
             result_line = f"0 = {sp.latex(C)}"
         self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
-        self.recorder.add_equation(result_line)
+        self.recorder.add_equation(result_line, role=STUDENT_CALC_LAST_LINE)
         if C == 0:
             self.recorder.add_equation(
-                "\\text{We get } 0 = 0 \\text{; the equations are dependent — infinitely many solutions.}"
+                "\\text{We get } 0 = 0 \\text{; the equations are dependent — infinitely many solutions.}",
+                role=EXPLANATION_RESULT_TEXT,
             )
             return degenerate_infinite()
         self.recorder.add_equation(
-            "\\text{We get } 0 = k \\text{ with } k \\neq 0 \\text{ — the system has no solution (inconsistent).}"
+            "\\text{We get } 0 = k \\text{ with } k \\neq 0 \\text{ — the system has no solution (inconsistent).}",
+            role=EXPLANATION_RESULT_TEXT,
         )
         return degenerate_none()
 
@@ -67,7 +76,8 @@ class EliminationSolver:
         if would_add_subtract_unlike_surds(a1, a2) or would_add_subtract_unlike_surds(b1, b2) or would_add_subtract_unlike_surds(c1, c2):
             self.recorder.add_equation(
                 "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
-                "which is beyond the scope of the current grade.}"
+                "which is beyond the scope of the current grade.}",
+                role=EXPLANATION_TEXT,
             )
             return above_grade()
         return None
@@ -161,7 +171,7 @@ class EliminationSolver:
             f"We substitute x = {sp.latex(x_value)} into equation ({idx}) because equation ({idx}) "
             "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding y is easier."
         )
-        self.recorder.add({"short": short, "detailed": detailed})
+        self.recorder.add({"short": short, "detailed": detailed}, role=BLOCK_INTRO)
 
         var2 = getattr(self.system, "var2", "y")
         b_term = self._term(b, var2)
@@ -196,7 +206,7 @@ class EliminationSolver:
             f"We substitute y = {sp.latex(y_value)} into equation ({idx}) because equation ({idx}) "
             "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier."
         )
-        self.recorder.add({"short": short, "detailed": detailed})
+        self.recorder.add({"short": short, "detailed": detailed}, role=BLOCK_INTRO)
         var1 = getattr(self.system, "var1", "x")
         a_term = self._term(a, var1)
         substituted = sp.simplify(b * y_value)

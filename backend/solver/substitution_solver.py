@@ -5,6 +5,7 @@ Steps 1 (standardization) are done upstream. Steps 2-6 and verification (detaile
 """
 import sympy as sp
 from backend.utils.step_recorder import StepRecorder
+from backend.utils.step_roles import BLOCK_INTRO, EXPLANATION_TEXT, STUDENT_CALC, STUDENT_RESULT_TEXT
 from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
 from backend.utils.grade_scope import would_add_subtract_unlike_surds
 from backend.latex.equation_formatter import EquationFormatter
@@ -156,7 +157,10 @@ class SubstitutionSolver:
         short_line = f"Solving equation ({eq_num}) for {var_name}:"
         detailed_line = self._why_we_chose(eq_num, var_name, chose_simple, a, b, c)
         content_latex = f"\\text{{Solving equation ({eq_num}) for }} {var_name} \\text{{:}}"
-        self.recorder.add({"short": short_line, "detailed": detailed_line, "medium": short_line, "content_latex": content_latex})
+        self.recorder.add(
+            {"short": short_line, "detailed": detailed_line, "medium": short_line, "content_latex": content_latex},
+            role=BLOCK_INTRO,
+        )
 
         # Equation (1) or (2) again without label
         self.recorder.add_equation(self._eq_latex(a, b, c))
@@ -165,18 +169,18 @@ class SubstitutionSolver:
         other_sym = self._y if sym_var == self._x else self._x
         algebra_steps = self._steps_to_solve_for_var(a, b, c, sym_var, other_sym, expr, var_name)
         for detailed_text, eq_latex in algebra_steps:
-            self.recorder.add({"detailed": detailed_text, "equation": eq_latex})
-        # If the last step is not already var = expr (e.g. we only had "Divide" and raw_expr != expr), add final line
+            self.recorder.add({"detailed": detailed_text, "equation": eq_latex}, role=STUDENT_CALC)
         final_latex = f"{sp.latex(sym_var)} = {self._expr_latex(expr)}"
         if not algebra_steps or algebra_steps[-1][1] != final_latex:
-            self.recorder.add({"detailed": "", "equation": final_latex})
+            self.recorder.add({"detailed": "", "equation": final_latex}, role=STUDENT_RESULT_TEXT)
 
     def _record_substitute_into(self, eq_num, var_name, expr, raw_substituted_latex):
         """Record Step 3: mixed text+math line, then raw substitution equation. Intermediate steps follow from _expand_solve_steps_from_raw."""
         self.recorder.add_equation(
-            f"\\text{{Substituting }} {var_name} = {sp.latex(expr)} \\text{{ into Equation ({eq_num}):}}"
+            f"\\text{{Substituting }} {var_name} = {sp.latex(expr)} \\text{{ into Equation ({eq_num}):}}",
+            role=BLOCK_INTRO,
         )
-        self.recorder.add_equation(raw_substituted_latex)
+        self.recorder.add_equation(raw_substituted_latex, role=STUDENT_CALC)
 
     def _record_solve_one_var_steps(self, var_sym, eq_lhs_eq_rhs_steps):
         """Record Step 4: each calculation step (text or detailed_latex + equation)."""
@@ -184,7 +188,10 @@ class SubstitutionSolver:
             detailed_latex = item[2] if len(item) >= 3 else None
             text = item[0]
             eq_latex = item[1]
-            self.recorder.add({"detailed": text or "", "equation": eq_latex, "detailed_latex": detailed_latex})
+            self.recorder.add(
+                {"detailed": text or "", "equation": eq_latex, "detailed_latex": detailed_latex},
+                role=STUDENT_CALC,
+            )
 
     def _back_substitute_intermediate_steps(self, sym_var, expr, other_sym, value, result_value):
         """
@@ -431,11 +438,14 @@ class SubstitutionSolver:
         self._record_back_substitute(other_var, other_value, expr, sym_var, other_sym, result_first)
 
         # Step 6: solution is appended by renderer; add verification for detailed only
-        self.recorder.add({
-            "detailed": "Check: substitute solution into Equation (1) and Equation (2) to verify.",
-            "medium": "",
-            "short": "",
-        })
+        self.recorder.add(
+            {
+                "detailed": "Check: substitute solution into Equation (1) and Equation (2) to verify.",
+                "medium": "",
+                "short": "",
+            },
+            role=EXPLANATION_TEXT,
+        )
 
         # Build solution dict
         if sym_var == self._x:

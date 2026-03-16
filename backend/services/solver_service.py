@@ -236,25 +236,31 @@ def _normalize_method_solution(raw_solution, var1: str, var2: str):
     return _normalize_solution_map(raw_solution, var1, var2)
 
 
+def _step_role(step):
+    return getattr(step, "role", None)
+
+
 def _serialize_steps(steps):
     serialized = []
     for step in steps:
+        role = _step_role(step)
+        extra = {} if role is None else {"role": role}
         if step.type == "vertical_elimination":
-            serialized.append(
-                {
-                    "type": step.type,
-                    "eq1": step.content.get("eq1"),
-                    "eq2": step.content.get("eq2"),
-                    "result": step.content.get("result"),
-                    "op": step.content.get("op"),
-                }
-            )
+            serialized.append({
+                "type": step.type,
+                "eq1": step.content.get("eq1"),
+                "eq2": step.content.get("eq2"),
+                "result": step.content.get("result"),
+                "op": step.content.get("op"),
+                **extra,
+            })
         elif step.type == "text" and isinstance(step.content, dict) and "short" in step.content and "detailed" in step.content:
             serialized.append({
                 "type": "substitution_intro",
                 "content": step.content["short"],
                 "detailed_content": step.content["detailed"],
                 "content_latex": step.content.get("content_latex"),
+                **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and "medium" in step.content:
             serialized.append({
@@ -263,6 +269,7 @@ def _serialize_steps(steps):
                 "medium": step.content["medium"],
                 "detailed_latex": step.content.get("detailed_latex"),
                 "medium_latex": step.content.get("medium_latex"),
+                **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "equation" in step.content:
             serialized.append({
@@ -270,14 +277,16 @@ def _serialize_steps(steps):
                 "detailed": step.content.get("detailed", ""),
                 "equation": step.content["equation"],
                 "detailed_latex": step.content.get("detailed_latex"),
+                **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and step.content.get("medium") == "" and step.content.get("short") == "" and "equation" not in step.content:
             serialized.append({
                 "type": "detailed_only",
                 "content": step.content["detailed"],
+                **extra,
             })
         else:
-            serialized.append({"type": step.type, "content": str(step.content)})
+            serialized.append({"type": step.type, "content": str(step.content), **extra})
     return serialized
 
 

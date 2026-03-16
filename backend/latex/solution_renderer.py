@@ -264,28 +264,39 @@ class SolutionLatexRenderer:
                     for ln in self._wrap_text(content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
 
+    # Cramer verbosity: 1-based step numbers to include (Final answer is always appended after steps).
+    _CRAMER_MEDIUM_STEPS = {1, 2, 3, 4, 7, 9, 10, 11, 12, 15, 17, 18, 19, 20, 23, 25, 26, 27, 28, 30, 31, 32, 33}
+    _CRAMER_SHORT_STEPS = {2, 4, 7, 12, 15, 20, 23, 28, 30, 31, 32, 33}
+
     def _append_cramer(self, equations, solution, steps, detailed, medium, short):
         if not steps:
             detailed.append("\\text{Cramer's rule applied.}")
             medium.append("\\text{Cramer's rule applied.}")
             short.append("\\text{Cramer.}")
             return
-        for step in steps:
+        for i, step in enumerate(steps):
+            step_num = i + 1
+            in_medium = step_num in self._CRAMER_MEDIUM_STEPS
+            in_short = step_num in self._CRAMER_SHORT_STEPS
             s_type = step.get("type")
             content = step.get("content", "")
             if s_type == "equation":
                 if content:
                     for ln in self._wrap_latex(content):
                         detailed.append(ln)
-                        medium.append(ln)
-                        short.append(ln)
+                        if in_medium:
+                            medium.append(ln)
+                        if in_short:
+                            short.append(ln)
             elif s_type == "text":
                 if content:
                     for ln in self._wrap_text(content):
                         line = f"\\text{{{self._escape_text(ln)}}}"
                         detailed.append(line)
-                        medium.append(line)
-                        short.append(line)
+                        if in_medium:
+                            medium.append(line)
+                        if in_short:
+                            short.append(line)
 
     def _format_coord(self, value: Any) -> str:
         """Format a numeric coordinate for LaTeX (integer or fraction)."""

@@ -92,8 +92,13 @@ def _graphical_substitution_steps(
     var2: str,
 ) -> list:
     """
-    For each of the 3 points, return a list of LaTeX strings showing the calculation:
-    substitute x = x0 into the equation and solve for y to get y = y0.
+    For each of the 3 points, return a list of LaTeX strings showing the calculation steps:
+    Step 1: equation (e.g. 3x + y = 8)
+    Step 2: Put x = x0
+    Step 3: a(x0) + b*y = c   (e.g. 3(0) + y = 8)
+    Step 4: (a*x0 simplified) + y = c   (e.g. 0 + y = 8 or 3 + y = 8)
+    Step 5: y = c - (a*x0)   (e.g. y = 8 - 3)
+    Step 6: y = y0   (e.g. y = 5)
     Returns a list of 3 elements; each element is a list of LaTeX equation lines.
     """
     a = eq.a.to_sympy()
@@ -106,16 +111,25 @@ def _graphical_substitution_steps(
         x0_val = sp.sympify(point[0])
         y0_val = sp.sympify(point[1])
         lines = []
-        # Line 1: Substitute var1 = x0  =>  a*x0 + b*y = c
-        lhs1 = a * x0_val + b * y_sym
-        rhs1 = c
-        lhs1 = sp.simplify(lhs1)
-        lines.append(f"{sp.latex(lhs1)} = {sp.latex(rhs1)}")
-        # Line 2: b*y = c - a*x0
-        rhs2 = c - a * x0_val
-        rhs2 = sp.simplify(sp.radsimp(rhs2))
-        lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(rhs2)}")
-        # Line 3: y = y0
+        # Step 1: equation  e.g. 3x + y = 8
+        lhs_eq = a * x_sym + b * y_sym
+        lines.append(f"{sp.latex(lhs_eq)} = {sp.latex(c)}")
+        # Step 2: Put var1 = x0
+        lines.append(f"\\text{{Put }} {sp.latex(x_sym)} = {sp.latex(x0_val)}")
+        # Step 3: a(x0) + b*y = c   (show parentheses around x0)
+        ax0_expr = a * x0_val  # will simplify when we want step 4
+        step3_lhs = f"{sp.latex(a)}({sp.latex(x0_val)}) + {sp.latex(b * y_sym)}"
+        lines.append(f"{step3_lhs} = {sp.latex(c)}")
+        # Step 4: (a*x0) simplified + b*y = c   e.g. 0 + y = 8  or  3 + y = 8
+        ax0_simpl = sp.simplify(ax0_expr)
+        step4_lhs = f"{sp.latex(ax0_simpl)} + {sp.latex(b * y_sym)}"
+        lines.append(f"{step4_lhs} = {sp.latex(c)}")
+        # Step 5: y = c - (a*x0)  when b is 1 or -1; else b*y = c - (a*x0)
+        if sp.simplify(b) == 1 or sp.simplify(b) == -1:
+            lines.append(f"{sp.latex(y_sym)} = {sp.latex(c)} - {sp.latex(ax0_simpl)}")
+        else:
+            lines.append(f"{sp.latex(b * y_sym)} = {sp.latex(c)} - {sp.latex(ax0_simpl)}")
+        # Step 6: y = y0
         lines.append(f"{sp.latex(y_sym)} = {sp.latex(y0_val)}")
         result.append(lines)
     return result

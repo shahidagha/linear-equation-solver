@@ -7,7 +7,12 @@ from backend.utils.step_roles import (
     STUDENT_CALC,
     STUDENT_CALC_LAST_LINE,
 )
+from backend.utils.back_substitute_block import back_substitute, get_visible_steps as get_visible_back_sub_steps
 from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
+from backend.utils.solve_for_var_block import (
+    get_visible_steps as get_visible_solve_steps,
+    solve_coeff_var_equals_constant,
+)
 from backend.utils.grade_scope import would_add_subtract_unlike_surds
 from backend.latex.equation_formatter import EquationFormatter
 
@@ -140,6 +145,13 @@ class EliminationSolver:
     # final substitution helper (SECTION 5)
     # -----------------------------
 
+    def _record_solve_one_var_after_elimination(self, coeff, constant, var_name):
+        """Record steps from coeff*var = constant to var = value (skip equation step; already shown)."""
+        steps = solve_coeff_var_equals_constant(coeff, constant, var_name)
+        for s in get_visible_solve_steps(steps):
+            if s["type"] != "equation":
+                self.recorder.add_equation(s["latex"])
+
     def _choose_substitution_equation(self):
         a1 = self.eq1.a.to_sympy()
         b1 = self.eq1.b.to_sympy()
@@ -165,6 +177,7 @@ class EliminationSolver:
 
     def _substitute_x(self, x_value):
         a, b, c, idx = self._choose_substitution_equation()
+        var2 = getattr(self.system, "var2", "y")
 
         short = f"Substitute x = {sp.latex(x_value)} in equation ({idx})"
         detailed = (
@@ -173,33 +186,18 @@ class EliminationSolver:
         )
         self.recorder.add({"short": short, "detailed": detailed}, role=BLOCK_INTRO)
 
-        var2 = getattr(self.system, "var2", "y")
-        b_term = self._term(b, var2)
-        # When coefficient of x is 1 or -1, don't show "1(1)" or "-1(1)"; show "1 + ..." or "-1 + ..."
-        if a == 1:
-            subst_line = f"{sp.latex(x_value)} + {b_term} = {sp.latex(c)}"
-        elif a == -1:
-            subst_line = f"-{sp.latex(x_value)} + {b_term} = {sp.latex(c)}"
-        else:
-            subst_line = f"{sp.latex(a)}({sp.latex(x_value)}) + {b_term} = {sp.latex(c)}"
-        self.recorder.add_equation(subst_line)
+        steps = back_substitute(a, b, c, "x", x_value, var2, eq_num=idx)
+        visible = get_visible_back_sub_steps(steps)
+        for s in visible:
+            if s["type"] != "intro":
+                self.recorder.add_equation(s["latex"])
 
-        lhs = sp.simplify(a * x_value)
-        next_line = f"{sp.latex(lhs)} + {b_term} = {sp.latex(c)}"
-        if next_line != subst_line:
-            self.recorder.add_equation(next_line)
-
-        rhs = sp.simplify(c - lhs)
-        y_value = sp.simplify(rhs / b)
-        var2 = getattr(self.system, "var2", "y")
-        final_y_line = f"{var2} = {sp.latex(y_value)}"
-        # Detailed steps: ∴ y = c - lhs, then ∴ y = value
-        self.recorder.add_equation(f"\\therefore {b_term} = {sp.latex(c)} - {sp.latex(lhs)}")
-        self.recorder.add_equation(f"\\therefore {final_y_line}")
+        y_value = sp.simplify((c - a * x_value) / b)
         return y_value
 
     def _substitute_y(self, y_value):
         a, b, c, idx = self._choose_substitution_equation()
+        var1 = getattr(self.system, "var1", "x")
 
         short = f"Substitute y = {sp.latex(y_value)} in equation ({idx})"
         detailed = (
@@ -207,23 +205,14 @@ class EliminationSolver:
             "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier."
         )
         self.recorder.add({"short": short, "detailed": detailed}, role=BLOCK_INTRO)
-        var1 = getattr(self.system, "var1", "x")
-        a_term = self._term(a, var1)
-        substituted = sp.simplify(b * y_value)
-        self.recorder.add_equation(f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}")
 
-        lhs = substituted
-        next_line = f"{a_term} + {sp.latex(lhs)} = {sp.latex(c)}"
-        prev_line = f"{a_term} + ({sp.latex(substituted)}) = {sp.latex(c)}"
-        if next_line != prev_line:
-            self.recorder.add_equation(next_line)
+        steps = back_substitute(a, b, c, "y", y_value, var1, eq_num=idx)
+        visible = get_visible_back_sub_steps(steps)
+        for s in visible:
+            if s["type"] != "intro":
+                self.recorder.add_equation(s["latex"])
 
-        rhs = sp.simplify(c - lhs)
-        x_value = sp.simplify(rhs / a)
-        var1 = getattr(self.system, "var1", "x")
-        # Detailed steps: ∴ a_term = c - lhs, then ∴ x = value
-        self.recorder.add_equation(f"\\therefore {a_term} = {sp.latex(c)} - {sp.latex(lhs)}")
-        self.recorder.add_equation(f"\\therefore {var1} = {sp.latex(x_value)}")
+        x_value = sp.simplify((c - b * y_value) / a)
         return x_value
 
     # -----------------------------
@@ -278,6 +267,7 @@ class EliminationSolver:
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(A, C, var1)
 
             x_value = sp.simplify(C / A)
             self._substitute_x(x_value)
@@ -320,6 +310,7 @@ class EliminationSolver:
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(B, C, var2)
 
             y_value = sp.simplify(C / B)
             self._substitute_y(y_value)
@@ -437,14 +428,10 @@ class EliminationSolver:
         result_rhs = sp.simplify(m + n)
         result_line = f"{self._term(sp.Integer(2), var1)} = {sp.latex(result_rhs)}"
         self.vertical_elimination(eq3_norm, eq4_norm, result_line, op="add")
+        self.recorder.add_equation(result_line)
+        self._record_solve_one_var_after_elimination(sp.Integer(2), result_rhs, var1)
 
         x_value = sp.simplify(result_rhs / 2)
-        # Step (16): calculation x = result_rhs/2 (e.g. x = 6/2)
-        step16_line = f"{var1} = \\frac{{{sp.latex(result_rhs)}}}{{2}}"
-        self.recorder.add_equation(step16_line)
-        # After (16): calculation x = value (e.g. x = 3)
-        self.recorder.add_equation(f"{var1} = {sp.latex(x_value)}")
-
         self._substitute_x(x_value)
 
     # -----------------------------
@@ -536,6 +523,7 @@ class EliminationSolver:
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(A, C, var1)
 
             x_value = sp.simplify(C / A)
             self._substitute_x(x_value)
@@ -605,6 +593,7 @@ class EliminationSolver:
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(B, C, var2)
 
             y_value = sp.simplify(C / B)
             self._substitute_y(y_value)
@@ -668,6 +657,7 @@ class EliminationSolver:
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(A, C, var1)
 
             x_value = sp.simplify(C / A)
             self._substitute_x(x_value)
@@ -746,6 +736,7 @@ class EliminationSolver:
             result_line = f"{x_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(A, C, var1)
 
             x_value = sp.simplify(C / A)
             self._substitute_x(x_value)
@@ -773,6 +764,7 @@ class EliminationSolver:
             result_line = f"{y_term} = {sp.latex(C)}"
             self.vertical_elimination(eq_line1, eq_line2, result_line, op=op)
             self.recorder.add_equation(result_line)
+            self._record_solve_one_var_after_elimination(B, C, var2)
 
             y_value = sp.simplify(C / B)
             self._substitute_y(y_value)

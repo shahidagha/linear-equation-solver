@@ -8,6 +8,7 @@ from backend.utils.step_recorder import StepRecorder
 from backend.utils.step_roles import BLOCK_INTRO, EXPLANATION_TEXT, STUDENT_CALC, STUDENT_RESULT_TEXT
 from backend.utils.degenerate import degenerate_none, degenerate_infinite, above_grade
 from backend.utils.grade_scope import would_add_subtract_unlike_surds
+from backend.utils.substitute_and_solve_block import get_visible_steps, substitute_and_solve_for_var
 from backend.latex.equation_formatter import EquationFormatter
 
 
@@ -135,13 +136,14 @@ class SubstitutionSolver:
             f"Subtract {self._expr_latex(other_term)} from both sides to isolate the term in {var_name}.",
             step1_latex,
         ))
-        # Step: divide both sides by coeff
+        # Step: divide both sides by coeff (skip when coeff is ±1 to avoid "divide by 1")
         raw_expr = sp.simplify(rhs1 / coeff)
         step2_latex = f"{sp.latex(sym_var)} = {self._expr_latex(raw_expr)}"
-        steps.append((
-            f"Divide both sides by {self._expr_latex(coeff)} to solve for {var_name}.",
-            step2_latex,
-        ))
+        if sp.simplify(coeff) != 1 and sp.simplify(coeff) != -1:
+            steps.append((
+                f"Divide both sides by {self._expr_latex(coeff)} to solve for {var_name}.",
+                step2_latex,
+            ))
         if sp.simplify(raw_expr - expr) != 0:
             steps.append((
                 "Simplify.",
@@ -211,11 +213,22 @@ class SubstitutionSolver:
         except (TypeError, ValueError, AttributeError):
             return steps
         numer_subst = num * val_int
+        frac_value = sp.Rational(numer_subst, den)
+        # When den==1, avoid sp.Pow(1,-1) which LaTeX renders as 1^{-1}; use integer arithmetic
+        if den == 1:
+            # One step: const + numer_subst (e.g. x = 2 - 1), then final (x = 1)
+            step_mid_latex = (
+                f"{sp.latex(sym_var)} = {sp.latex(const)} - {-numer_subst}"
+                if numer_subst < 0
+                else f"{sp.latex(sym_var)} = {sp.latex(const)} + {numer_subst}"
+            )
+            steps.append(step_mid_latex)
+            steps.append(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
+            return steps
         # Step 1: sym_var = const + numer_subst/den (unsimplified), e.g. q = 7 - 15/3
         step_frac = const + sp.Mul(numer_subst, sp.Pow(den, -1, evaluate=False), evaluate=False)
         steps.append(f"{sp.latex(sym_var)} = {sp.latex(step_frac)}")
         # Step 2: simplify the fraction only, e.g. q = 7 - 5 (display as const - positive when frac_value < 0)
-        frac_value = sp.Rational(numer_subst, den)
         if frac_value < 0:
             step_mid_latex = f"{sp.latex(sym_var)} = {sp.latex(const)} - {sp.latex(-frac_value)}"
         else:
@@ -390,10 +403,11 @@ class SubstitutionSolver:
                 "\\text{After substitution the equation simplifies to a contradiction. The system has no solution.}"
             )
             return degenerate_none()
-        # Build raw substitution line without simplifying (so we show e.g. 3p + 5(7 - 5p/3) = 19)
+        # Build raw substitution line: substitute sym_var = expr into a_t*x + b_t*y = c_t
+        # → a_t*expr + b_t*other = c_t (e.g. 7(2-y) + y = 8)
         other_sym_t = self._y if sym_var == self._x else self._x
-        term1 = sp.Mul(a_t, other_sym_t, evaluate=False)
-        term2 = sp.Mul(b_t, expr, evaluate=False)
+        term1 = sp.Mul(a_t, expr, evaluate=False)
+        term2 = sp.Mul(b_t, other_sym_t, evaluate=False)
         if would_add_subtract_unlike_surds(term1, term2):
             self.recorder.add_equation(
                 "\\text{At this step we would add or subtract expressions involving surds with different radicands, "
@@ -422,12 +436,20 @@ class SubstitutionSolver:
             )
             return degenerate_none()
 
-        # Step 4: solve for other_sym with full intermediate steps (expand, multiply by denom, arrange, simplify, sign, divide)
-        calc_steps = self._expand_solve_steps_from_raw(raw_lhs, c_t, other_sym, a_t, b_t, other_sym_t, expr)
+        # Step 4: solve for other_sym using unified substitute-and-solve block (fixed logical path, visibility rules)
+        block_steps = substitute_and_solve_for_var(
+            a_t, b_t, c_t, solve_for_var, expr, other_var, target_eq_num
+        )
         sol_other = sp.solve(substituted, other_sym)
         if not sol_other:
             return self._fallback_solve()
         other_value = sp.simplify(sol_other[0])
+        visible_steps = get_visible_steps(block_steps)
+        calc_steps = [
+            (s.get("description", ""), s["latex"], s.get("description"))
+            for s in visible_steps
+            if s["type"] not in ("intro", "substitute_raw")
+        ]
         if not calc_steps:
             self.recorder.add_equation(f"{sp.latex(other_sym)} = {self._expr_latex(other_value)}")
         else:

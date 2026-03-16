@@ -273,19 +273,11 @@ class SolutionLatexRenderer:
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if eq_latex:
                     for ln in self._wrap_latex(eq_latex):
-                        detailed.append(ln)
-                        if in_medium:
-                            medium.append(ln)
-                        if in_short:
-                            short.append(ln)
+                        self._append_if_not_duplicate(ln, detailed, medium, short, in_medium, in_short)
             elif s_type == "equation":
                 if content:
                     for ln in self._wrap_latex(content):
-                        detailed.append(ln)
-                        if in_medium:
-                            medium.append(ln)
-                        if in_short:
-                            short.append(ln)
+                        self._append_if_not_duplicate(ln, detailed, medium, short, in_medium, in_short)
             elif s_type == "text":
                 if content:
                     for ln in self._wrap_text(content):
@@ -308,6 +300,17 @@ class SolutionLatexRenderer:
                 if content:
                     for ln in self._wrap_text(content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+
+    @staticmethod
+    def _append_if_not_duplicate(ln: str, detailed: list, medium: list, short: list, in_medium: bool, in_short: bool) -> None:
+        """Append line to detailed/medium/short, skipping if it duplicates the last line (avoids repeated y=1 etc.)."""
+        if detailed and detailed[-1] == ln:
+            return
+        detailed.append(ln)
+        if in_medium:
+            medium.append(ln)
+        if in_short:
+            short.append(ln)
 
     @staticmethod
     def _include_by_role(step: Dict[str, Any], medium_roles: frozenset, short_roles: frozenset) -> tuple:

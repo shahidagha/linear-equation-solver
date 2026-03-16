@@ -18,6 +18,15 @@ def _expr_latex(expr):
     return sp.latex(sp.simplify(expr))
 
 
+def _wrap_if_negative(expr):
+    """LaTeX for expr; wrap in parentheses only if negative."""
+    e = sp.simplify(expr)
+    s = sp.latex(e)
+    if s.strip().startswith("-") and len(s.strip()) > 1:
+        return f"\\left({s}\\right)"
+    return s
+
+
 class CramerSolver:
     def __init__(self, system):
         self.system = system
@@ -146,13 +155,30 @@ class CramerSolver:
         return {sp.Symbol(self.var1): sp.simplify(Dx / D), sp.Symbol(self.var2): sp.simplify(Dy / D)}
 
     def _record_det_computation(self, label, term1, term2, result, formula, v1, v2, v3, v4):
-        """Record determinant computation: label = formula = v1*v2 - v3*v4 = ... = result."""
+        """Record determinant steps: (1) label = formula (2) label = v1×v2 - v3×v4, parens only if negative
+        (3) = t1 - t2  (4) if negatives: = t1 + (-t2)  (5) \\therefore label = result."""
         t1 = sp.simplify(term1)
         t2 = sp.simplify(term2)
-        self.recorder.add_equation(
-            f"{label} = {formula} = ({_expr_latex(v1)})({_expr_latex(v2)}) - ({_expr_latex(v3)})({_expr_latex(v4)}) "
-            f"= {_expr_latex(t1)} - {_expr_latex(t2)} = {_expr_latex(result)}"
-        )
+        # Step 1: D = a_1 b_2 - a_2 b_1
+        self.recorder.add_equation(f"{label} = {formula}")
+        # Step 2: D = v1 × v2 - v3 × v4  (parentheses only for negative values)
+        p1 = _wrap_if_negative(v1)
+        p2 = _wrap_if_negative(v2)
+        p3 = _wrap_if_negative(v3)
+        p4 = _wrap_if_negative(v4)
+        self.recorder.add_equation(f"{label} = {p1} \\times {p2} - {p3} \\times {p4}")
+        # Step 3: = t1 - t2  (wrap in parentheses if negative)
+        sub1 = _wrap_if_negative(t1)
+        sub2 = _wrap_if_negative(t2)
+        self.recorder.add_equation(f"= {sub1} - {sub2}")
+        # Step 4: when second term is negative, show = t1 + (-t2)  e.g. = -7 + 1
+        t2_latex = sp.latex(sp.simplify(t2))
+        t2_is_negative = t2_latex.strip().startswith("-") and len(t2_latex.strip()) > 1
+        if t2_is_negative:
+            t2_neg = sp.simplify(-t2)
+            self.recorder.add_equation(f"= {_expr_latex(t1)} + {_expr_latex(t2_neg)}")
+        # Step 5: \therefore label = result
+        self.recorder.add_equation(f"\\therefore {label} = {_expr_latex(result)}")
 
     def _record_division_steps(self, var_name, num, den):
         """Record var = num/den with all calculation steps (show fraction, then simplify if needed)."""

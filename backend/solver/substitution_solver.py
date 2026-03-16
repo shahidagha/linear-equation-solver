@@ -213,11 +213,22 @@ class SubstitutionSolver:
         except (TypeError, ValueError, AttributeError):
             return steps
         numer_subst = num * val_int
+        frac_value = sp.Rational(numer_subst, den)
+        # When den==1, avoid sp.Pow(1,-1) which LaTeX renders as 1^{-1}; use integer arithmetic
+        if den == 1:
+            # One step: const + numer_subst (e.g. x = 2 - 1), then final (x = 1)
+            step_mid_latex = (
+                f"{sp.latex(sym_var)} = {sp.latex(const)} - {-numer_subst}"
+                if numer_subst < 0
+                else f"{sp.latex(sym_var)} = {sp.latex(const)} + {numer_subst}"
+            )
+            steps.append(step_mid_latex)
+            steps.append(f"{sp.latex(sym_var)} = {self._expr_latex(result_value)}")
+            return steps
         # Step 1: sym_var = const + numer_subst/den (unsimplified), e.g. q = 7 - 15/3
         step_frac = const + sp.Mul(numer_subst, sp.Pow(den, -1, evaluate=False), evaluate=False)
         steps.append(f"{sp.latex(sym_var)} = {sp.latex(step_frac)}")
         # Step 2: simplify the fraction only, e.g. q = 7 - 5 (display as const - positive when frac_value < 0)
-        frac_value = sp.Rational(numer_subst, den)
         if frac_value < 0:
             step_mid_latex = f"{sp.latex(sym_var)} = {sp.latex(const)} - {sp.latex(-frac_value)}"
         else:

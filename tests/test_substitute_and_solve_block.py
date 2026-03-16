@@ -52,26 +52,22 @@ def test_with_fractions_clear_denominator_visible():
 
 
 def test_flip_signs_when_coeff_negative():
-    """When coefficient of x is negative after simplify_lhs, flip_signs is visible."""
-    x = sp.Symbol("x")
-    # 5x - 4*(7-2x)/3 = 10 → after clear and arrange we get 23x = 58 (positive coeff). So no flip.
-    # Use an example that yields negative coeff: e.g. -2x + 3y = 5, substitute y = 1 → -2x = 2 → flip → 2x = -2.
-    steps = substitute_and_solve_for_var(-2, 0, 2, "y", sp.S(1), "x", target_eq_num=2)
+    """When coefficient of remaining var is negative after simplify_lhs, flip_signs is visible."""
+    # Target 2x - 3y = 0, substitute x = 5 → 10 - 3y = 0 → -3y = -10 → flip → 3y = 10.
+    steps = substitute_and_solve_for_var(2, -3, 0, "x", sp.S(5), "y", target_eq_num=2)
     flip_step = next(s for s in steps if s["type"] == "flip_signs")
     assert flip_step["visible"] is True
 
 
 def test_divide_hidden_when_coeff_one():
-    """When coefficient of variable is 1 after simplify, divide step is hidden."""
-    x = sp.Symbol("x")
-    # 3x + 4(x+2) = 29 → 3x+4x+8=29 → 7x=21 → x=3. Coeff 7, so divide visible.
-    # Get coeff 1: e.g. 1*x + 0*y = 5, substitute y=0 → x=5. So a_t=1, b_t=0, c_t=5, expr=0.
-    steps = substitute_and_solve_for_var(1, 0, 5, "y", sp.S(0), "x", target_eq_num=2)
+    """When coefficient of remaining variable is 1 after simplify, divide step is hidden."""
+    # Target 0*x + 1*y = 5, substitute x=0 → y = 5 (coeff 1, so divide hidden).
+    steps = substitute_and_solve_for_var(0, 1, 5, "x", sp.S(0), "y", target_eq_num=2)
     divide_step = next(s for s in steps if s["type"] == "divide")
     assert divide_step["visible"] is False
     result_step = next(s for s in steps if s["type"] == "result")
     assert result_step["visible"] is True
-    assert "x" in result_step["latex"] and "5" in result_step["latex"]
+    assert "y" in result_step["latex"] and "5" in result_step["latex"]
 
 
 def test_intro_and_substitute_raw_content():

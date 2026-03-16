@@ -136,13 +136,14 @@ class SubstitutionSolver:
             f"Subtract {self._expr_latex(other_term)} from both sides to isolate the term in {var_name}.",
             step1_latex,
         ))
-        # Step: divide both sides by coeff
+        # Step: divide both sides by coeff (skip when coeff is ±1 to avoid "divide by 1")
         raw_expr = sp.simplify(rhs1 / coeff)
         step2_latex = f"{sp.latex(sym_var)} = {self._expr_latex(raw_expr)}"
-        steps.append((
-            f"Divide both sides by {self._expr_latex(coeff)} to solve for {var_name}.",
-            step2_latex,
-        ))
+        if sp.simplify(coeff) != 1 and sp.simplify(coeff) != -1:
+            steps.append((
+                f"Divide both sides by {self._expr_latex(coeff)} to solve for {var_name}.",
+                step2_latex,
+            ))
         if sp.simplify(raw_expr - expr) != 0:
             steps.append((
                 "Simplify.",
@@ -391,10 +392,11 @@ class SubstitutionSolver:
                 "\\text{After substitution the equation simplifies to a contradiction. The system has no solution.}"
             )
             return degenerate_none()
-        # Build raw substitution line without simplifying (so we show e.g. 3p + 5(7 - 5p/3) = 19)
+        # Build raw substitution line: substitute sym_var = expr into a_t*x + b_t*y = c_t
+        # → a_t*expr + b_t*other = c_t (e.g. 7(2-y) + y = 8)
         other_sym_t = self._y if sym_var == self._x else self._x
-        term1 = sp.Mul(a_t, other_sym_t, evaluate=False)
-        term2 = sp.Mul(b_t, expr, evaluate=False)
+        term1 = sp.Mul(a_t, expr, evaluate=False)
+        term2 = sp.Mul(b_t, other_sym_t, evaluate=False)
         if would_add_subtract_unlike_surds(term1, term2):
             self.recorder.add_equation(
                 "\\text{At this step we would add or subtract expressions involving surds with different radicands, "

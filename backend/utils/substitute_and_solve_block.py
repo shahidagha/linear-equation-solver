@@ -60,7 +60,8 @@ def substitute_and_solve_for_var(
 ) -> List[Dict[str, Any]]:
     """
     Produce the unified step sequence for substituting substituted_var = expr into
-    a_t*remaining + b_t*substituted = c_t and solving for remaining_var.
+    a_t*substituted + b_t*remaining = c_t (target equation) and solving for remaining_var.
+    So after substitution: a_t*expr + b_t*remaining = c_t.
 
     Parameters
     ----------
@@ -87,10 +88,10 @@ def substitute_and_solve_for_var(
 
     steps: List[Dict[str, Any]] = []
 
-    # Raw substitution: a_t*var + b_t*expr = c_t (unevaluated so we see the substitution)
+    # Raw substitution: a_t*expr + b_t*var = c_t (substitute expr for the other variable)
     raw_lhs = sp.Add(
-        sp.Mul(a_t, var_sym, evaluate=False),
-        sp.Mul(b_t, expr, evaluate=False),
+        sp.Mul(a_t, expr, evaluate=False),
+        sp.Mul(b_t, var_sym, evaluate=False),
         evaluate=False,
     )
 
@@ -111,12 +112,12 @@ def substitute_and_solve_for_var(
         "visible": True,
     })
 
-    # 3. Expand (distribute): show a_t*var + (b_t*expr expanded as const + var_term) = c_t
+    # 3. Expand (distribute): show (a_t*expr expanded) + b_t*var = c_t
     expanded_lhs = sp.expand(raw_lhs)
-    expanded_second = sp.expand(b_t * expr)
-    const_second = expanded_second.subs(var_sym, 0)
-    var_second = sp.simplify(expanded_second - const_second)
-    expand_display = sp.Add(a_t * var_sym, const_second, var_second, evaluate=False)
+    expanded_first = sp.expand(a_t * expr)
+    const_first = expanded_first.subs(var_sym, 0)
+    var_first = sp.simplify(expanded_first - const_first)
+    expand_display = sp.Add(const_first, var_first, b_t * var_sym, evaluate=False)
     steps.append({
         "type": "expand",
         "latex": f"{sp.latex(expand_display)} = {_expr_latex(c_t)}",
@@ -168,13 +169,15 @@ def substitute_and_solve_for_var(
         "visible": True,
     })
 
-    # 6. Simplify LHS (collect like terms)
+    # 6. Simplify LHS (collect like terms); hide when identical to arrange (avoid duplicate line)
     simplified_lhs = sp.simplify(var_part)
     const_side = sp.simplify(rhs_arranged)
+    arrange_latex = f"{sp.latex(var_part)} = {_expr_latex(rhs_arranged)}"
+    simplify_lhs_latex = f"{_expr_latex(simplified_lhs)} = {_expr_latex(const_side)}"
     steps.append({
         "type": "simplify_lhs",
-        "latex": f"{_expr_latex(simplified_lhs)} = {_expr_latex(const_side)}",
-        "visible": True,
+        "latex": simplify_lhs_latex,
+        "visible": simplify_lhs_latex != arrange_latex,
     })
 
     coeff = simplified_lhs.coeff(var_sym)

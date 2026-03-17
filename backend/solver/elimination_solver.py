@@ -179,12 +179,19 @@ class EliminationSolver:
         a, b, c, idx = self._choose_substitution_equation()
         var2 = getattr(self.system, "var2", "y")
 
-        short = f"Substitute x = {sp.latex(x_value)} in equation ({idx})"
+        x_latex = sp.latex(x_value)
+        short = f"Substitute x = {x_latex} in equation ({idx})"
         detailed = (
-            f"We substitute x = {sp.latex(x_value)} into equation ({idx}) because equation ({idx}) "
+            f"We substitute x = {x_latex} into equation ({idx}) because equation ({idx}) "
             "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding y is easier."
         )
-        self.recorder.add({"short": short, "detailed": detailed}, role=BLOCK_INTRO)
+        content_latex = (
+            f"\\text{{Substitute }} x = {x_latex} \\text{{ in equation ({idx})}}"
+        )
+        self.recorder.add(
+            {"short": short, "detailed": detailed, "content_latex": content_latex},
+            role=BLOCK_INTRO,
+        )
 
         steps = back_substitute(a, b, c, "x", x_value, var2, eq_num=idx)
         visible = get_visible_back_sub_steps(steps)
@@ -199,12 +206,19 @@ class EliminationSolver:
         a, b, c, idx = self._choose_substitution_equation()
         var1 = getattr(self.system, "var1", "x")
 
-        short = f"Substitute y = {sp.latex(y_value)} in equation ({idx})"
+        y_latex = sp.latex(y_value)
+        short = f"Substitute y = {y_latex} in equation ({idx})"
         detailed = (
-            f"We substitute y = {sp.latex(y_value)} into equation ({idx}) because equation ({idx}) "
+            f"We substitute y = {y_latex} into equation ({idx}) because equation ({idx}) "
             "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier."
         )
-        self.recorder.add({"short": short, "detailed": detailed}, role=BLOCK_INTRO)
+        content_latex = (
+            f"\\text{{Substitute }} y = {y_latex} \\text{{ in equation ({idx})}}"
+        )
+        self.recorder.add(
+            {"short": short, "detailed": detailed, "content_latex": content_latex},
+            role=BLOCK_INTRO,
+        )
 
         steps = back_substitute(a, b, c, "y", y_value, var1, eq_num=idx)
         visible = get_visible_back_sub_steps(steps)

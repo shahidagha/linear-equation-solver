@@ -204,11 +204,8 @@ def substitute_and_solve_for_var(
         })
 
     # 8. Divide by coefficient
-    try:
-        c_num, c_den = int(const_side), int(coeff)
-        value_frac = sp.Mul(c_num, sp.Pow(c_den, -1, evaluate=False), evaluate=False)
-    except (TypeError, ValueError):
-        value_frac = const_side / coeff
+    # Symbolic division so fractions are preserved; do not use int() (e.g. int(S(1)/2)==0)
+    value_frac = sp.simplify(const_side / coeff)
     value_simple = sp.simplify(value_frac)
     divide_visible = not (sp.simplify(coeff) == 1 or sp.simplify(coeff) == -1)
     divide_latex = f"{sp.latex(var_sym)} = {_expr_latex(value_frac)}"

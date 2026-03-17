@@ -141,12 +141,8 @@ def back_substitute(
     else:
         steps.append({"type": "flip_signs", "latex": "", "visible": False})
 
-    # 7. Divide
-    try:
-        c_num, c_den = int(const_side), int(coeff)
-        value_frac = sp.Mul(c_num, sp.Pow(c_den, -1, evaluate=False), evaluate=False)
-    except (TypeError, ValueError):
-        value_frac = const_side / coeff
+    # 7. Divide (symbolic division so fractions like 1/2 are preserved; do not use int() — int(S(1)/2)==0)
+    value_frac = sp.simplify(const_side / coeff)
     value_simple = sp.simplify(value_frac)
     divide_visible = not (sp.simplify(coeff) == 1 or sp.simplify(coeff) == -1)
     divide_latex = f"\\therefore {solve_for_var} = {_expr_latex(value_frac)}"

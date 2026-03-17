@@ -82,12 +82,8 @@ def solve_coeff_var_equals_constant(
     else:
         steps.append({"type": "flip_signs", "latex": "", "visible": False})
 
-    # 3. Divide
-    try:
-        c_num, c_den = int(constant), int(coeff)
-        value_frac = sp.Mul(c_num, sp.Pow(c_den, -1, evaluate=False), evaluate=False)
-    except (TypeError, ValueError):
-        value_frac = constant / coeff
+    # 3. Divide (symbolic division so fractions are preserved; do not use int() — e.g. int(S(1)/2)==0)
+    value_frac = sp.simplify(constant / coeff)
     value_simple = sp.simplify(value_frac)
     divide_visible = not _coefficient_is_one_or_minus_one(coeff)
     divide_latex = f"{var_name} = {_expr_latex(value_frac)}"

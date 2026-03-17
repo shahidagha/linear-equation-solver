@@ -190,7 +190,7 @@ class EliminationSolver:
         )
         detailed_latex = (
             f"\\text{{We substitute }} x = {x_latex} \\text{{ into equation ({idx}) because equation ({idx}) "
-            "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding y is easier.}}"
+            "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding y is easier.}"
         )
         self.recorder.add(
             {"short": short, "detailed": detailed, "content_latex": content_latex, "detailed_latex": detailed_latex},
@@ -221,7 +221,7 @@ class EliminationSolver:
         )
         detailed_latex = (
             f"\\text{{We substitute }} y = {y_latex} \\text{{ into equation ({idx}) because equation ({idx}) "
-            "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier.}}"
+            "has the simpler coefficients (smaller sum of coefficients), so the arithmetic for finding x is easier.}"
         )
         self.recorder.add(
             {"short": short, "detailed": detailed, "content_latex": content_latex, "detailed_latex": detailed_latex},

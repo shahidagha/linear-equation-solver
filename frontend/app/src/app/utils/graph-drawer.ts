@@ -94,8 +94,17 @@ function drawLabelAlongLine(
   ctx.restore();
 }
 
+/** Parse a number or fraction string (e.g. "5/2" -> 2.5). parseFloat("5/2") returns 5, so we handle fractions explicitly. */
 function toNum(v: number | string): number {
-  const n = typeof v === 'number' ? v : parseFloat(String(v));
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const s = String(v).trim();
+  const slash = s.indexOf('/');
+  if (slash !== -1) {
+    const num = parseFloat(s.slice(0, slash).trim());
+    const den = parseFloat(s.slice(slash + 1).trim());
+    if (Number.isFinite(num) && Number.isFinite(den) && den !== 0) return num / den;
+  }
+  const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 }
 

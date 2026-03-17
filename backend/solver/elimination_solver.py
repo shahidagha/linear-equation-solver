@@ -229,11 +229,18 @@ class EliminationSolver:
 
         if eliminate == "y":
             self.recorder.add_equation(
-                f"\\text{{Using Direct Elimination on }} {var2} \\text{{ (}}|b_1| = |b_2|\\text{{)}}"
+                f"\\text{{Using Direct Elimination on }} {var2} \\text{{ (}}|b_1| = |b_2|\\text{{)}}",
+                role=EXPLANATION_TEXT,
             )
             if sp.sign(b1) != sp.sign(b2):
-                self.recorder.add_equation(
-                    f"\\text{{Adding equations (coefficients of }} {var2} \\text{{ have opposite signs)}}"
+                self.recorder.add(
+                    {
+                        "detailed": f"Adding equations (coefficients of {var2} have opposite signs)",
+                        "medium": "Adding equations (1) and (2)",
+                        "detailed_latex": f"\\text{{Adding equations (coefficients of }} {var2} \\text{{ have opposite signs)}}",
+                        "medium_latex": "\\text{Adding equations (1) and (2)}",
+                    },
+                    role=STUDENT_CALC,
                 )
                 result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
                 if result is not None:
@@ -273,11 +280,18 @@ class EliminationSolver:
             self._substitute_x(x_value)
         else:
             self.recorder.add_equation(
-                f"\\text{{Using Direct Elimination on }} {var1} \\text{{ (}}|a_1| = |a_2|\\text{{)}}"
+                f"\\text{{Using Direct Elimination on }} {var1} \\text{{ (}}|a_1| = |a_2|\\text{{)}}",
+                role=EXPLANATION_TEXT,
             )
             if sp.sign(a1) != sp.sign(a2):
-                self.recorder.add_equation(
-                    f"\\text{{Adding equations (coefficients of }} {var1} \\text{{ have opposite signs)}}"
+                self.recorder.add(
+                    {
+                        "detailed": f"Adding equations (coefficients of {var1} have opposite signs)",
+                        "medium": "Adding equations (1) and (2)",
+                        "detailed_latex": f"\\text{{Adding equations (coefficients of }} {var1} \\text{{ have opposite signs)}}",
+                        "medium_latex": "\\text{Adding equations (1) and (2)}",
+                    },
+                    role=STUDENT_CALC,
                 )
                 result = self._check_like_surds_and_maybe_above_grade(a1, b1, c1, a2, b2, c2)
                 if result is not None:
@@ -784,24 +798,26 @@ class EliminationSolver:
 
         strategy = self.detect_strategy()
 
-        # Record a strategy explanation. For LCM we provide a teacher-style rationale
-        # only in the detailed view (renderer will hide it in other verbosities).
+        # Record a strategy explanation (Detailed only; Medium hides it).
         if strategy == "LCM":
             self.recorder.add(
                 "Elimination strategy: LCM. We choose the LCM method because the coefficients of x and y do not "
                 "line up for direct or cross elimination; by multiplying each equation to make one variable share "
                 "the same coefficient (with opposite signs), that variable will cancel in a single addition or "
-                "subtraction step."
+                "subtraction step.",
+                role=EXPLANATION_TEXT,
             )
         elif strategy == "DIRECT":
             self.recorder.add(
                 "Elimination strategy: Direct. The coefficients of x or y already match in size, so we can add "
-                "or subtract the equations immediately to eliminate one variable."
+                "or subtract the equations immediately to eliminate one variable.",
+                role=EXPLANATION_TEXT,
             )
         else:  # CROSS → Six step Method
             self.recorder.add_equation(
                 "\\text{Elimination Strategy: Six step Method. Since } |a_1|=|b_2| \\text{ and } |a_2|=|b_1| "
-                "\\text{ and both equations have same middle sign we will implement six step method.}"
+                "\\text{ and both equations have same middle sign we will implement six step method.}",
+                role=EXPLANATION_TEXT,
             )
 
         result = None

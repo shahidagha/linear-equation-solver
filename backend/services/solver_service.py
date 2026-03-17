@@ -57,10 +57,15 @@ def build_fraction_surd(term: dict):
 
 
 def to_python_number(value):
-    """Convert SymPy numbers to JSON-safe values without float conversion."""
-
+    """Convert SymPy numbers to JSON-safe values without float conversion.
+    Preserves fractions (e.g. 5/2, 1/2) as strings so the renderer can show \\frac{5}{2};
+    only integers are returned as int (avoid int(Rational(5,2)) -> 2, int(Rational(1,2)) -> 0).
+    """
     try:
-        return int(value)
+        v = sp.simplify(sp.S(value))
+        if v.is_Integer:
+            return int(v)
+        return str(v)
     except Exception:
         return str(value)
 
@@ -260,6 +265,7 @@ def _serialize_steps(steps):
                 "content": step.content["short"],
                 "detailed_content": step.content["detailed"],
                 "content_latex": step.content.get("content_latex"),
+                "detailed_latex": step.content.get("detailed_latex"),
                 **extra,
             })
         elif step.type == "text" and isinstance(step.content, dict) and "detailed" in step.content and "medium" in step.content:

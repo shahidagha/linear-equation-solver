@@ -130,10 +130,15 @@ class SolutionLatexRenderer:
                     any_to_short = True
             elif s_type == "substitution_intro":
                 detailed_content = step.get("detailed_content", "")
+                detailed_latex = step.get("detailed_latex")
                 content = step.get("content", "")
                 content_latex = step.get("content_latex")
-                for ln in self._wrap_text(detailed_content):
-                    detailed.append(f"\\text{{{self._escape_text(ln)}}}")
+                if detailed_latex:
+                    for ln in self._wrap_latex(detailed_latex):
+                        detailed.append(ln)
+                else:
+                    for ln in self._wrap_text(detailed_content):
+                        detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if content_latex:
                     for ln in self._wrap_latex(content_latex):
                         if in_medium:
@@ -248,8 +253,12 @@ class SolutionLatexRenderer:
             content = step.get("content", "")
             if s_type == "substitution_intro":
                 detailed_content = step.get("detailed_content", "")
+                detailed_latex = step.get("detailed_latex")
                 intro_content = step.get("content", "")
-                if detailed_content:
+                if detailed_latex:
+                    for ln in self._wrap_latex(detailed_latex):
+                        detailed.append(ln)
+                elif detailed_content:
                     for ln in self._wrap_text(detailed_content):
                         detailed.append(f"\\text{{{self._escape_text(ln)}}}")
                 if intro_content:

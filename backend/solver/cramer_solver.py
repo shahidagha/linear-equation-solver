@@ -74,12 +74,14 @@ class CramerSolver:
             role=STUDENT_CALC,
         )
 
-        # Step 3: D = matrix, fill values, compute (mixed text+math)
+        # Step 3: D — Teacher explanation (steps 1+3: Detailed only) + Calculation block (steps 2,4,5: Detailed + Medium)
         self.recorder.add_equation(
             "\\text{Compute } D \\text{ (determinant of coefficient matrix):}",
             role=BLOCK_INTRO,
         )
+        # Teacher explanation (step 1): symbolic determinant — Detailed only
         self.recorder.add_equation(r"D = \begin{vmatrix} a_1 & b_1 \\ a_2 & b_2 \end{vmatrix}", role=EXPLANATION_CALC)
+        # Calculation block (step 2): substitute values into matrix — Detailed + Medium
         self.recorder.add_equation(
             f"D = \\begin{{vmatrix}} {_expr_latex(a1)} & {_expr_latex(b1)} \\\\ {_expr_latex(a2)} & {_expr_latex(b2)} \\end{{vmatrix}}",
             role=STUDENT_CALC,
@@ -92,6 +94,7 @@ class CramerSolver:
             )
             return above_grade()
         D = sp.simplify(a1 * b2 - a2 * b1)
+        # _record_det_computation: step 3 (formula) = EXPLANATION_CALC; steps 4,5 (numeric + simplify) = STUDENT_CALC
         self._record_det_computation("D", a1 * b2, a2 * b1, D, "a_1 b_2 - a_2 b_1", a1, b2, a2, b1)
 
         if D == 0:
@@ -127,15 +130,17 @@ class CramerSolver:
             )
             return degenerate_infinite()
 
-        # Step 4: D_x — strike out first column, replace with c1, c2 (mixed text+math)
+        # Step 4: D_x — Teacher (steps 1+3) + Calculation (steps 2,4,5). Same role grouping as D.
         self.recorder.add_equation(
             f"\\text{{To find }} D_{{{self.var1}}} \\text{{, in }} D \\text{{ strike out the first column }} (a_1, a_2) \\text{{; replace with }} (c_1, c_2) \\text{{:}}",
             role=BLOCK_INTRO,
         )
+        # Teacher (step 1): symbolic D_x matrix — Detailed only
         self.recorder.add_equation(
             f"D_{{{self.var1}}} = \\begin{{vmatrix}} c_1 & b_1 \\\\ c_2 & b_2 \\end{{vmatrix}}",
             role=EXPLANATION_CALC,
         )
+        # Calculation (step 2): filled matrix — Detailed + Medium
         self.recorder.add_equation(
             f"D_{{{self.var1}}} = \\begin{{vmatrix}} {_expr_latex(c1)} & {_expr_latex(b1)} \\\\ {_expr_latex(c2)} & {_expr_latex(b2)} \\end{{vmatrix}}",
             role=STUDENT_CALC,
@@ -150,15 +155,17 @@ class CramerSolver:
         Dx = sp.simplify(c1 * b2 - c2 * b1)
         self._record_det_computation(f"D_{{{self.var1}}}", c1 * b2, c2 * b1, Dx, "c_1 b_2 - c_2 b_1", c1, b2, c2, b1)
 
-        # Step 5: D_y — strike out second column, replace with c1, c2; fill and compute
+        # Step 5: D_y — Teacher (steps 1+3) + Calculation (steps 2,4,5). Same role grouping.
         self.recorder.add(
             f"To find D for {self.var2}, in D strike out the second column (b1, b2); replace with c1, c2:",
             role=BLOCK_INTRO,
         )
+        # Teacher (step 1): symbolic D_y matrix — Detailed only
         self.recorder.add_equation(
             f"D_{{{self.var2}}} = \\begin{{vmatrix}} a_1 & c_1 \\\\ a_2 & c_2 \\end{{vmatrix}}",
             role=EXPLANATION_CALC,
         )
+        # Calculation (step 2): filled matrix — Detailed + Medium
         self.recorder.add_equation(
             f"D_{{{self.var2}}} = \\begin{{vmatrix}} {_expr_latex(a1)} & {_expr_latex(c1)} \\\\ {_expr_latex(a2)} & {_expr_latex(c2)} \\end{{vmatrix}}",
             role=STUDENT_CALC,
@@ -183,11 +190,13 @@ class CramerSolver:
         return {sp.Symbol(self.var1): sp.simplify(Dx / D), sp.Symbol(self.var2): sp.simplify(Dy / D)}
 
     def _record_det_computation(self, label, term1, term2, result, formula, v1, v2, v3, v4):
-        """Record determinant steps: (1) label = formula (2) label = v1×v2 - v3×v4, parens only if negative
-        (3) = t1 - t2  (4) if negatives: = t1 + (-t2)  (5) \\therefore label = result."""
+        """Record determinant calculation: Teacher (step 3) = formula (EXPLANATION_CALC, Detailed only).
+        Calculation block (steps 4,5): numeric products, simplify, therefore (STUDENT_CALC, Detailed + Medium)."""
         t1 = sp.simplify(term1)
         t2 = sp.simplify(term2)
+        # Teacher explanation (step 3): general formula — Detailed only
         self.recorder.add_equation(f"{label} = {formula}", role=EXPLANATION_CALC)
+        # Calculation (step 4): substitute values with brackets for negatives — Detailed + Medium
         p1 = _wrap_if_negative(v1)
         p2 = _wrap_if_negative(v2)
         p3 = _wrap_if_negative(v3)

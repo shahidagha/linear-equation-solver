@@ -1,10 +1,13 @@
 """
 Canonical roles for solution steps. Verbosity is defined by which roles to show:
-- Detailed: all roles
-- Medium: block_intro + all student_* + final_result_text
+- Detailed: all roles (teacher explanation + calculation block)
+- Medium: block_intro + calculation block only (student_* + final_result_text); no explanation_calc
 - Short: student_calc_last_line + student_result_text + final_result_text
+
+For Cramer determinants: steps 1+3 (symbolic matrix, formula) = teacher = EXPLANATION_CALC (Detailed only);
+steps 2,4,5 (filled matrix, numeric formula, simplify) = calculation = STUDENT_CALC (Detailed + Medium).
 """
-# Shown in Detailed only
+# Shown in Detailed only (teacher explanation part)
 EXPLANATION_TEXT = "explanation_text"
 EXPLANATION_CALC = "explanation_calc"
 EXPLANATION_CALC_LAST_LINE = "explanation_calc_last_line"

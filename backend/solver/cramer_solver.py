@@ -74,10 +74,10 @@ class CramerSolver:
             role=STUDENT_CALC,
         )
 
-        # Step 3: D — Teacher explanation (steps 1+3: Detailed only) + Calculation block (steps 2,4,5: Detailed + Medium)
+        # Step 3: D — Teacher explanation (steps 1+3 + intro: Detailed only) + Calculation block (steps 2,4,5: Detailed + Medium)
         self.recorder.add_equation(
             "\\text{Compute } D \\text{ (determinant of coefficient matrix):}",
-            role=BLOCK_INTRO,
+            role=EXPLANATION_TEXT,
         )
         # Teacher explanation (step 1): symbolic determinant — Detailed only
         self.recorder.add_equation(r"D = \begin{vmatrix} a_1 & b_1 \\ a_2 & b_2 \end{vmatrix}", role=EXPLANATION_CALC)
@@ -130,10 +130,10 @@ class CramerSolver:
             )
             return degenerate_infinite()
 
-        # Step 4: D_x — Teacher (steps 1+3) + Calculation (steps 2,4,5). Same role grouping as D.
+        # Step 4: D_x — Teacher (intro + steps 1+3) = Detailed only; Calculation (steps 2,4,5) = Medium too.
         self.recorder.add_equation(
             f"\\text{{To find }} D_{{{self.var1}}} \\text{{, in }} D \\text{{ strike out the first column }} (a_1, a_2) \\text{{; replace with }} (c_1, c_2) \\text{{:}}",
-            role=BLOCK_INTRO,
+            role=EXPLANATION_TEXT,
         )
         # Teacher (step 1): symbolic D_x matrix — Detailed only
         self.recorder.add_equation(
@@ -155,10 +155,10 @@ class CramerSolver:
         Dx = sp.simplify(c1 * b2 - c2 * b1)
         self._record_det_computation(f"D_{{{self.var1}}}", c1 * b2, c2 * b1, Dx, "c_1 b_2 - c_2 b_1", c1, b2, c2, b1)
 
-        # Step 5: D_y — Teacher (steps 1+3) + Calculation (steps 2,4,5). Same role grouping.
+        # Step 5: D_y — Teacher (intro + steps 1+3) = Detailed only; Calculation (steps 2,4,5) = Medium too.
         self.recorder.add(
             f"To find D for {self.var2}, in D strike out the second column (b1, b2); replace with c1, c2:",
-            role=BLOCK_INTRO,
+            role=EXPLANATION_TEXT,
         )
         # Teacher (step 1): symbolic D_y matrix — Detailed only
         self.recorder.add_equation(
